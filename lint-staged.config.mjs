@@ -1,6 +1,6 @@
 export default {
     "*.go": [
-        "golangci-lint run --fix",
+        "./scripts/golangci-lint",
         "go fmt",
     ]
 }
