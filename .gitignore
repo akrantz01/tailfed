@@ -26,6 +26,14 @@ go.work.sum
 # env file
 .env
 
+### JavaScript ###
+
+# Logs
+.pnpm-debug.log*
+
+# Dependency directory
+node_modules/
+
 ### JetBrains ###
 
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
