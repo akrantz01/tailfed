@@ -14,7 +14,11 @@ type cronAdapter struct {
 var _ gocron.Logger = (*cronAdapter)(nil)
 
 // NewCronAdapter creates a new logging adapter that is compatible with gocron
-func NewCronAdapter(logger *logrus.Logger) gocron.Logger {
+func NewCronAdapter(logger logrus.FieldLogger) gocron.Logger {
+	if logger == nil {
+		logger = logrus.StandardLogger()
+	}
+
 	return &cronAdapter{
 		logger: logger.WithField("logger", "gocron"),
 	}

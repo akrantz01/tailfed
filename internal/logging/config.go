@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"strconv"
@@ -10,18 +11,11 @@ import (
 )
 
 // Initialize configures logging to standard output at the desired level
-func Initialize(level string) (*logrus.Logger, error) {
-	lvl, err := logrus.ParseLevel(level)
-	if err != nil {
-		return nil, err
-	}
+func Initialize(levelName string) error {
+	logrus.SetOutput(os.Stdout)
+	logrus.SetReportCaller(true)
 
-	logger := logrus.New()
-	logger.SetLevel(lvl)
-	logger.SetOutput(os.Stdout)
-	logger.SetReportCaller(true)
-
-	logger.SetFormatter(&logrus.TextFormatter{
+	logrus.SetFormatter(&logrus.TextFormatter{
 		EnvironmentOverrideColors: true,
 
 		FullTimestamp:   true,
@@ -37,5 +31,11 @@ func Initialize(level string) (*logrus.Logger, error) {
 		},
 	})
 
-	return logger, nil
+	level, err := logrus.ParseLevel(levelName)
+	if err != nil {
+		return fmt.Errorf("invalid log level %q", levelName)
+	}
+	logrus.SetLevel(level)
+
+	return nil
 }
