@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"time"
+
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -11,13 +13,17 @@ type root struct {
 	exit func(int)
 
 	logLevel string
+	*run
 }
 
 var _ Executable = (*root)(nil)
 
 // NewRoot creates the root command for the client
 func NewRoot(exit func(int)) Executable {
-	root := &root{exit: exit}
+	root := &root{
+		exit: exit,
+		run:  &run{},
+	}
 
 	cmd := &cobra.Command{
 		Use:   "tailfed-client",
@@ -27,19 +33,26 @@ A daemon for refreshing AWS web identity federation tokens issued by Tailfed. Ta
 Tailscale network to prove a host's identity, allowing it to retrieve temporary AWS credentials.`,
 		SilenceUsage:      true,
 		SilenceErrors:     true,
-		PersistentPreRunE: root.PreRun,
+		PersistentPreRunE: root.PersistentPreRun,
+		PreRunE:           root.PreRun,
+		RunE:              root.Run,
 	}
 
 	cmd.PersistentFlags().StringVarP(&root.logLevel, "log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 
-	cmd.AddCommand(newVersion())
+	cmd.Flags().StringVarP(&root.path, "path", "p", "/run/tailfed/token", "The path to write the generated web identity token to")
+	cmd.Flags().DurationVarP(&root.frequency, "frequency", "f", 1*time.Hour, "How often to refresh the token")
+	cmd.Flags().StringVarP(&root.url, "url", "u", "", "The URL of the Tailfed API")
+	_ = cmd.MarkFlagRequired("url")
+
+	cmd.AddCommand(root.NewRunCommand(), newVersion())
 
 	root.cmd = cmd
 	return root
 }
 
-// PreRun performs the common initializations for all commands
-func (r *root) PreRun(*cobra.Command, []string) error {
+// PersistentPreRun performs the common initializations for all commands
+func (r *root) PersistentPreRun(*cobra.Command, []string) error {
 	if err := logging.Initialize(r.logLevel); err != nil {
 		return err
 	}
