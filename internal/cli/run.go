@@ -3,8 +3,13 @@ package cli
 import (
 	"fmt"
 	"net/url"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/scheduler"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -42,8 +47,24 @@ func (r *run) PreRun(*cobra.Command, []string) error {
 	return nil
 }
 
-func (r *run) Run(*cobra.Command, []string) error {
-	fmt.Printf("%+v\n", r)
+func (r *run) Run(cmd *cobra.Command, _ []string) error {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	sched, err := scheduler.NewScheduler(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	sched.Start()
+
+	logrus.Info("daemon started")
+	<-sigs
+	logrus.Info("signal received, shutting down...")
+
+	if err := sched.Stop(); err != nil {
+		return err
+	}
 
 	return nil
 }
