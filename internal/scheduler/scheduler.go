@@ -4,64 +4,74 @@ import (
 	"context"
 	"time"
 
-	"github.com/akrantz01/tailfed/internal/logging"
-	"github.com/go-co-op/gocron/v2"
 	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
 )
 
+type JobFn func(ctx context.Context) error
+
 type Scheduler struct {
 	logger *logrus.Entry
-	inner  gocron.Scheduler
+
+	clock  clockwork.Clock
+	ticker clockwork.Ticker
+
+	shutdownCtx      context.Context
+	shutdownFn       context.CancelFunc
+	shutdownComplete chan struct{}
+
+	jobCtx context.Context
+	job    JobFn
 }
 
-// NewScheduler creates a new scheduler to run the refresh job periodically
-func NewScheduler(ctx context.Context) (*Scheduler, error) {
+func NewScheduler(ctx context.Context, frequency time.Duration, job JobFn) *Scheduler {
 	clock := clockwork.FromContext(ctx)
-	inner, err := gocron.NewScheduler(
-		gocron.WithLogger(logging.NewCronAdapter(nil)),
-		gocron.WithClock(clock),
-	)
-	if err != nil {
-		return nil, err
-	}
+
+	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
 
 	return &Scheduler{
-		inner:  inner,
 		logger: logrus.WithField("logger", "scheduler"),
-	}, nil
+		clock:  clock,
+		ticker: clock.NewTicker(frequency),
+
+		shutdownCtx:      shutdownCtx,
+		shutdownFn:       shutdownFn,
+		shutdownComplete: make(chan struct{}, 1),
+
+		jobCtx: ctx,
+		job:    job,
+	}
 }
 
 // Start starts the scheduler
 func (s *Scheduler) Start() {
-	s.inner.Start()
+	go s.run()
 }
 
-// RegisterJob registers a new job with the specified frequency
-func (s *Scheduler) RegisterJob(frequency time.Duration, job Job) error {
-	j, err := s.inner.NewJob(gocron.DurationJob(frequency), s.toTask(job), gocron.WithName(job.Name()))
-	if err != nil {
-		return err
-	}
+func (s *Scheduler) run() {
+	s.logger.Debug("scheduler started")
 
-	s.logger.WithField("name", job.Name()).Debug("registered new job")
-	return j.RunNow()
-}
-
-func (s *Scheduler) toTask(job Job) gocron.Task {
-	logger := s.logger.WithField("name", job.Name())
-
-	return gocron.NewTask(func(ctx context.Context) {
-		logger.Debug("starting job...")
-		if err := job.Run(ctx); err != nil {
-			logger.WithError(err).Error("job execution failed")
-		} else {
-			logger.Debug("job execution completed")
+	c := s.ticker.Chan()
+	for {
+		select {
+		case <-c:
+			s.logger.Debug("starting job execution")
+			if err := s.job(s.jobCtx); err != nil {
+				s.logger.WithError(err).Error("job execution failed")
+			} else {
+				s.logger.Debug("job execution complete")
+			}
+		case <-s.shutdownCtx.Done():
+			s.logger.Debug("scheduler shutdown")
+			s.shutdownComplete <- struct{}{}
+			return
 		}
-	})
+	}
 }
 
 // Stop finishes any jobs in progress and halt the scheduler
-func (s *Scheduler) Stop() error {
-	return s.inner.Shutdown()
+func (s *Scheduler) Stop() {
+	s.ticker.Stop()
+	s.shutdownFn()
+	<-s.shutdownComplete
 }

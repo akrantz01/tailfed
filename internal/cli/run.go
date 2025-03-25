@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -51,10 +52,10 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	sched, err := scheduler.NewScheduler(cmd.Context())
-	if err != nil {
-		return err
-	}
+	sched := scheduler.NewScheduler(cmd.Context(), r.frequency, func(ctx context.Context) error {
+		logrus.Info("job run")
+		return nil
+	})
 
 	sched.Start()
 
@@ -62,9 +63,7 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	<-sigs
 	logrus.Info("signal received, shutting down...")
 
-	if err := sched.Stop(); err != nil {
-		return err
-	}
+	sched.Stop()
 
 	return nil
 }
