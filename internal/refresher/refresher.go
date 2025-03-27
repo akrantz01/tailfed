@@ -59,6 +59,7 @@ func (r *Refresher) Job(ctx context.Context) error {
 
 	res, err := r.api.Start(ctx, status.ID, addresses)
 	if err != nil {
+		r.releaseListeners(listeners)
 		return err
 	}
 
