@@ -11,31 +11,34 @@ import (
 	"net/http"
 
 	"github.com/akrantz01/tailfed/internal/api"
-	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/sirupsen/logrus"
 )
 
 type challengeHandler struct {
-	ts *tailscale.Client
+	logger    logrus.FieldLogger
+	refresher *Refresher
 
 	path   string
 	secret string
 }
 
 func (r *Refresher) launchServer(id, secret string, l net.Listener) *http.Server {
+	logger := logrus.WithFields(map[string]any{
+		"component": "refresher.server",
+		"address":   l.Addr().String(),
+		"flow":      id,
+	})
 	s := &http.Server{
 		Handler: &challengeHandler{
-			ts:     r.ts,
+			logger:    logger,
+			refresher: r,
+
 			path:   "/" + id,
 			secret: secret,
 		},
 	}
 
 	go func() {
-		logger := r.logger.WithFields(map[string]any{
-			"address":   l.Addr().String(),
-			"component": "refresher.server",
-		})
 		logger.Debug("started challenge server")
 
 		err := s.Serve(l)
@@ -58,8 +61,9 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status, err := ch.ts.Status(r.Context())
+	status, err := ch.refresher.ts.Status(r.Context())
 	if err != nil {
+		ch.logger.WithError(err).Error("failed to get node status")
 		apiError(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
