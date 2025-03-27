@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/netip"
+	"time"
 
 	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/akrantz01/tailfed/internal/tailscale"
@@ -22,10 +24,8 @@ type Refresher struct {
 }
 
 type inFlight struct {
-	id            string
-	signingSecret string
-
 	listeners []net.Listener
+	servers   []*http.Server
 }
 
 // New creates a new Refresher
@@ -63,14 +63,16 @@ func (r *Refresher) Job(ctx context.Context) error {
 		return err
 	}
 
-	r.logger.WithField("flow", res.ID).Debug("new flow successfully started")
-	r.inFlight[res.ID] = inFlight{
-		id:            res.ID,
-		signingSecret: res.SigningSecret,
-		listeners:     listeners,
+	servers := make([]*http.Server, 0, len(listeners))
+	for _, lis := range listeners {
+		servers = append(servers, r.launchServer(res.ID, res.SigningSecret, lis))
 	}
 
-	// TODO: start HTTP listener(s)
+	r.logger.WithField("flow", res.ID).Debug("new flow successfully started")
+	r.inFlight[res.ID] = inFlight{
+		listeners: listeners,
+		servers:   servers,
+	}
 
 	return nil
 }
@@ -115,12 +117,23 @@ func (r *Refresher) releaseListeners(listeners []net.Listener) {
 	}
 }
 
+func (r *Refresher) stopServers(servers []*http.Server) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	for _, srv := range servers {
+		if err := srv.Shutdown(ctx); err != nil {
+			r.logger.WithError(err).Error("failed to shutdown server")
+		}
+	}
+}
+
 // ShutdownInFlight shuts down all the in-flight refresh flows
 func (r *Refresher) ShutdownInFlight() {
 	r.logger.Debug("shutting down in-flight flows...")
 
 	for _, flow := range r.inFlight {
-		r.releaseListeners(flow.listeners)
+		r.stopServers(flow.servers)
 	}
 
 	r.logger.Debug("successfully shutdown in-flight requests")
