@@ -2,8 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,26 +24,8 @@ func (r *run) NewRunCommand() *cobra.Command {
 		Aliases: []string{"r", "start", "s"},
 		Short:   "Start the daemon (default)",
 		Long:    "Starts the daemon using the configuration from the flags.",
-		PreRunE: r.PreRun,
 		RunE:    r.Run,
 	}
-}
-
-func (r *run) PreRun(*cobra.Command, []string) error {
-	if len(r.url) == 0 {
-		return fmt.Errorf("missing required option 'url'")
-	}
-
-	u, err := url.Parse(r.url)
-	if err != nil {
-		return fmt.Errorf("invalid backend url: %w", err)
-	}
-
-	if u.Scheme != "https" && u.Scheme != "http" {
-		return fmt.Errorf("invalid backend url: scheme must be 'http' or 'https', got '%s'", u.Scheme)
-	}
-
-	return nil
 }
 
 func (r *run) Run(cmd *cobra.Command, _ []string) error {

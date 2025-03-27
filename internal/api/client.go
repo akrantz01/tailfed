@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/sirupsen/logrus"
 )
@@ -13,16 +15,24 @@ import (
 // Client provides access to the Tailfed API
 type Client struct {
 	logger logrus.FieldLogger
-	inner  *http.Client
+
+	inner *http.Client
+	base  *url.URL
 }
 
 // NewClient creates a new Tailfed API client
-func NewClient() *Client {
+func NewClient(baseUrl string) (*Client, error) {
+	base, err := parseBaseUrl(baseUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid API base url: %w", err)
+	}
+
 	return &Client{
 		logger: logrus.WithField("component", "api"),
 		// TODO: allow customizing client
 		inner: http.DefaultClient,
-	}
+		base:  base,
+	}, nil
 }
 
 // Start begins the ID token issuance process
@@ -38,6 +48,19 @@ func (c *Client) Finalize(ctx context.Context, id string) (string, error) {
 	}
 
 	return res.IdentityToken, nil
+}
+
+func parseBaseUrl(baseUrl string) (*url.URL, error) {
+	base, err := url.Parse(baseUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	if base.Scheme != "https" && base.Scheme != "http" {
+		return nil, errors.New("scheme must be 'http' or 'https'")
+	}
+
+	return base, nil
 }
 
 // doRequest makes a request to the Tailfed server. This should be a method, but Go does not support generics

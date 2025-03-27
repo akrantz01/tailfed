@@ -34,7 +34,6 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 		SilenceUsage:      true,
 		SilenceErrors:     true,
 		PersistentPreRunE: root.PersistentPreRun,
-		PreRunE:           root.PreRun,
 		RunE:              root.Run,
 	}
 
