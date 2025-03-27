@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"net/url"
 
 	"github.com/sirupsen/logrus"
@@ -36,8 +37,17 @@ func NewClient(baseUrl string) (*Client, error) {
 }
 
 // Start begins the ID token issuance process
-func (c *Client) Start(ctx context.Context, node string, port int) (*StartResponse, error) {
-	return doRequest[StartResponse](c, ctx, "start", "/start", &StartRequest{node, port})
+func (c *Client) Start(ctx context.Context, node string, addresses []string) (*StartResponse, error) {
+	bindings := make([]PortBinding, 0, len(addresses))
+	for _, address := range addresses {
+		addr := netip.MustParseAddrPort(address)
+		bindings = append(bindings, PortBinding{
+			Port:    addr.Port(),
+			Network: NetworkFromAddrPort(addr),
+		})
+	}
+
+	return doRequest[StartResponse](c, ctx, "start", "/start", &StartRequest{node, bindings})
 }
 
 // Finalize attempts to finish the request flow and issue a token
