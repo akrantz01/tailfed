@@ -94,6 +94,9 @@ func doRequest[R any](c *Client, ctx context.Context, name, path string, body an
 		return nil, fmt.Errorf("failed to build request: %w", err)
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
 	logger.Debug("sending request...")
 	res, err := c.inner.Do(req)
 	if err != nil {
