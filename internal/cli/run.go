@@ -1,13 +1,15 @@
 package cli
 
 import (
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/api"
+	"github.com/akrantz01/tailfed/internal/refresher"
 	"github.com/akrantz01/tailfed/internal/scheduler"
+	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -32,10 +34,15 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	sched := scheduler.NewScheduler(cmd.Context(), r.frequency, func(ctx context.Context) error {
-		logrus.Info("job run")
-		return nil
-	})
+	apiClient, err := api.NewClient(r.url)
+	if err != nil {
+		return err
+	}
+
+	tsClient := tailscale.NewClient()
+	refresh := refresher.New(apiClient, tsClient)
+
+	sched := scheduler.NewScheduler(cmd.Context(), r.frequency, refresh.Job)
 
 	sched.Start()
 
@@ -44,6 +51,7 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	logrus.Info("signal received, shutting down...")
 
 	sched.Stop()
+	refresh.ShutdownInFlight()
 
 	return nil
 }
