@@ -47,8 +47,10 @@ func (a Network) Valid() bool {
 
 // PortBinding represents a listening port on a particular network type
 type PortBinding struct {
-	Port    uint16
-	Network Network
+	// Port is the system port being listened on
+	Port uint16 `json:"port"`
+	// Network is the type of address the port is listening on
+	Network Network `json:"network"`
 }
 
 // StartResponse is returned by the start handler
@@ -56,7 +58,7 @@ type StartResponse struct {
 	// ID is a unique identifier for the challenge
 	ID string `json:"id"`
 	// SigningSecret is used to generate a HMAC-SHA256 signature of the client details
-	SigningSecret string `json:"token"`
+	SigningSecret string `json:"signing-secret"`
 }
 
 // ChallengeResponse is returned by the client challenge handler
