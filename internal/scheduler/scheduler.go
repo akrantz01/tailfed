@@ -45,27 +45,33 @@ func NewScheduler(ctx context.Context, frequency time.Duration, job JobFn) *Sche
 
 // Start starts the scheduler
 func (s *Scheduler) Start() {
-	go s.run()
+	go s.scheduler()
 }
 
-func (s *Scheduler) run() {
+func (s *Scheduler) scheduler() {
 	s.logger.Debug("scheduler started")
+
+	s.run()
 
 	c := s.ticker.Chan()
 	for {
 		select {
 		case <-c:
-			s.logger.Debug("starting job execution")
-			if err := s.job(s.jobCtx); err != nil {
-				s.logger.WithError(err).Error("job execution failed")
-			} else {
-				s.logger.Debug("job execution complete")
-			}
+			s.run()
 		case <-s.shutdownCtx.Done():
 			s.logger.Debug("scheduler shutdown")
 			s.shutdownComplete <- struct{}{}
 			return
 		}
+	}
+}
+
+func (s *Scheduler) run() {
+	s.logger.Debug("starting job execution")
+	if err := s.job(s.jobCtx); err != nil {
+		s.logger.WithError(err).Error("job execution failed")
+	} else {
+		s.logger.Debug("job execution complete")
 	}
 }
 
