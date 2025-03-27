@@ -63,7 +63,7 @@ type StartResponse struct {
 
 // ChallengeResponse is returned by the client challenge handler
 type ChallengeResponse struct {
-	// Signature is a HMAC-SHA256 of the node key and tailnet IPs (sorted lexicographically)
+	// Signature is a HMAC-SHA256 of the tailnet, hostname, node key and operating system
 	Signature string `json:"signature"`
 }
 
