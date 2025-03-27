@@ -78,7 +78,7 @@ func doRequest[R any](c *Client, ctx context.Context, name, path string, body an
 	}
 	logger.WithField("body", body).Trace("encoded body")
 
-	req, err := http.NewRequestWithContext(ctx, "POST", path, bytes.NewReader(encoded))
+	req, err := http.NewRequestWithContext(ctx, "POST", c.base.JoinPath(path).String(), bytes.NewReader(encoded))
 	if err != nil {
 		logger.WithError(err).Error("failed to build request")
 		return nil, fmt.Errorf("failed to build request: %w", err)
