@@ -1,0 +1,7 @@
+services:
+  wiremock:
+    build: wiremock/
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./wiremock/stubs:/home/wiremock

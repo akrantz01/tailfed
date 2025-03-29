@@ -1,0 +1,39 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/start",
+    "headers": {
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": {
+          "expression": "$.node",
+          "matches": "^[a-zA-Z0-9]+$"
+        }
+      },
+      { "matchesJsonPath": "$.port-bindings[*]" },
+      {
+        "matchesJsonPath": {
+          "expression": "$.port-bindings[*].port",
+          "matches": "^[1-9][0-9]*$"
+        }
+      },
+      {
+        "matchesJsonPath": {
+          "expression": "$.port-bindings[*].network",
+          "matches": "^(v4|v6)$"
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "start.json.hbs"
+  }
+}
