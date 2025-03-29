@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -61,6 +62,11 @@ func (c *Client) Finalize(ctx context.Context, id string) (string, error) {
 }
 
 func parseBaseUrl(baseUrl string) (*url.URL, error) {
+	baseUrl = strings.TrimSpace(baseUrl)
+	if len(baseUrl) == 0 {
+		return nil, errors.New("not configured")
+	}
+
 	base, err := url.Parse(baseUrl)
 	if err != nil {
 		return nil, err
