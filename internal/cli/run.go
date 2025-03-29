@@ -15,9 +15,9 @@ import (
 )
 
 type run struct {
-	path      string
-	frequency time.Duration
-	url       string
+	Path      string        `koanf:"path"`
+	Frequency time.Duration `koanf:"frequency"`
+	Url       string        `koanf:"url"`
 }
 
 func (r *run) NewRunCommand() *cobra.Command {
@@ -34,15 +34,15 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	apiClient, err := api.NewClient(r.url)
+	apiClient, err := api.NewClient(r.Url)
 	if err != nil {
 		return err
 	}
 
 	tsClient := tailscale.NewClient()
-	refresh := refresher.New(apiClient, tsClient, r.path)
+	refresh := refresher.New(apiClient, tsClient, r.Path)
 
-	sched := scheduler.NewScheduler(cmd.Context(), r.frequency, refresh.Job)
+	sched := scheduler.NewScheduler(cmd.Context(), r.Frequency, refresh.Job)
 
 	sched.Start()
 

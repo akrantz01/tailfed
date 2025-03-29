@@ -128,3 +128,6 @@ fabric.properties
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+### Project Files ###
+tailfed.yml
