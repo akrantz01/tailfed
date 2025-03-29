@@ -2,6 +2,7 @@ package refresher
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -18,6 +19,7 @@ type challengeHandler struct {
 	logger    logrus.FieldLogger
 	refresher *Refresher
 
+	id     string
 	path   string
 	secret string
 }
@@ -33,6 +35,7 @@ func (r *Refresher) launchServer(id, secret string, l net.Listener) *http.Server
 			logger:    logger,
 			refresher: r,
 
+			id:     id,
 			path:   "/" + id,
 			secret: secret,
 		},
@@ -85,6 +88,8 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Data:    &api.ChallengeResponse{Signature: signature},
 	}, 200)
+
+	go ch.refresher.complete(context.Background(), ch.id)
 }
 
 func apiError(w http.ResponseWriter, message string, status int) {

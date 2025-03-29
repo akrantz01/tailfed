@@ -20,6 +20,8 @@ type Refresher struct {
 	ts     *tailscale.Client
 	logger logrus.FieldLogger
 
+	path string
+
 	inFlight map[string]inFlight
 }
 
@@ -29,11 +31,13 @@ type inFlight struct {
 }
 
 // New creates a new Refresher
-func New(api *api.Client, ts *tailscale.Client) *Refresher {
+func New(api *api.Client, ts *tailscale.Client, path string) *Refresher {
 	return &Refresher{
 		api:    api,
 		ts:     ts,
 		logger: logrus.WithField("component", "refresher"),
+
+		path: path,
 
 		inFlight: make(map[string]inFlight),
 	}
