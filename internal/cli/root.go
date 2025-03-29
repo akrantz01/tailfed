@@ -2,21 +2,13 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/logging"
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/env"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/providers/posflag"
-	"github.com/knadh/koanf/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-const envPrefix = "TAILFED_"
 
 type root struct {
 	cmd  *cobra.Command
@@ -62,36 +54,15 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 
 // PersistentPreRun performs the common initializations for all commands
 func (r *root) PersistentPreRun(*cobra.Command, []string) error {
-	if err := r.loadConfig(); err != nil {
-		return err
+	flags := r.cmd.Flags()
+	path, _ := flags.GetString("config")
+	err := configloader.LoadInto(flags, r, configloader.WithEnvPrefix("TAILFED_"), configloader.IncludeConfigFile(path))
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	if err := logging.Initialize(r.LogLevel); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (r *root) loadConfig() error {
-	k := koanf.New(".")
-	flags := r.cmd.Flags()
-
-	path, _ := flags.GetString("config")
-	if err := k.Load(file.Provider(path), yaml.Parser()); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to load config from file %q: %w", path, err)
-	}
-
-	if err := k.Load(env.Provider(envPrefix, ".", cleanEnvVarKey), nil); err != nil {
-		return fmt.Errorf("failed to load config from env: %w", err)
-	}
-
-	if err := k.Load(posflag.Provider(flags, ".", k), nil); err != nil {
-		return fmt.Errorf("failed to load config from cli: %w", err)
-	}
-
-	if err := k.Unmarshal("", r); err != nil {
-		return fmt.Errorf("unable to unmarshal config: %w", err)
 	}
 
 	return nil
@@ -106,10 +77,4 @@ func (r *root) Execute(args []string) {
 		logrus.Error(err.Error())
 		r.exit(1)
 	}
-}
-
-func cleanEnvVarKey(s string) string {
-	formatted := strings.ToLower(strings.TrimPrefix(s, envPrefix))
-	nested := strings.Replace(formatted, "__", ".", -1)
-	return strings.Replace(nested, "_", "-", -1)
 }
