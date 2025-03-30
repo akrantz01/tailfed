@@ -8,14 +8,14 @@ import (
 	"tailscale.com/client/tailscale"
 )
 
-// Client connects to the local Tailscale instance
-type Client struct {
+// Local connects to the local Tailscale instance
+type Local struct {
 	inner tailscale.LocalClient
 }
 
-// NewClient connects to the local Tailscale socket
-func NewClient() *Client {
-	return &Client{
+// NewLocal connects to the local Tailscale socket
+func NewLocal() *Local {
+	return &Local{
 		inner: tailscale.LocalClient{},
 	}
 }
@@ -43,7 +43,7 @@ type Status struct {
 }
 
 // Status retrieves information about the current node
-func (c *Client) Status(ctx context.Context) (*Status, error) {
+func (c *Local) Status(ctx context.Context) (*Status, error) {
 	status, err := c.inner.StatusWithoutPeers(ctx)
 	if err != nil {
 		return nil, err

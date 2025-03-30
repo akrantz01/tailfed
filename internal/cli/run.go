@@ -39,7 +39,7 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	tsClient := tailscale.NewClient()
+	tsClient := tailscale.NewLocal()
 	refresh := refresher.New(apiClient, tsClient, r.Path)
 
 	sched := scheduler.NewScheduler(cmd.Context(), r.Frequency, refresh.Job)

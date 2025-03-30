@@ -17,7 +17,7 @@ import (
 // Refresher holds the state for periodically refreshing the identity token
 type Refresher struct {
 	api    *api.Client
-	ts     *tailscale.Client
+	ts     *tailscale.Local
 	logger logrus.FieldLogger
 
 	path string
@@ -31,7 +31,7 @@ type inFlight struct {
 }
 
 // New creates a new Refresher
-func New(api *api.Client, ts *tailscale.Client, path string) *Refresher {
+func New(api *api.Client, ts *tailscale.Local, path string) *Refresher {
 	return &Refresher{
 		api:    api,
 		ts:     ts,
