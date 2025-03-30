@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/knadh/koanf/parsers/dotenv"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
@@ -27,6 +28,10 @@ func Load(flags *pflag.FlagSet, opts ...Option) (*koanf.Koanf, error) {
 		if err := k.Load(file.Provider(options.file), yaml.Parser()); err != nil {
 			return nil, fmt.Errorf("failed to load from file %q: %w", options.file, err)
 		}
+	}
+
+	if err := k.Load(file.Provider(".env"), dotenv.ParserEnv(options.envPrefix, ".", cleanEnvVarKey(options.envPrefix))); err != nil {
+		return nil, fmt.Errorf("failed to load from dotenv: %w", err)
 	}
 
 	if err := k.Load(env.Provider(options.envPrefix, ".", cleanEnvVarKey(options.envPrefix)), nil); err != nil {
