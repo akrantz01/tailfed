@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/lambda"
+	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
@@ -20,17 +22,19 @@ import (
 // Handler responds to incoming flow start requests, performing the necessary validations before issuing a challenge and
 // kicking off the verification workflow.
 type Handler struct {
-	store storage.Backend
-	ts    *tailscale.API
+	launch launcher.Backend
+	store  storage.Backend
+	ts     *tailscale.API
 }
 
 var _ gateway.Handler = (*Handler)(nil)
 
 // New creates a new handler
-func New(client *tailscale.API, store storage.Backend) *Handler {
+func New(client *tailscale.API, launch launcher.Backend, store storage.Backend) *Handler {
 	return &Handler{
-		store: store,
-		ts:    client,
+		store:  store,
+		launch: launch,
+		ts:     client,
 	}
 }
 
@@ -56,6 +60,11 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("node not found", http.StatusUnprocessableEntity), nil
 	}
 
+	if len(info.Addresses) != 2 {
+		logger.Errorf("expected 2 addresses, got %d", len(info.Addresses))
+		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+	}
+
 	id := uuid.Must(uuid.NewV7()).String()
 
 	secret := make([]byte, 64)
@@ -79,7 +88,22 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("internal server error", http.StatusInternalServerError), nil
 	}
 
-	// TODO: launch challenge verifier(s)
+	addresses := make([]netip.AddrPort, 0, 2)
+	for _, address := range info.Addresses {
+		var port uint16
+		if address.Is4() {
+			port = body.Ports.IPv4
+		} else {
+			port = body.Ports.IPv6
+		}
+
+		addresses = append(addresses, netip.AddrPortFrom(address, port))
+	}
+
+	if err := h.launch.Launch(id, addresses); err != nil {
+		logger.WithError(err).Error("failed to launch verifier")
+		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+	}
 
 	return lambda.Success(&types.StartResponse{ID: id, SigningSecret: secret}), nil
 }

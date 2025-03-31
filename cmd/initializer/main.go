@@ -5,6 +5,7 @@ import (
 
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/initializer"
+	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
@@ -27,10 +28,13 @@ func main() {
 		logrus.WithError(err).Fatal("failed to create tailscale client")
 	}
 
+	// TODO: replace with step function-backed implementation
+	var launch launcher.Backend = nil
+
 	// TODO: replace with dynamodb-backed implementation
 	var store storage.Backend = nil
 
-	handler := initializer.New(tsClient, store)
+	handler := initializer.New(tsClient, launch, store)
 	lambda.Start(handler.Serve)
 }
 

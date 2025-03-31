@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
+	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -73,7 +75,9 @@ func run(*cobra.Command, []string) error {
 
 	tsClient := cfg.Tailscale.NewClient()
 
-	srv, serverErrors := startGateway(tsClient, store)
+	launch := launcher.NewLocal(make(chan types.VerifyRequest))
+
+	srv, serverErrors := startGateway(tsClient, launch, store)
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)

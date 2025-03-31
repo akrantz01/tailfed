@@ -9,6 +9,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/requestid"
 	"github.com/akrantz01/tailfed/internal/initializer"
+	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
@@ -16,11 +17,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func startGateway(tsClient *tailscale.API, store storage.Backend) (*http.Server, <-chan error) {
+func startGateway(tsClient *tailscale.API, launch launcher.Backend, store storage.Backend) (*http.Server, <-chan error) {
 	mux := http.NewServeMux()
 	srv := newServer(cfg.Address, mux, requestid.Middleware, logging.Middleware)
 
-	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, store)))
+	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, launch, store)))
 	// TODO: register finalize handler
 
 	serverErrors := make(chan error, 1)
