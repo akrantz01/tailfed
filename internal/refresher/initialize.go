@@ -22,6 +22,10 @@ func (r *Refresher) Job(ctx context.Context) error {
 		r.logger.Warn("node is unhealthy")
 	}
 
+	if len(status.IPs) != 2 {
+		return fmt.Errorf("expected 2 tailnet ips, got %d", len(status.IPs))
+	}
+
 	listeners, addresses, err := r.bindListeners(status.IPs)
 	if err != nil {
 		return fmt.Errorf("failed to bind listeners: %w", err)
