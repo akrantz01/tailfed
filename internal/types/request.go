@@ -1,5 +1,7 @@
 package types
 
+import "net/netip"
+
 // StartRequest is sent by the client to initiate a token issuance flow
 type StartRequest struct {
 	// Node contains the ID of the Tailscale node
@@ -14,6 +16,14 @@ type Ports struct {
 	IPv4 uint16 `json:"ipv4"`
 	// IPv6 contains the listening port for the v6 address
 	IPv6 uint16 `json:"ipv6"`
+}
+
+// VerifyRequest is sent by the launcher backend to perform the challenge verification
+type VerifyRequest struct {
+	// ID contains the flow's unique identifier
+	ID string `json:"id"`
+	// Addresses contains the IP address-port pairs to test
+	Addresses []netip.AddrPort `json:"addresses"`
 }
 
 // FinalizeRequest is sent by the client once the challenge has been sent

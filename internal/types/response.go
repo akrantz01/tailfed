@@ -24,6 +24,12 @@ type ChallengeResponse struct {
 	Signature string `json:"signature"`
 }
 
+// VerifyResponse is returned by the verifier handler whenever an attempt completes
+type VerifyResponse struct {
+	// Success denotes whether the verification was successful
+	Success bool `json:"success"`
+}
+
 // FinalizeResponse is sent by the finalize handler once the challenge has been successfully authenticated
 type FinalizeResponse struct {
 	// IdentityToken is a signed JWT that can be used to generate AWS credentials
