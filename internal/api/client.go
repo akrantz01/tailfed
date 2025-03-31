@@ -39,16 +39,20 @@ func NewClient(baseUrl string) (*Client, error) {
 
 // Start begins the ID token issuance process
 func (c *Client) Start(ctx context.Context, node string, addresses []string) (*StartResponse, error) {
-	bindings := make([]PortBinding, 0, len(addresses))
+	ports := Ports{}
 	for _, address := range addresses {
 		addr := netip.MustParseAddrPort(address)
-		bindings = append(bindings, PortBinding{
-			Port:    addr.Port(),
-			Network: NetworkFromAddrPort(addr),
-		})
+		switch {
+		case addr.Addr().Is4():
+			ports.IPv4 = addr.Port()
+		case addr.Addr().Is6():
+			ports.IPv6 = addr.Port()
+		default:
+			c.logger.WithField("address", address).Warn("found address that is neither ipv4 nor ipv6")
+		}
 	}
 
-	return doRequest[StartResponse](c, ctx, "start", "/start", &StartRequest{node, bindings})
+	return doRequest[StartResponse](c, ctx, "start", "/start", &StartRequest{node, ports})
 }
 
 // Finalize attempts to finish the request flow and issue a token

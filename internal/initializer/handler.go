@@ -43,7 +43,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 	}
 	logger.WithField("body", body).Debug("")
 
-	if len(body.PortBindings) != 2 {
+	if body.Ports.IPv4 == 0 || body.Ports.IPv6 == 0 {
 		return lambda.Error("must have two port bindings", http.StatusUnprocessableEntity), nil
 	}
 
