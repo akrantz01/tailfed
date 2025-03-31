@@ -15,6 +15,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/requestid"
+	"github.com/akrantz01/tailfed/internal/initializer"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -80,7 +81,8 @@ func run(*cobra.Command, []string) error {
 	mux := http.NewServeMux()
 	srv := newServer(cfg.Address, mux, requestid.Middleware, logging.Middleware)
 
-	// TODO: register handlers with the mux
+	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, store)))
+	// TODO: register finalize handler
 
 	serverErrors := make(chan error, 1)
 	go func() {
