@@ -23,8 +23,8 @@ import (
 
 func main() {
 	cmd := &cobra.Command{
-		Use:           "dev-gateway",
-		Short:         "An API gateway implementation for local development",
+		Use:           "dev",
+		Short:         "Mimics the API gateway and step function for coordinating the Lambda functions",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRunE:       preRun,
