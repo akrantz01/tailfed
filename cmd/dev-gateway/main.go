@@ -49,7 +49,10 @@ func main() {
 
 // preRun configures the runtime environment
 func preRun(cmd *cobra.Command, _ []string) error {
-	err := configloader.LoadInto(cmd.Flags(), &cfg, configloader.WithEnvPrefix("DEV_GATEWAY_"))
+	err := configloader.LoadInto(&cfg,
+		configloader.WithFlags(cmd.Flags()),
+		configloader.WithEnvPrefix("DEV_GATEWAY_"),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

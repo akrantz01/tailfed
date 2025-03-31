@@ -56,7 +56,11 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 func (r *root) PersistentPreRun(*cobra.Command, []string) error {
 	flags := r.cmd.Flags()
 	path, _ := flags.GetString("config")
-	err := configloader.LoadInto(flags, r, configloader.WithEnvPrefix("TAILFED_"), configloader.IncludeConfigFile(path))
+	err := configloader.LoadInto(r,
+		configloader.WithFlags(flags),
+		configloader.WithEnvPrefix("TAILFED_"),
+		configloader.IncludeConfigFile(path),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
