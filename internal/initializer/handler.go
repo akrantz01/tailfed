@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/lambda"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
+	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/uuid"
 )
@@ -37,7 +37,7 @@ func New(client *tailscale.API, store storage.Backend) *Handler {
 func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	logger := logging.FromContext(ctx)
 
-	var body api.StartRequest
+	var body types.StartRequest
 	if err := json.Unmarshal([]byte(req.Body), &body); err != nil {
 		return lambda.Error("invalid request body", http.StatusUnprocessableEntity), nil
 	}
@@ -81,5 +81,5 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 
 	// TODO: launch challenge verifier(s)
 
-	return lambda.Success(&api.StartResponse{ID: id, SigningSecret: secret}), nil
+	return lambda.Success(&types.StartResponse{ID: id, SigningSecret: secret}), nil
 }

@@ -11,12 +11,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/requestid"
 	"github.com/akrantz01/tailfed/internal/initializer"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -159,7 +159,7 @@ func internalServerError(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusInternalServerError)
 
-	resp := api.Response[struct{}]{
+	resp := types.Response[struct{}]{
 		Success: false,
 		Error:   "internal server error",
 	}

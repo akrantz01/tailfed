@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/akrantz01/tailfed/internal/api"
+	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/aws/aws-lambda-go/events"
 )
 
 // Success creates a successful HTTP response with some data
 func Success[T any](data *T) *events.APIGatewayProxyResponse {
-	return makeJsonResponse(&api.Response[T]{
+	return makeJsonResponse(&types.Response[T]{
 		Success: true,
 		Data:    data,
 	}, http.StatusOK)
@@ -18,7 +18,7 @@ func Success[T any](data *T) *events.APIGatewayProxyResponse {
 
 // Error creates an error HTTP response with a message and status code
 func Error(message string, statusCode int) *events.APIGatewayProxyResponse {
-	return makeJsonResponse(&api.Response[struct{}]{
+	return makeJsonResponse(&types.Response[struct{}]{
 		Success: false,
 		Error:   message,
 	}, statusCode)

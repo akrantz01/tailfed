@@ -11,7 +11,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/akrantz01/tailfed/internal/api"
+	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -84,22 +84,22 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = mac.Write(buf.Bytes())
 	signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
 
-	response(w, &api.Response[api.ChallengeResponse]{
+	response(w, &types.Response[types.ChallengeResponse]{
 		Success: true,
-		Data:    &api.ChallengeResponse{Signature: signature},
+		Data:    &types.ChallengeResponse{Signature: signature},
 	}, 200)
 
 	go ch.refresher.complete(context.Background(), ch.id)
 }
 
 func apiError(w http.ResponseWriter, message string, status int) {
-	response(w, &api.Response[struct{}]{
+	response(w, &types.Response[struct{}]{
 		Success: false,
 		Error:   message,
 	}, status)
 }
 
-func response[R any](w http.ResponseWriter, res *api.Response[R], status int) {
+func response[R any](w http.ResponseWriter, res *types.Response[R], status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 

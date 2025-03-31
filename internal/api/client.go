@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,8 +39,8 @@ func NewClient(baseUrl string) (*Client, error) {
 }
 
 // Start begins the ID token issuance process
-func (c *Client) Start(ctx context.Context, node string, addresses []string) (*StartResponse, error) {
-	ports := Ports{}
+func (c *Client) Start(ctx context.Context, node string, addresses []string) (*types.StartResponse, error) {
+	ports := types.Ports{}
 	for _, address := range addresses {
 		addr := netip.MustParseAddrPort(address)
 		switch {
@@ -52,12 +53,12 @@ func (c *Client) Start(ctx context.Context, node string, addresses []string) (*S
 		}
 	}
 
-	return doRequest[StartResponse](c, ctx, "start", "/start", &StartRequest{node, ports})
+	return doRequest[types.StartResponse](c, ctx, "start", "/start", &types.StartRequest{Node: node, Ports: ports})
 }
 
 // Finalize attempts to finish the request flow and issue a token
 func (c *Client) Finalize(ctx context.Context, id string) (string, error) {
-	res, err := doRequest[FinalizeResponse](c, ctx, "finalize", "/finalize", &FinalizeRequest{id})
+	res, err := doRequest[types.FinalizeResponse](c, ctx, "finalize", "/finalize", &types.FinalizeRequest{ID: id})
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +117,7 @@ func doRequest[R any](c *Client, ctx context.Context, name, path string, body an
 	defer res.Body.Close()
 	logger.WithField("status", res.StatusCode).Debug("got response")
 
-	var resBody Response[R]
+	var resBody types.Response[R]
 	if err := json.NewDecoder(res.Body).Decode(&resBody); err != nil {
 		logger.WithError(err).Error("failed to deserialize response")
 		return nil, fmt.Errorf("failed to deserialize response: %w", err)
