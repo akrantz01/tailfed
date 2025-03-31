@@ -32,6 +32,9 @@ func main() {
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The address and port combination to listen on")
 
+	cmd.Flags().StringP("storage.backend", "b", "filesystem", "Where to store data for in-flight flows (choices: filesystem)")
+	cmd.Flags().String("storage.path", "flows", "The directory path used by the filesystem backend")
+
 	cmd.Flags().String("tailscale.tailnet", "", "The name of the tailnet to issue tokens for")
 	cmd.Flags().String("tailscale.api-key", "", "The Tailscale API key to authenticate with")
 	cmd.Flags().String("tailscale.oauth.client-id", "", "The Tailscale OAuth client ID to authenticate with")
@@ -64,6 +67,11 @@ func preRun(cmd *cobra.Command, _ []string) error {
 
 // run configures and launches the development gateway
 func run(*cobra.Command, []string) error {
+	store, err := cfg.Storage.NewBackend()
+	if err != nil {
+		return fmt.Errorf("failed to open storage: %w", err)
+	}
+
 	tsClient := cfg.Tailscale.NewClient()
 
 	mux := http.NewServeMux()

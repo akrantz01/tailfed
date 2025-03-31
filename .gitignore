@@ -130,4 +130,5 @@ fabric.properties
 *.vsix
 
 ### Project Files ###
+flows/
 tailfed.yml
