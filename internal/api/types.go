@@ -58,7 +58,7 @@ type StartResponse struct {
 	// ID is a unique identifier for the challenge
 	ID string `json:"id"`
 	// SigningSecret is used to generate a HMAC-SHA256 signature of the client details
-	SigningSecret string `json:"signing-secret"`
+	SigningSecret []byte `json:"signing-secret"`
 }
 
 // ChallengeResponse is returned by the client challenge handler

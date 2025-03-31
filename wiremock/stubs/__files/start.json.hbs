@@ -2,6 +2,6 @@
   "success": true,
   "data": {
     "id": "{{randomValue type='UUID'}}",
-    "signing-secret": "{{randomValue length=(randomInt lower=32 upper=48) type='ALPHANUMERIC'}}"
+    "signing-secret": "{{base64 (randomValue length=64 type='ALPHANUMERIC')}}"
   }
 }

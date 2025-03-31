@@ -21,10 +21,10 @@ type challengeHandler struct {
 
 	id     string
 	path   string
-	secret string
+	secret []byte
 }
 
-func (r *Refresher) launchServer(id, secret string, l net.Listener) *http.Server {
+func (r *Refresher) launchServer(id string, secret []byte, l net.Listener) *http.Server {
 	logger := logrus.WithFields(map[string]any{
 		"component": "refresher.server",
 		"address":   l.Addr().String(),
@@ -80,7 +80,7 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	buf.WriteRune('|')
 	buf.WriteString(status.OS)
 
-	mac := hmac.New(sha256.New, []byte(ch.secret))
+	mac := hmac.New(sha256.New, ch.secret)
 	_, _ = mac.Write(buf.Bytes())
 	signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
 
