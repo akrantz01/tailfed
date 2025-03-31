@@ -20,13 +20,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type config struct {
-	LogLevel string `koanf:"log-level"`
-	Address  string `koanf:"address"`
-}
-
-var cfg config
-
 func main() {
 	cmd := &cobra.Command{
 		Use:           "dev-gateway",
@@ -38,6 +31,11 @@ func main() {
 	}
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The address and port combination to listen on")
+
+	cmd.Flags().String("tailscale.tailnet", "", "The name of the tailnet to issue tokens for")
+	cmd.Flags().String("tailscale.api-key", "", "The Tailscale API key to authenticate with")
+	cmd.Flags().String("tailscale.oauth.client-id", "", "The Tailscale OAuth client ID to authenticate with")
+	cmd.Flags().String("tailscale.oauth.client-secret", "", "The Tailscale OAuth client secret to authenticate with")
 
 	err := cmd.Execute()
 	if err != nil {
@@ -57,11 +55,17 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
 	return nil
 }
 
 // run configures and launches the development gateway
 func run(*cobra.Command, []string) error {
+	tsClient := cfg.Tailscale.NewClient()
+
 	mux := http.NewServeMux()
 	srv := newServer(cfg.Address, mux, requestid.Middleware, logging.Middleware)
 
