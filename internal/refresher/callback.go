@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net"
@@ -82,7 +81,7 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	mac := hmac.New(sha256.New, ch.secret)
 	_, _ = mac.Write(buf.Bytes())
-	signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	signature := mac.Sum(nil)
 
 	response(w, &types.Response[types.ChallengeResponse]{
 		Success: true,
