@@ -39,7 +39,7 @@ func New(client *tailscale.API, launch launcher.Backend, store storage.Backend) 
 }
 
 func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	logger := logging.FromContext(ctx)
+	logger := logging.FromContext(ctx).WithField("component", "logger")
 
 	var body types.StartRequest
 	if err := json.Unmarshal([]byte(req.Body), &body); err != nil {
