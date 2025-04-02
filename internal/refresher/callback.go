@@ -2,7 +2,6 @@ package refresher
 
 import (
 	"bytes"
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
@@ -87,8 +86,6 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Data:    &types.ChallengeResponse{Signature: signature},
 	}, 200)
-
-	go ch.refresher.complete(context.Background(), ch.id)
 }
 
 func apiError(w http.ResponseWriter, message string, status int) {

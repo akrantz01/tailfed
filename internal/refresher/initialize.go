@@ -48,6 +48,8 @@ func (r *Refresher) Job(ctx context.Context) error {
 		servers:   servers,
 	}
 
+	go r.complete(ctx, res.ID)
+
 	return nil
 }
 
