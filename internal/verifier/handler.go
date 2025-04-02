@@ -29,7 +29,7 @@ func New(client *http.Client, store storage.Backend, tailnet string) *Handler {
 
 func (h *Handler) Serve(ctx context.Context, req types.VerifyRequest) (*types.VerifyResponse, error) {
 	logger := logging.FromContext(ctx).WithFields(map[string]any{
-		"id":      req.ID,
+		"flow":    req.ID,
 		"address": req.Address.String(),
 	})
 
