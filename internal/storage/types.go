@@ -45,8 +45,13 @@ func (s *Status) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(*s))
 }
 
-func (s *Status) UnmarshalJSON(raw []byte) error {
-	switch strings.ToLower(strings.TrimSpace(string(raw))) {
+func (s *Status) UnmarshalJSON(encoded []byte) error {
+	var raw string
+	if err := json.Unmarshal(encoded, &raw); err != nil {
+		return err
+	}
+
+	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "pending":
 		*s = StatusPending
 	case "failed":
