@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/netip"
+	"strings"
 
 	"tailscale.com/client/tailscale"
 )
@@ -60,7 +61,7 @@ func (c *Local) Status(ctx context.Context) (*Status, error) {
 		IPs:       status.TailscaleIPs,
 		ID:        string(status.Self.ID),
 		PublicKey: status.Self.PublicKey.String(),
-		DNSName:   status.Self.DNSName,
+		DNSName:   strings.TrimSuffix(status.Self.DNSName, "."),
 		OS:        status.Self.OS,
 	}, nil
 }
