@@ -8,7 +8,7 @@ help:
 	$(info test     - run unit tests)
 	$(info coverage - run unit tests with coverage)
 
-build: out/client
+build: out/client out/dev
 
 test:
 	go test $(TEST_ARGS) ./...
