@@ -74,7 +74,7 @@ func run(*cobra.Command, []string) error {
 
 	tsClient := cfg.Tailscale.NewClient()
 
-	stopLauncher, bus := startLauncher(store)
+	stopLauncher, bus := startLauncher(store, cfg.Tailscale.Tailnet)
 	launch := launcher.NewLocal(bus)
 
 	srv, serverErrors := startGateway(tsClient, launch, store)
