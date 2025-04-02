@@ -29,8 +29,9 @@ func New(client *http.Client, store storage.Backend, tailnet string) *Handler {
 
 func (h *Handler) Serve(ctx context.Context, req types.VerifyRequest) (*types.VerifyResponse, error) {
 	logger := logging.FromContext(ctx).WithFields(map[string]any{
-		"flow":    req.ID,
-		"address": req.Address.String(),
+		"component": "verifier",
+		"flow":      req.ID,
+		"address":   req.Address.String(),
 	})
 
 	flow, err := h.store.Get(ctx, req.ID)
