@@ -59,8 +59,9 @@ func performVerifyRequest(ctx context.Context, store storage.Backend, tailnet st
 			Address: req.Addresses[attempts%len(req.Addresses)],
 		})
 		if err != nil {
+			// TODO: disambiguate between fatal and non-fatal errors
 			logger.WithError(err).Error("verifier execution failed")
-			continue
+			return
 		}
 
 		if resp.Success {
