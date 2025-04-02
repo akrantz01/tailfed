@@ -22,7 +22,14 @@ func (r *Refresher) complete(ctx context.Context, id string) {
 		logger.WithField("next", next).WithError(err).Warn("finalization not yet complete")
 	}
 
-	token, err := backoff.Retry(ctx, operation, backoff.WithMaxElapsedTime(1*time.Minute), backoff.WithNotify(notify))
+	expBackoff := backoff.NewExponentialBackOff()
+	expBackoff.InitialInterval = 5 * time.Second
+
+	token, err := backoff.Retry(ctx, operation,
+		backoff.WithBackOff(expBackoff),
+		backoff.WithMaxElapsedTime(3*time.Minute),
+		backoff.WithNotify(notify),
+	)
 	if err != nil {
 		logger.WithError(err).Error("failed to get authorization token")
 		return
