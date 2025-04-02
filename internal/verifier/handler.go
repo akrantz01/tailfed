@@ -48,15 +48,21 @@ func (h *Handler) Serve(ctx context.Context, req types.VerifyRequest) (*types.Ve
 		logger.WithError(err).Error("failed to send request")
 		return &types.VerifyResponse{Success: false}, nil
 	}
+	defer res.Body.Close()
 
-	var challenge types.ChallengeResponse
+	var challenge types.Response[types.ChallengeResponse]
 	if err := json.NewDecoder(res.Body).Decode(&challenge); err != nil {
 		logger.WithError(err).Error("failed to deserialize challenge response")
 		return &types.VerifyResponse{Success: false}, nil
 	}
 
+	if !challenge.Success {
+		logger.WithField("err", challenge.Error).Error("unsuccessful response from client")
+		return &types.VerifyResponse{Success: false}, nil
+	}
+
 	expected := h.generateMac(flow)
-	if !hmac.Equal(challenge.Signature, expected) {
+	if !hmac.Equal(challenge.Data.Signature, expected) {
 		logger.Warn("invalid signature")
 		return &types.VerifyResponse{Success: false}, nil
 	}
