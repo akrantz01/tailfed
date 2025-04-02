@@ -7,6 +7,27 @@ resource "aws_api_gateway_rest_api" "default" {
   }
 }
 
+resource "aws_api_gateway_deployment" "default" {
+  rest_api_id = aws_api_gateway_rest_api.default.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  triggers = {
+    # TODO: make this update automatically
+    redeployment = "1"
+  }
+}
+
+resource "aws_api_gateway_stage" "production" {
+  rest_api_id   = aws_api_gateway_rest_api.default.id
+  deployment_id = aws_api_gateway_deployment.default.id
+
+  stage_name = "production"
+  # TODO: enable throttling
+}
+
 resource "aws_api_gateway_resource" "start" {
   rest_api_id = aws_api_gateway_rest_api.default.id
   parent_id   = aws_api_gateway_rest_api.default.root_resource_id
