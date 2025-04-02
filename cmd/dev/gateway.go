@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/finalizer"
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/requestid"
 	"github.com/akrantz01/tailfed/internal/initializer"
@@ -22,7 +23,7 @@ func startGateway(tsClient *tailscale.API, launch launcher.Backend, store storag
 	srv := newServer(cfg.Address, mux, requestid.Middleware, logging.Middleware)
 
 	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, launch, store)))
-	// TODO: register finalize handler
+	mux.Handle("POST /finalize", lambdaHandler(finalizer.New(store)))
 
 	serverErrors := make(chan error, 1)
 	go func() {
