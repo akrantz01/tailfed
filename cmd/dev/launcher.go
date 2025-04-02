@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/sirupsen/logrus"
@@ -14,8 +15,8 @@ const (
 	startInterval = 500 * time.Millisecond
 )
 
-func startLauncher(store storage.Backend) (context.CancelFunc, chan<- types.VerifyRequest) {
-	bus := make(chan types.VerifyRequest, 3)
+func startLauncher(store storage.Backend) (context.CancelFunc, chan<- launcher.Request) {
+	bus := make(chan launcher.Request, 3)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go launcherLoop(ctx, store, bus)
@@ -23,7 +24,7 @@ func startLauncher(store storage.Backend) (context.CancelFunc, chan<- types.Veri
 	return cancel, bus
 }
 
-func launcherLoop(ctx context.Context, store storage.Backend, bus <-chan types.VerifyRequest) {
+func launcherLoop(ctx context.Context, store storage.Backend, bus <-chan launcher.Request) {
 	logger := logrus.WithField("component", "launcher")
 	logger.Debug("started local launcher")
 
@@ -39,7 +40,7 @@ func launcherLoop(ctx context.Context, store storage.Backend, bus <-chan types.V
 	}
 }
 
-func performVerifyRequest(ctx context.Context, store storage.Backend, logger logrus.FieldLogger, req types.VerifyRequest) {
+func performVerifyRequest(ctx context.Context, store storage.Backend, logger logrus.FieldLogger, req launcher.Request) {
 	logger.Info("received launch")
 
 	attempts := 1

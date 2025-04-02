@@ -22,8 +22,8 @@ type Ports struct {
 type VerifyRequest struct {
 	// ID contains the flow's unique identifier
 	ID string `json:"id"`
-	// Addresses contains the IP address-port pairs to test
-	Addresses []netip.AddrPort `json:"addresses"`
+	// Address contains the IP address-port pairs to test
+	Address netip.AddrPort `json:"address"`
 }
 
 // FinalizeRequest is sent by the client once the challenge has been sent
