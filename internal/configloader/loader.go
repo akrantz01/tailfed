@@ -2,6 +2,7 @@ package configloader
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/dotenv"
@@ -30,7 +31,9 @@ func Load(opts ...Option) (*koanf.Koanf, error) {
 	}
 
 	if err := k.Load(file.Provider(".env"), dotenv.ParserEnv(options.envPrefix, ".", cleanEnvVarKey(options.envPrefix))); err != nil {
-		return nil, fmt.Errorf("failed to load from dotenv: %w", err)
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to load from dotenv: %w", err)
+		}
 	}
 
 	if err := k.Load(env.Provider(options.envPrefix, ".", cleanEnvVarKey(options.envPrefix)), nil); err != nil {
