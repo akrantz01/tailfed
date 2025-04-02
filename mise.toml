@@ -2,3 +2,4 @@
 go = "latest"
 golangci-lint = "latest"
 node = "22.14.0"
+opentofu = "latest"
