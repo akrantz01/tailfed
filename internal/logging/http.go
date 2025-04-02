@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -19,7 +18,7 @@ func Middleware(next http.Handler) http.Handler {
 			"method": r.Method,
 			"path":   r.URL.Path,
 		})
-		ctx := context.WithValue(r.Context(), contextKey{}, logger)
+		ctx := WithLogger(r.Context(), logger)
 
 		start := time.Now()
 
