@@ -7,7 +7,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -tags lambda.norpc -o handler ./cmd/$FUNCTION
+RUN CGO_ENABLED=0 go build -tags lambda.norpc -o handler ./cmd/$FUNCTION
 
 FROM public.ecr.aws/lambda/provided:al2023
 
