@@ -9,7 +9,12 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -tags lambda.norpc -o handler ./cmd/$FUNCTION
 
-FROM public.ecr.aws/lambda/provided:al2023
+FROM public.ecr.aws/lambda/provided:al2023 AS bare
+
+COPY --from=build /app/handler ./handler
+ENTRYPOINT ["./handler"]
+
+FROM public.ecr.aws/lambda/provided:al2023 AS tailscale
 
 COPY --from=docker.io/tailscale/tailscale:stable /usr/local/bin/tailscaled /var/runtime/tailscaled
 COPY --from=docker.io/tailscale/tailscale:stable /usr/local/bin/tailscale /var/runtime/tailscale
