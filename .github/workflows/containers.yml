@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Build (${{ matrix.function }}, ${{ matrix.platform }})
+    name: Build (${{ matrix.function }}, ${{ matrix.arch }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -20,15 +20,15 @@ jobs:
         function:
           - initializer
           - finalizer
-        platform:
-          - linux/amd64
-          - linux/arm64
+        arch:
+          - amd64
+          - arm64
         include:
           - function: verifier
-            platform: linux/amd64
+            arch: amd64
             target: tailscale
           - function: verifier
-            platform: linux/arm64
+            arch: arm64
             target: tailscale
     permissions:
       attestations: write
@@ -55,6 +55,8 @@ jobs:
         id: meta
         with:
           images: ${{ steps.ecr.outputs.registry }}/krantz/tailfed/${{ matrix.function }}
+          flavor: |
+            suffix=-${{ matrix.arch }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -65,29 +67,26 @@ jobs:
       - uses: docker/build-push-action@v6
         id: build
         with:
-          platforms: ${{ matrix.platform }}
+          platforms: linux/${{ matrix.arch }}
           target: ${{ matrix.target || 'bare' }}
           build-args: |
             FUNCTION=${{ matrix.function }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}
           provenance: mode=max
           cache-from: type=gha
           cache-to: type=gha
 
       - name: Export digest
-        run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
-          
+        run: |          
           mkdir -p "${{ runner.temp }}/digests"
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ matrix.arch }}
           path: ${{ runner.temp }}/digests
           if-no-files-found: error
           retention-days: 1
