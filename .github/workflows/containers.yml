@@ -20,7 +20,7 @@ jobs:
           - initializer
           - finalizer
         include:
-          - function: initializer
+          - function: verifier
             target: tailscale
     steps:
       - uses: actions/checkout@v4
