@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Build
+    name: Build (${{ matrix.function }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
