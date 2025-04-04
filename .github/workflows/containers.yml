@@ -86,7 +86,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ matrix.arch }}
+          name: digests-${{ matrix.function }}-${{ matrix.arch }}
           path: ${{ runner.temp }}/digests
           if-no-files-found: error
           retention-days: 1
