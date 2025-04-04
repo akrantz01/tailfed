@@ -144,7 +144,7 @@ jobs:
         run: |
           short_sha=$(cut -c1-8 <<< "$GITHUB_SHA")
           docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ") <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY_URL }}@sha256:%s ' *)
 
       - name: Inspect manifest
