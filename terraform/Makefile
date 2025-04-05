@@ -14,7 +14,7 @@ help:
 init: .tf-init
 
 fmt: $(SRCS)
-	$(TERRAFORM) fmt
+	$(TERRAFORM) fmt -recursive
 
 plan: $(SRCS)
 	$(TERRAFORM) plan
