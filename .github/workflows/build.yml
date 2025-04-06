@@ -4,14 +4,47 @@ on:
   push:
 
 jobs:
-  compile:
-    name: Compile ${{ matrix.binary }} (${{ matrix.arch }})
+  client:
+    name: Client ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - darwin
+          - linux
+          - windows
+        arch:
+          - amd64
+          - arm64
+        exclude:
+          - os: windows
+            arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          cache: true
+          cache-dependency-path: go.sum
+          go-version-file: go.mod
+
+      - run: make build-client
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client
+          path: out/client
+
+  lambda:
+    name: ${{ matrix.binary }} Lambda (${{ matrix.arch }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         binary:
-          - client
           - initializer
           - finalizer
           - verifier
