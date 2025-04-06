@@ -108,7 +108,7 @@ signs:
     artifacts: all
 
 sboms:
-  - artifacts: any
+  - artifacts: binary
 
 changelog:
   sort: asc
