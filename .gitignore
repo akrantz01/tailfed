@@ -132,3 +132,6 @@ fabric.properties
 ### Project Files ###
 flows/
 tailfed.yml
+
+# Added by goreleaser init:
+dist/
