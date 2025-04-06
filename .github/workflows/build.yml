@@ -39,12 +39,12 @@ jobs:
           path: out/client
 
   lambda:
-    name: ${{ matrix.binary }} Lambda (${{ matrix.arch }})
+    name: ${{ matrix.function }} Lambda (${{ matrix.arch }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        binary:
+        function:
           - initializer
           - finalizer
           - verifier
@@ -59,12 +59,12 @@ jobs:
           cache-dependency-path: go.sum
           go-version-file: go.mod
 
-      - run: make out/${{ matrix.binary }}
+      - run: make build-lambda LAMBDA_BINARIES=${{ matrix.function }}
         env:
           GOOS: linux
           GOARCH: ${{ matrix.arch }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.binary }}
+          name: ${{ matrix.function }}
           path: out/${{ matrix.binary }}
