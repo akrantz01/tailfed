@@ -22,12 +22,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          architecture: ${{ matrix.arch }}
           cache: true
           cache-dependency-path: go.sum
           go-version-file: go.mod
 
       - run: make out/${{ matrix.binary }}
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
 
       - uses: actions/upload-artifact@v4
         with:
