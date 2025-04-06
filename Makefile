@@ -21,14 +21,14 @@ build-lambda: export CGO_ENABLED := 0
 build-lambda: out/finalizer out/initializer out/verifier
 
 test:
-	go test $(TEST_ARGS) ./...
+	go test $(GO_ARGS) ./...
 
 coverage: cover.out
 	go tool cover -html cover.out
 
 .SECONDEXPANSION:
 
-cover.out: TEST_ARGS := -coverprofile cover.out
+cover.out: GO_ARGS := -coverprofile cover.out
 cover.out: test
 
 out/%: $$(call src_files,$$(@F))
