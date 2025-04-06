@@ -1,10 +1,8 @@
 package main
 
 import (
-	"net/http"
-	"net/url"
+	"fmt"
 	"os"
-	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/logging"
@@ -12,7 +10,10 @@ import (
 	"github.com/akrantz01/tailfed/internal/verifier"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/sirupsen/logrus"
+	"tailscale.com/tsnet"
 )
+
+var ts *tsnet.Server
 
 func main() {
 	var config Config
@@ -24,20 +25,14 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize logging")
 	}
 
-	proxyUrl, err := url.Parse(os.Getenv("ALL_PROXY"))
-	if err != nil {
-		logrus.WithError(err).Fatal("failed to parse tailscale proxy url")
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)},
-		Timeout:   15 * time.Second,
+	if err := connectToTailscale(config.Tailscale.AuthKey); err != nil {
+		logrus.WithError(err).Fatal("failed to connect to tailscale")
 	}
 
 	// TODO: replace with dynamodb-backed implementation
 	var store storage.Backend = nil
 
-	handler := verifier.New(client, store, config.Tailscale.Tailnet)
+	handler := verifier.New(ts.HTTPClient(), store, config.Tailscale.Tailnet)
 	lambda.Start(handler.Serve)
 }
 
@@ -48,5 +43,30 @@ type Config struct {
 }
 
 type Tailscale struct {
+	AuthKey string `koanf:"auth-key"`
 	Tailnet string `koanf:"tailnet"`
+}
+
+func connectToTailscale(authKey string) error {
+	if ts != nil {
+		return nil
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return fmt.Errorf("could not get hostname: %w", err)
+	}
+
+	ts = &tsnet.Server{
+		AuthKey:   authKey,
+		Ephemeral: true,
+		Hostname:  fmt.Sprintf("tailfed-initializer-%s-%s", os.Getenv("AWS_LAMBDA_FUNCTION_VERSION"), hostname),
+		Dir:       "/tmp",
+	}
+	if err := ts.Start(); err != nil {
+		ts = nil
+		return err
+	}
+
+	return nil
 }
