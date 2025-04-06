@@ -20,8 +20,19 @@ before:
 builds:
   - id: client
     main: ./cmd/client
+    goarch:
+      - "386"
+      - amd64
+      - arm
+      - arm64
+    goarm: [ "6", "7" ]
     env:
       - CGO_ENABLED=0
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
 
   - id: finalizer
     main: ./cmd/finalizer
@@ -64,37 +75,31 @@ builds:
 
 archives:
   - id: client
-    ids: [client]
-    formats: [tar.gz]
+    ids: [ client ]
+    formats: [ binary ]
     name_template: >-
-      {{ .ProjectName }}_
-      {{- .Version }}_
+      client_
       {{- .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
+      {{- if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
-    format_overrides:
-      - goos: windows
-        formats: [zip]
 
   - id: finalizer
     ids: [ finalizer ]
     formats: [ zip ]
-    name_template: "{{ .Binary }}-{{ .Arch }}"
+    name_template: finalizer-{{ .Arch }}
     files: [ none* ]
 
   - id: initializer
     ids: [ initializer ]
     formats: [ zip ]
-    name_template: "{{ .Binary }}-{{ .Arch }}"
+    name_template: initializer-{{ .Arch }}
     files: [ none* ]
 
   - id: verifier
     ids: [ verifier ]
     formats: [ zip ]
-    name_template: "{{ .Binary }}-{{ .Arch }}"
+    name_template: verifier-{{ .Arch }}
     files: [ none* ]
 
 signs:
