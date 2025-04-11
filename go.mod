@@ -5,6 +5,7 @@ go 1.24.1
 require (
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/cenkalti/backoff/v5 v5.0.2
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/jonboulle/clockwork v0.5.0
 	github.com/knadh/koanf/parsers/dotenv v1.0.0
