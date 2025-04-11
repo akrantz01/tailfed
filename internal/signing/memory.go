@@ -4,10 +4,12 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
+	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 // inMemory generates ephemeral private and public keys for signing
@@ -25,7 +27,13 @@ func NewInMemory() (Backend, error) {
 		return nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
-	id := uuid.Must(uuid.NewV7()).String()
+	der, err := x509.MarshalPKIXPublicKey(&private.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode public key to der: %w", err)
+	}
+	fingerprint := sha1.Sum(der)
+	id := hex.EncodeToString(fingerprint[:])
+
 	return &inMemory{id, private}, nil
 }
 
