@@ -29,7 +29,11 @@ func main() {
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The address and port combination to listen on")
 
-	cmd.Flags().StringP("storage.backend", "b", "filesystem", "Where to store data for in-flight flows (choices: filesystem)")
+	cmd.Flags().String("signing.backend", "memory", "The method used to sign JWTs (choices: memory)")
+	cmd.Flags().Duration("signing.validity", 1*time.Hour, "How long the generated tokens should be valid for")
+	cmd.Flags().String("signing.audience", "sts.amazonaws.com", "The audience the tokens are issued for")
+
+	cmd.Flags().String("storage.backend", "filesystem", "Where to store data for in-flight flows (choices: filesystem)")
 	cmd.Flags().String("storage.path", "flows", "The directory path used by the filesystem backend")
 
 	cmd.Flags().String("tailscale.tailnet", "", "The name of the tailnet to issue tokens for")
@@ -67,6 +71,11 @@ func preRun(cmd *cobra.Command, _ []string) error {
 
 // run configures and launches the development gateway
 func run(*cobra.Command, []string) error {
+	signer, err := cfg.Signing.NewBackend()
+	if err != nil {
+		return fmt.Errorf("failed to create signing backend: %w", err)
+	}
+
 	store, err := cfg.Storage.NewBackend()
 	if err != nil {
 		return fmt.Errorf("failed to open storage: %w", err)
@@ -77,7 +86,7 @@ func run(*cobra.Command, []string) error {
 	stopLauncher, bus := startLauncher(store, cfg.Tailscale.Tailnet)
 	launch := launcher.NewLocal(bus)
 
-	srv, serverErrors := startGateway(tsClient, launch, store)
+	srv, serverErrors := startGateway(tsClient, launch, signer, store)
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)

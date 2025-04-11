@@ -4,12 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
+	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 )
 
 var (
+	signingBackends = []string{"memory"}
 	storageBackends = []string{"filesystem"}
 
 	cfg config
@@ -19,11 +22,24 @@ type config struct {
 	LogLevel string `koanf:"log-level"`
 	Address  string `koanf:"address"`
 
+	Signing   signingConfig   `koanf:"signing"`
 	Storage   storageConfig   `koanf:"storage"`
 	Tailscale tailscaleConfig `koanf:"tailscale"`
 }
 
 func (c *config) Validate() error {
+	if !slices.Contains(signingBackends, c.Signing.Backend) {
+		return fmt.Errorf("unknown signing backend %q", c.Signing.Backend)
+	}
+
+	if len(c.Signing.Audience) == 0 {
+		return errors.New("token audience cannot be empty")
+	}
+
+	if c.Signing.Validity <= 0 {
+		return errors.New("token validity must be positive")
+	}
+
 	if !slices.Contains(storageBackends, c.Storage.Backend) {
 		return fmt.Errorf("unknown storage backend %q", c.Storage.Backend)
 	}
@@ -41,6 +57,21 @@ func (c *config) Validate() error {
 	}
 
 	return nil
+}
+
+type signingConfig struct {
+	Backend  string        `koanf:"backend"`
+	Validity time.Duration `koanf:"validity"`
+	Audience string        `koanf:"audience"`
+}
+
+func (s *signingConfig) NewBackend() (signing.Backend, error) {
+	switch s.Backend {
+	case "memory":
+		return signing.NewInMemory()
+	default:
+		return nil, errors.New("unknown signing backend")
+	}
 }
 
 type storageConfig struct {
