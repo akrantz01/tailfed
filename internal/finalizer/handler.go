@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/lambda"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/aws/aws-lambda-go/events"
@@ -15,14 +17,18 @@ import (
 
 // Handler responds to incoming flow finalization requests, issuing the token if the challenge was successful.
 type Handler struct {
-	store storage.Backend
+	audience string
+	validity time.Duration
+
+	signer signing.Backend
+	store  storage.Backend
 }
 
 var _ gateway.Handler = (*Handler)(nil)
 
 // New creates a new handler
-func New(store storage.Backend) *Handler {
-	return &Handler{store}
+func New(audience string, validity time.Duration, signer signing.Backend, store storage.Backend) *Handler {
+	return &Handler{audience, validity, signer, store}
 }
 
 func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
@@ -47,8 +53,12 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("challenge not verified", http.StatusForbidden), nil
 	}
 
-	// TODO: generate and sign jwt
-	token := "this.will.be.the.token"
+	claims := signing.NewClaims(req.RequestContext.DomainName, h.audience, flow.DNSName, h.validity)
+	token, err := h.signer.Sign(claims)
+	if err != nil {
+		logger.WithError(err).Error("failed to sign JWT")
+		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+	}
 
 	if err := h.store.Delete(ctx, flow.ID); err != nil {
 		logger.WithError(err).Error("failed to delete flow")
