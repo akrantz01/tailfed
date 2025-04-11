@@ -10,6 +10,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/verifier"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/sirupsen/logrus"
+	"tailscale.com/hostinfo"
 	"tailscale.com/tsnet"
 )
 
@@ -51,6 +52,8 @@ func connectToTailscale(authKey string) error {
 	if ts != nil {
 		return nil
 	}
+
+	hostinfo.SetApp("tailfed-verifier")
 
 	hostname, err := os.Hostname()
 	if err != nil {
