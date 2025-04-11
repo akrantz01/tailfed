@@ -45,6 +45,7 @@ func FromHttpRequest(r *http.Request) (events.APIGatewayProxyRequest, error) {
 			ResourceID: "mock-resource",
 			RequestID:  requestid.Get(r),
 
+			DomainName:   "mock-api.execute-api.us-east-1.amazonaws.com",
 			ResourcePath: r.URL.Path,
 			HTTPMethod:   r.Method,
 
