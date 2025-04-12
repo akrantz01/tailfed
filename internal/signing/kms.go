@@ -18,10 +18,11 @@ import (
 
 // kmsBackend signs tokens using a key stored in AWS KMS
 type kmsBackend struct {
-	id     string
-	arn    *string
-	client *kms.Client
-	signer jose.Signer
+	id        string
+	arn       *string
+	algorithm jose.SignatureAlgorithm
+	client    *kms.Client
+	signer    jose.Signer
 }
 
 var _ Backend = (*kmsBackend)(nil)
@@ -53,7 +54,7 @@ func NewKMS(config aws.Config, alias string) (Backend, error) {
 		return nil, err
 	}
 
-	return &kmsBackend{*metadata.KeyId, metadata.Arn, client, signer}, nil
+	return &kmsBackend{*metadata.KeyId, metadata.Arn, algorithm, client, signer}, nil
 }
 
 func (k *kmsBackend) Sign(claims jwt.Claims) (string, error) {
@@ -81,7 +82,7 @@ func (k *kmsBackend) PublicKey() (jose.JSONWebKey, error) {
 		Use:       "sig",
 		KeyID:     k.id,
 		Key:       public,
-		Algorithm: "",
+		Algorithm: string(k.algorithm),
 	}, nil
 }
 
