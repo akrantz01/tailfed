@@ -22,3 +22,12 @@ resource "aws_iam_role_policy" "finalizer" {
   name   = "Lambda"
   policy = data.aws_iam_policy_document.finalizer.json
 }
+
+module "finalizer_apigateway" {
+  source = "./modules/apigateway-lambda"
+
+  rest_api = aws_api_gateway_rest_api.default
+  resource = aws_api_gateway_resource.finalize
+
+  function = module.finalizer
+}
