@@ -143,7 +143,6 @@ changelog:
       - "^test:"
 
 release:
-  disable: true
   footer: >-
 
     ---

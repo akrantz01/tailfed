@@ -11,8 +11,7 @@ jobs:
   generate-release:
     name: Generate Release
     runs-on: ubuntu-latest
-    # if: github.ref == 'refs/heads/main'
-    if: false # Temporarily disable
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
@@ -32,7 +31,6 @@ jobs:
       attestations: write
       contents: write
       id-token: write
-    if: false # Temporarily disable
     steps:
       - uses: actions/checkout@v4
         with:
