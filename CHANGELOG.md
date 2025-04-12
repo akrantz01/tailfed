@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/akrantz01/tailfed/compare/v1.0.0...v1.1.0) (2025-04-12)
+
+
+### Features
+
+* **terraform:** add lambda function module ([76216a7](https://github.com/akrantz01/tailfed/commit/76216a7e8f31c0326c838969dd3e2ead15c1fbd9))
+* **terraform:** create and integrate generator lambda function ([f6bd9a1](https://github.com/akrantz01/tailfed/commit/f6bd9a164298d7680816f25e6a5b1c091440a137))
+
+
+### Bug Fixes
+
+* **finalizer:** pass handler serve function ([218cc83](https://github.com/akrantz01/tailfed/commit/218cc830e0f8b750600d2da0b5ee6c1ea574fa7e))
+* **generator:** pull bucket name from environment ([d3acad5](https://github.com/akrantz01/tailfed/commit/d3acad5486f5eaeee1b688653f2a21e1e912b501))
+
 ## 1.0.0 (2025-04-12)
 
 
