@@ -23,3 +23,12 @@ resource "aws_iam_role_policy" "initializer" {
   name   = "Lambda"
   policy = data.aws_iam_policy_document.initializer.json
 }
+
+module "initializer_apigateway" {
+  source = "./modules/apigateway-lambda"
+
+  rest_api = aws_api_gateway_rest_api.default
+  resource = aws_api_gateway_resource.start
+
+  function = module.initializer
+}
