@@ -1,5 +1,27 @@
 data "aws_caller_identity" "current" {}
 
+data "aws_iam_policy_document" "generator" {
+  statement {
+    sid     = "Metadata"
+    effect  = "Allow"
+    actions = ["s3:PutObject"]
+    resources = [
+      "${module.openid_configuration.arn}/openid-configuration",
+      "${module.openid_configuration.arn}/jwks.json",
+    ]
+  }
+
+  statement {
+    sid    = "Signer"
+    effect = "Allow"
+    actions = [
+      "kms:DescribeKey",
+      "kms:GetPublicKey",
+    ]
+    resources = [aws_kms_key.signer.arn]
+  }
+}
+
 data "aws_iam_policy_document" "generator_schedule_trust_policy" {
   statement {
     effect  = "Allow"

@@ -49,6 +49,13 @@ module "generator" {
   }
 }
 
+resource "aws_iam_role_policy" "generator" {
+  role = module.generator.role_id
+
+  name   = "Lambda"
+  policy = data.aws_iam_policy_document.generator.json
+}
+
 resource "aws_lambda_invocation" "generator" {
   function_name   = module.generator.id
   lifecycle_scope = "CRUD"
