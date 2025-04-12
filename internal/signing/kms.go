@@ -3,7 +3,9 @@ package signing
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"encoding/asn1"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"math/big"
@@ -55,8 +57,27 @@ func (k *kmsBackend) Sign(claims jwt.Claims) (string, error) {
 	return token.SignedString(k.arn)
 }
 
-func (k *kmsBackend) PublicKeys() map[string]crypto.PublicKey {
-	return nil
+func (k *kmsBackend) PublicKeys() (map[string]crypto.PublicKey, error) {
+	output, err := k.client.GetPublicKey(context.Background(), &kms.GetPublicKeyInput{KeyId: aws.String(k.arn)})
+	if err != nil {
+		return nil, err
+	}
+
+	block, _ := pem.Decode(output.PublicKey)
+	if block == nil {
+		return nil, errors.New("failed to parse PEM block containing public key")
+	}
+
+	public, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %w", err)
+	}
+
+	if publicKey, ok := public.(crypto.PublicKey); ok {
+		return map[string]crypto.PublicKey{k.id: publicKey}, nil
+	} else {
+		return nil, errors.New("unknown public key type")
+	}
 }
 
 type kmsSigningMethod struct {

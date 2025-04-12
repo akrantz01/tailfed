@@ -43,6 +43,6 @@ func (m *inMemory) Sign(claims jwt.Claims) (string, error) {
 	return token.SignedString(m.private)
 }
 
-func (m *inMemory) PublicKeys() map[string]crypto.PublicKey {
-	return map[string]crypto.PublicKey{m.id: m.private.PublicKey}
+func (m *inMemory) PublicKeys() (map[string]crypto.PublicKey, error) {
+	return map[string]crypto.PublicKey{m.id: m.private.PublicKey}, nil
 }

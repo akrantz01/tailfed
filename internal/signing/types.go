@@ -10,7 +10,7 @@ import (
 // Backend provides a mechanism for generating signed JWTs
 type Backend interface {
 	// PublicKeys returns a mapping of key ID to public key for JWK set generation
-	PublicKeys() map[string]crypto.PublicKey
+	PublicKeys() (map[string]crypto.PublicKey, error)
 	// Sign generates a signed JWT with the provided claims
 	Sign(claims jwt.Claims) (string, error)
 }
