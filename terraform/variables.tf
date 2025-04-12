@@ -35,3 +35,29 @@ variable "release_version" {
   type        = string
   description = "The release version to deploy, must exist within the bucket"
 }
+
+variable "tailscale" {
+  type = object({
+    tailnet = string
+
+    api_key = optional(string)
+    oauth = optional(object({
+      client_id     = string
+      client_secret = string
+    }))
+  })
+  description = "The Tailscale tailent and API authentication method"
+
+  validation {
+    condition     = length(var.tailscale.tailnet) > 0
+    error_message = "A tailnet is required"
+  }
+
+  validation {
+    condition = (
+      (var.tailscale.api_key == null && var.tailscale.oauth != null) ||
+      (var.tailscale.api_key != null && var.tailscale.oauth == null)
+    )
+    error_message = "Exactly one authentication method must be provided"
+  }
+}

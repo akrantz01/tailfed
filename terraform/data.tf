@@ -1,5 +1,14 @@
 data "aws_caller_identity" "current" {}
 
+data "aws_iam_policy_document" "initializer" {
+  statement {
+    sid       = "Storage"
+    effect    = "Allow"
+    actions   = ["dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.storage.arn]
+  }
+}
+
 data "aws_iam_policy_document" "generator" {
   statement {
     sid     = "Metadata"
