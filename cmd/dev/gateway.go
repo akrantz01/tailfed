@@ -12,19 +12,24 @@ import (
 	"github.com/akrantz01/tailfed/internal/initializer"
 	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/metadata"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/akrantz01/tailfed/internal/types"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/sirupsen/logrus"
 )
 
-func startGateway(tsClient *tailscale.API, launch launcher.Backend, signer signing.Backend, store storage.Backend) (*http.Server, <-chan error) {
+func startGateway(tsClient *tailscale.API, launch launcher.Backend, meta metadata.Backend, signer signing.Backend, store storage.Backend) (*http.Server, <-chan error) {
 	mux := http.NewServeMux()
 	srv := newServer(cfg.Address, mux, requestid.Middleware, logging.Middleware)
 
 	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, launch, store)))
 	mux.Handle("POST /finalize", lambdaHandler(finalizer.New(cfg.Signing.Audience, cfg.Signing.Validity, signer, store)))
+
+	mux.Handle("GET /.well-known/openid-configuration", metadataHandler[any]("openid-configuration", meta))
+	mux.Handle("GET /.well-known/jwks.json", metadataHandler[jose.JSONWebKeySet]("jwks.json", meta))
 
 	serverErrors := make(chan error, 1)
 	go func() {
@@ -72,6 +77,27 @@ func lambdaHandler(next gateway.Handler) http.Handler {
 
 		if err := gateway.WriteHttpResponse(w, response); err != nil {
 			logger.WithError(err).Error("failed to write lambda response")
+		}
+	})
+}
+
+// metadataHandler serves static keys from the metadata backend
+func metadataHandler[T any](key string, meta metadata.Backend) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		logger := logging.FromContext(ctx)
+
+		var data T
+		if err := meta.Load(ctx, key, &data); err != nil {
+			logger.WithError(err).Error("could not load from backend")
+			internalServerError(w)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			logger.WithError(err).Error("failed to write metadata response")
 		}
 	})
 }

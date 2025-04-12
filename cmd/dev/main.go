@@ -11,8 +11,11 @@ import (
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
+	"github.com/akrantz01/tailfed/internal/generator"
+	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -28,6 +31,10 @@ func main() {
 	}
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The address and port combination to listen on")
+
+	cmd.Flags().String("metadata.backend", "filesystem", "Where to store OpenID Connect metadata (choices: filesystem, s3)")
+	cmd.Flags().String("metadata.bucket", "", "The bucket to store metadata in for the s3 backend")
+	cmd.Flags().String("metadata.path", "metadata", "The directory path used by the filesystem backend")
 
 	cmd.Flags().String("signing.backend", "memory", "The method used to sign JWTs (choices: memory, kms)")
 	cmd.Flags().Duration("signing.validity", 1*time.Hour, "How long the generated tokens should be valid for")
@@ -77,6 +84,11 @@ func run(*cobra.Command, []string) error {
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
+	meta, err := cfg.Metadata.NewBackend(awsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create metadata backend: %w", err)
+	}
+
 	signer, err := cfg.Signing.NewBackend(awsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create signing backend: %w", err)
@@ -89,10 +101,15 @@ func run(*cobra.Command, []string) error {
 
 	tsClient := cfg.Tailscale.NewClient()
 
+	logrus.Info("generating metadata documents")
+	if err := generator.New(meta, signer).Serve(context.Background(), types.GenerateRequest{Issuer: gateway.BaseUrl}); err != nil {
+		return fmt.Errorf("failed to generate metadata documents: %w", err)
+	}
+
 	stopLauncher, bus := startLauncher(store, cfg.Tailscale.Tailnet)
 	launch := launcher.NewLocal(bus)
 
-	srv, serverErrors := startGateway(tsClient, launch, signer, store)
+	srv, serverErrors := startGateway(tsClient, launch, meta, signer, store)
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)

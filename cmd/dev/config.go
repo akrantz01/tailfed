@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/metadata"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
@@ -19,13 +20,14 @@ type config struct {
 	LogLevel string `koanf:"log-level"`
 	Address  string `koanf:"address"`
 
+	Metadata  metadataConfig  `koanf:"metadata"`
 	Signing   signingConfig   `koanf:"signing"`
 	Storage   storageConfig   `koanf:"storage"`
 	Tailscale tailscaleConfig `koanf:"tailscale"`
 }
 
 func (c *config) LoadAWSConfig() (aws.Config, error) {
-	if c.Signing.Backend == "kms" || c.Storage.Backend == "dynamo" {
+	if c.Metadata.Bucket == "s3" || c.Signing.Backend == "kms" || c.Storage.Backend == "dynamo" {
 		return awsconfig.LoadDefaultConfig(context.Background())
 	}
 
@@ -33,6 +35,10 @@ func (c *config) LoadAWSConfig() (aws.Config, error) {
 }
 
 func (c *config) Validate() error {
+	if err := c.Metadata.Validate(); err != nil {
+		return fmt.Errorf("metadata configuration is invalid: %w", err)
+	}
+
 	if err := c.Signing.Validate(); err != nil {
 		return fmt.Errorf("signing configuration is invalid: %w", err)
 	}
@@ -46,6 +52,35 @@ func (c *config) Validate() error {
 	}
 
 	return nil
+}
+
+type metadataConfig struct {
+	Backend string `koanf:"backend"`
+	Bucket  string `koanf:"bucket"`
+	Path    string `koanf:"path"`
+}
+
+func (m *metadataConfig) Validate() error {
+	if m.Backend == "filesystem" && len(m.Path) == 0 {
+		return errors.New("missing path for filesystem backend")
+	}
+
+	if m.Backend == "dynamo" && len(m.Backend) == 0 {
+		return errors.New("missing bucket for s3 backend")
+	}
+
+	return nil
+}
+
+func (m *metadataConfig) NewBackend(config aws.Config) (metadata.Backend, error) {
+	switch m.Backend {
+	case "filesystem":
+		return metadata.NewFilesystem(m.Path)
+	case "s3":
+		return metadata.NewS3(config, m.Bucket)
+	default:
+		return nil, errors.New("unknown metadata backend")
+	}
 }
 
 type signingConfig struct {
