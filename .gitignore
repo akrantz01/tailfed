@@ -130,7 +130,8 @@ fabric.properties
 *.vsix
 
 ### Project Files ###
-flows/
+/flows/
+/metadata/
 tailfed.yml
 
 # Added by goreleaser init:
