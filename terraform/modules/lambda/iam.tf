@@ -6,7 +6,9 @@ resource "aws_iam_role" "handler" {
 }
 
 resource "aws_iam_role_policy" "handler" {
-  role   = aws_iam_role.handler.id
+  role = aws_iam_role.handler.id
+
+  name   = "Logging"
   policy = data.aws_iam_policy_document.permissions_policy.json
 }
 
