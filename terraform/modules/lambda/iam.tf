@@ -12,20 +12,13 @@ resource "aws_iam_role_policy" "handler" {
 
 data "aws_iam_policy_document" "permissions_policy" {
   statement {
-    sid       = "CloudWatchLogGroup"
-    effect    = "Allow"
-    actions   = ["logs:CreateLogGroup"]
-    resources = [aws_cloudwatch_log_group.handler.arn]
-  }
-
-  statement {
     sid    = "CloudWatchLogStream"
     effect = "Allow"
     actions = [
       "logs:CreateLogStream",
       "logs:PutLogEvent",
     ]
-    resources = ["${aws_cloudwatch_log_group.handler.arn}:log-group:*"]
+    resources = ["${aws_cloudwatch_log_group.handler.arn}:*"]
   }
 }
 
