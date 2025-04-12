@@ -7,6 +7,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // Backend provides a mechanism for storing state between Lambda handlers
@@ -41,16 +44,7 @@ var (
 	StatusSuccess Status = "success"
 )
 
-func (s *Status) MarshalJSON() ([]byte, error) {
-	return json.Marshal(string(*s))
-}
-
-func (s *Status) UnmarshalJSON(encoded []byte) error {
-	var raw string
-	if err := json.Unmarshal(encoded, &raw); err != nil {
-		return err
-	}
-
+func (s *Status) UnmarshalText(raw string) error {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "pending":
 		*s = StatusPending
@@ -64,8 +58,44 @@ func (s *Status) UnmarshalJSON(encoded []byte) error {
 	return nil
 }
 
+func (s *Status) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(*s))
+}
+
+func (s *Status) UnmarshalJSON(encoded []byte) error {
+	var raw string
+	if err := json.Unmarshal(encoded, &raw); err != nil {
+		return err
+	}
+
+	return s.UnmarshalText(raw)
+}
+
+func (s *Status) MarshalDynamoDBAttributeValue() (types.AttributeValue, error) {
+	return attributevalue.Marshal(string(*s))
+}
+
+func (s *Status) UnmarshalDynamoDBAttributeValue(value types.AttributeValue) error {
+	var raw string
+	if err := attributevalue.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+
+	return s.UnmarshalText(raw)
+}
+
 // UnixTime wraps a [time.Time] to serialize it as a unix timestamp with seconds resolution
 type UnixTime time.Time
+
+func (u *UnixTime) UnmarshalText(raw string) error {
+	epoch, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	*u = UnixTime(time.Unix(epoch, 0))
+	return nil
+}
 
 func (u *UnixTime) MarshalJSON() ([]byte, error) {
 	epoch := time.Time(*u).Unix()
@@ -78,11 +108,19 @@ func (u *UnixTime) UnmarshalJSON(raw []byte) error {
 		return err
 	}
 
-	epoch, err := strconv.ParseInt(decoded, 10, 64)
-	if err != nil {
+	return u.UnmarshalText(decoded)
+}
+
+func (u *UnixTime) MarshalDynamoDBAttributeValue() (types.AttributeValue, error) {
+	epoch := time.Time(*u).Unix()
+	return attributevalue.Marshal(epoch)
+}
+
+func (u *UnixTime) UnmarshalDynamoDBAttributeValue(value types.AttributeValue) error {
+	var decoded string
+	if err := attributevalue.Unmarshal(value, &decoded); err != nil {
 		return err
 	}
 
-	*u = UnixTime(time.Unix(epoch, 0))
-	return nil
+	return u.UnmarshalText(decoded)
 }
