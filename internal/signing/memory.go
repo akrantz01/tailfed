@@ -44,7 +44,7 @@ func (m *inMemory) PublicKey() (jose.JSONWebKey, error) {
 	return jose.JSONWebKey{
 		Use:       "sig",
 		KeyID:     m.id,
-		Key:       m.private.PublicKey,
+		Key:       &m.private.PublicKey,
 		Algorithm: string(jose.RS256),
 	}, nil
 }
