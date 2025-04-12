@@ -130,10 +130,14 @@ signs:
       - --bundle=${artifact}.sig
       - --output-signature=${signature}
       - ${artifact}
-    artifacts: all
+    artifacts: binary
 
 sboms:
-  - artifacts: binary
+  - id: lambda
+    artifacts: archive
+  - id: client
+    artifacts: binary
+    ids: [ client ]
 
 changelog:
   sort: asc
