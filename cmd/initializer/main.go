@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
@@ -10,6 +11,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/aws/aws-lambda-go/lambda"
+	aws "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,6 +25,11 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize logging")
 	}
 
+	awsConfig, err := aws.LoadDefaultConfig(context.Background())
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to load AWS config from environment")
+	}
+
 	tsClient, err := config.Tailscale.Client()
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to create tailscale client")
@@ -31,16 +38,20 @@ func main() {
 	// TODO: replace with step function-backed implementation
 	var launch launcher.Backend = nil
 
-	// TODO: replace with dynamodb-backed implementation
-	var store storage.Backend = nil
+	store, err := storage.NewDynamo(awsConfig, config.Storage.Table)
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to initialize store")
+	}
 
 	handler := initializer.New(tsClient, launch, store)
 	lambda.Start(handler.Serve)
 }
 
 type Config struct {
-	LogLevel  string    `koanf:"log-level"`
+	LogLevel string `koanf:"log-level"`
+
 	Tailscale Tailscale `koanf:"tailscale"`
+	Storage   Storage   `koanf:"storage"`
 }
 
 type Tailscale struct {
@@ -69,4 +80,8 @@ func (t *Tailscale) Client() (*tailscale.API, error) {
 	}
 
 	return tailscale.NewAPI(t.Tailnet, auth), nil
+}
+
+type Storage struct {
+	Table string `koanf:"table"`
 }
