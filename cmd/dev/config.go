@@ -9,10 +9,11 @@ import (
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 var (
-	signingBackends = []string{"memory"}
+	signingBackends = []string{"memory", "kms"}
 	storageBackends = []string{"filesystem"}
 
 	cfg config
@@ -27,6 +28,10 @@ type config struct {
 	Tailscale tailscaleConfig `koanf:"tailscale"`
 }
 
+func (c *config) RequiresAWSConfig() bool {
+	return c.Signing.Backend == "kms"
+}
+
 func (c *config) Validate() error {
 	if !slices.Contains(signingBackends, c.Signing.Backend) {
 		return fmt.Errorf("unknown signing backend %q", c.Signing.Backend)
@@ -38,6 +43,10 @@ func (c *config) Validate() error {
 
 	if c.Signing.Validity <= 0 {
 		return errors.New("token validity must be positive")
+	}
+
+	if c.Signing.Backend == "kms" && len(c.Signing.Key) == 0 {
+		return errors.New("missing key for kms backend")
 	}
 
 	if !slices.Contains(storageBackends, c.Storage.Backend) {
@@ -62,13 +71,16 @@ func (c *config) Validate() error {
 type signingConfig struct {
 	Backend  string        `koanf:"backend"`
 	Validity time.Duration `koanf:"validity"`
+	Key      string        `koanf:"key"`
 	Audience string        `koanf:"audience"`
 }
 
-func (s *signingConfig) NewBackend() (signing.Backend, error) {
+func (s *signingConfig) NewBackend(config aws.Config) (signing.Backend, error) {
 	switch s.Backend {
 	case "memory":
 		return signing.NewInMemory()
+	case "kms":
+		return signing.NewKMS(config, s.Key)
 	default:
 		return nil, errors.New("unknown signing backend")
 	}
