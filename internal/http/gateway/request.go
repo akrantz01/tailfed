@@ -9,6 +9,12 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
+const (
+	ID         = "mock-api"
+	DomainName = ID + ".execute-api.us-east-1.amazonaws.com"
+	BaseUrl    = "https://" + DomainName
+)
+
 // FromHttpRequest creates a new API gateway request from a standard library HTTP request. AWS-specific values are
 // filled with dummy values.
 func FromHttpRequest(r *http.Request) (events.APIGatewayProxyRequest, error) {
@@ -40,12 +46,12 @@ func FromHttpRequest(r *http.Request) (events.APIGatewayProxyRequest, error) {
 
 		RequestContext: events.APIGatewayProxyRequestContext{
 			AccountID:  "111122223333",
-			APIID:      "mock-api",
+			APIID:      ID,
 			Stage:      "dev",
 			ResourceID: "mock-resource",
 			RequestID:  requestid.Get(r),
 
-			DomainName:   "mock-api.execute-api.us-east-1.amazonaws.com",
+			DomainName:   DomainName,
 			ResourcePath: r.URL.Path,
 			HTTPMethod:   r.Method,
 
