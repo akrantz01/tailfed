@@ -127,10 +127,9 @@ signs:
     args:
       - sign-blob
       - --yes
-      - --bundle=${artifact}.sig
-      - --output-signature=${signature}
+      - --bundle=${signature}
       - ${artifact}
-    artifacts: binary
+    artifacts: archive
 
 sboms:
   - id: lambda
