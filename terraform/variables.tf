@@ -9,6 +9,12 @@ variable "architecture" {
   }
 }
 
+variable "audience" {
+  type        = string
+  description = "The token audience to issue for"
+  default     = "sts.amazonaws.com"
+}
+
 variable "log_level" {
   type        = string
   description = "The level for functions to log at"
@@ -66,4 +72,10 @@ variable "tailscale" {
     )
     error_message = "Exactly one authentication method must be provided"
   }
+}
+
+variable "validity" {
+  type        = string
+  description = "How long a token should be valid for. Formatted as a Go duration string"
+  default     = "1h"
 }
