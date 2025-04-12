@@ -31,3 +31,9 @@ type FinalizeRequest struct {
 	// ID is the unique identifier for the challenge from StartRequest
 	ID string `json:"id"`
 }
+
+// GenerateRequest is sent by an EventBridge schedule to re-generate the OIDC metadata
+type GenerateRequest struct {
+	// Issuer is the base URL of the OIDC provider
+	Issuer string `json:"issuer"`
+}
