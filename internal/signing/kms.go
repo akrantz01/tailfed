@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/asn1"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"math/big"
@@ -67,12 +66,7 @@ func (k *kmsBackend) PublicKey() (jose.JSONWebKey, error) {
 		return jose.JSONWebKey{}, err
 	}
 
-	block, _ := pem.Decode(output.PublicKey)
-	if block == nil {
-		return jose.JSONWebKey{}, errors.New("failed to parse PEM block containing public key")
-	}
-
-	parsed, err := x509.ParsePKIXPublicKey(block.Bytes)
+	parsed, err := x509.ParsePKIXPublicKey(output.PublicKey)
 	if err != nil {
 		return jose.JSONWebKey{}, fmt.Errorf("failed to parse DER encoded public key: %w", err)
 	}
