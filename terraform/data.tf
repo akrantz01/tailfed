@@ -16,7 +16,7 @@ data "aws_iam_policy_document" "generator_schedule" {
   statement {
     effect    = "Allow"
     actions   = ["lambda:InvokeFunction"]
-    resources = ["*"] # TODO: replace with generator lambda arn
+    resources = [module.generator.arn]
   }
 }
 

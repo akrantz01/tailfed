@@ -19,13 +19,10 @@ resource "aws_scheduler_schedule" "generator" {
   }
 
   target {
-    # TODO: replace with generator lambda arn
-    arn      = "arn:aws:lambda:ca-central-1:${data.aws_caller_identity.current.account_id}:function:hello-world"
+    arn      = module.generator.arn
     role_arn = aws_iam_role.generator_schedule.arn
 
-    input = jsonencode({
-      "issuer" : aws_api_gateway_deployment.default.invoke_url,
-    })
+    input = local.generator_input
 
     retry_policy {
       maximum_event_age_in_seconds = 3600
