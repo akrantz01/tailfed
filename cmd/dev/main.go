@@ -29,7 +29,7 @@ func main() {
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The address and port combination to listen on")
 
-	cmd.Flags().String("signing.backend", "memory", "The method used to sign JWTs (choices: memory)")
+	cmd.Flags().String("signing.backend", "memory", "The method used to sign JWTs (choices: memory, kms)")
 	cmd.Flags().Duration("signing.validity", 1*time.Hour, "How long the generated tokens should be valid for")
 	cmd.Flags().String("signing.audience", "sts.amazonaws.com", "The audience the tokens are issued for")
 
