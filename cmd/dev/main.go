@@ -33,8 +33,9 @@ func main() {
 	cmd.Flags().Duration("signing.validity", 1*time.Hour, "How long the generated tokens should be valid for")
 	cmd.Flags().String("signing.audience", "sts.amazonaws.com", "The audience the tokens are issued for")
 
-	cmd.Flags().String("storage.backend", "filesystem", "Where to store data for in-flight flows (choices: filesystem)")
+	cmd.Flags().String("storage.backend", "filesystem", "Where to store data for in-flight flows (choices: dynamo, filesystem)")
 	cmd.Flags().String("storage.path", "flows", "The directory path used by the filesystem backend")
+	cmd.Flags().String("storage.table", "", "The name of the DynamoDB table used by the dynamo backend")
 
 	cmd.Flags().String("tailscale.tailnet", "", "The name of the tailnet to issue tokens for")
 	cmd.Flags().String("tailscale.api-key", "", "The Tailscale API key to authenticate with")
@@ -81,7 +82,7 @@ func run(*cobra.Command, []string) error {
 		return fmt.Errorf("failed to create signing backend: %w", err)
 	}
 
-	store, err := cfg.Storage.NewBackend()
+	store, err := cfg.Storage.NewBackend(awsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to open storage: %w", err)
 	}

@@ -25,7 +25,7 @@ type config struct {
 }
 
 func (c *config) LoadAWSConfig() (aws.Config, error) {
-	if c.Signing.Backend == "kms" {
+	if c.Signing.Backend == "kms" || c.Storage.Backend == "dynamo" {
 		return awsconfig.LoadDefaultConfig(context.Background())
 	}
 
@@ -85,6 +85,7 @@ func (s *signingConfig) NewBackend(config aws.Config) (signing.Backend, error) {
 type storageConfig struct {
 	Backend string `koanf:"backend"`
 	Path    string `koanf:"path"`
+	Table   string `koanf:"table"`
 }
 
 func (s *storageConfig) Validate() error {
@@ -92,13 +93,19 @@ func (s *storageConfig) Validate() error {
 		return errors.New("missing path for filesystem backend")
 	}
 
+	if s.Backend == "dynamo" && len(s.Table) == 0 {
+		return errors.New("missing table for dynamo backend")
+	}
+
 	return nil
 }
 
-func (s *storageConfig) NewBackend() (storage.Backend, error) {
+func (s *storageConfig) NewBackend(config aws.Config) (storage.Backend, error) {
 	switch s.Backend {
 	case "filesystem":
 		return storage.NewFilesystem(s.Path)
+	case "dynamo":
+		return storage.NewDynamo(config, s.Table)
 	default:
 		return nil, errors.New("unknown storage backend")
 	}
