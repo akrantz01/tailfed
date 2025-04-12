@@ -43,6 +43,7 @@ module "generator" {
   checksum = aws_s3_object_copy.artifacts["generator"].checksum_sha256
 
   environment = {
+    TAILFED_LOG_LEVEL        = var.log_level
     TAILFED_METADATA__BUCKET = module.openid_configuration.id
     TAILFED_SIGNING__KEY     = aws_kms_alias.signer.name
   }
