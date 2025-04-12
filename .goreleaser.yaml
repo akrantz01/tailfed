@@ -73,6 +73,19 @@ builds:
     flags:
       - -tags=lambda.norpc
 
+  - id: generator
+    main: ./cmd/generator
+    binary: generator
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -tags=lambda.norpc
+
 archives:
   - id: client
     ids: [ client ]
@@ -100,6 +113,12 @@ archives:
     ids: [ verifier ]
     formats: [ zip ]
     name_template: verifier-{{ .Arch }}
+    files: [ none* ]
+
+  - id: generator
+    ids: [ generator ]
+    formats: [ zip ]
+    name_template: generator-{{ .Arch }}
     files: [ none* ]
 
 signs:
@@ -138,3 +157,4 @@ blobs:
       - finalizer
       - initializer
       - verifier
+      - generator
