@@ -28,7 +28,7 @@ func main() {
 		logrus.WithError(err).Fatal("failed to load AWS config from environment")
 	}
 
-	meta, err := metadata.NewS3(awsConfig, "")
+	meta, err := metadata.NewS3(awsConfig, config.Metadata.Bucket)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to initialize metadata")
 	}
@@ -45,7 +45,12 @@ func main() {
 type Config struct {
 	LogLevel string `koanf:"log-level"`
 
-	Signing Signing `koanf:"signing"`
+	Metadata Metadata `koanf:"metadata"`
+	Signing  Signing  `koanf:"signing"`
+}
+
+type Metadata struct {
+	Bucket string `koanf:"bucket"`
 }
 
 type Signing struct {
