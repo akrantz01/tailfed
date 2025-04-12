@@ -40,7 +40,7 @@ func main() {
 	}
 
 	handler := finalizer.New(config.Signing.Audience, config.Signing.Validity, signer, store)
-	lambda.Start(handler)
+	lambda.Start(handler.Serve)
 }
 
 type Config struct {
