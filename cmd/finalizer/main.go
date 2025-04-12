@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
@@ -9,6 +10,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/aws/aws-lambda-go/lambda"
+	aws "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,8 +24,15 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize logging")
 	}
 
-	// TODO: replace with kms-backed implementation
-	var signer signing.Backend = nil
+	awsConfig, err := aws.LoadDefaultConfig(context.Background())
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to load AWS config from environment")
+	}
+
+	signer, err := signing.NewKMS(awsConfig, config.Signing.Key)
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to initialize signer")
+	}
 
 	// TODO: replace with dynamodb-backed implementation
 	var store storage.Backend = nil
@@ -40,5 +49,6 @@ type Config struct {
 
 type Signing struct {
 	Audience string        `koanf:"audience"`
+	Key      string        `koanf:"key"`
 	Validity time.Duration `koanf:"validity"`
 }
