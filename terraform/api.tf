@@ -15,8 +15,17 @@ resource "aws_api_gateway_deployment" "default" {
   }
 
   triggers = {
-    # TODO: make this update automatically
-    redeployment = "1"
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_resource.well_known,
+      aws_api_gateway_resource.openid_configuration,
+      aws_api_gateway_resource.jwks,
+      aws_api_gateway_resource.start,
+      aws_api_gateway_resource.finalize,
+      module.openid_configuration_discovery_document.requires_redeployment,
+      module.openid_configuration_jwks.requires_redeployment,
+      module.initializer_apigateway.requires_redeployment,
+      module.finalizer_apigateway.requires_redeployment,
+    ]))
   }
 }
 
