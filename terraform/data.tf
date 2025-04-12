@@ -1,5 +1,25 @@
 data "aws_caller_identity" "current" {}
 
+data "aws_iam_policy_document" "generator_schedule_trust_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["scheduler.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "generator_schedule" {
+  statement {
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
+    resources = ["*"] # TODO: replace with generator lambda arn
+  }
+}
+
 data "aws_iam_policy_document" "openid_configuration_trust_policy" {
   statement {
     effect  = "Allow"
