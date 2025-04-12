@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/signing"
@@ -12,12 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
-var (
-	signingBackends = []string{"memory", "kms"}
-	storageBackends = []string{"filesystem"}
-
-	cfg config
-)
+var cfg config
 
 type config struct {
 	LogLevel string `koanf:"log-level"`
@@ -33,36 +27,16 @@ func (c *config) RequiresAWSConfig() bool {
 }
 
 func (c *config) Validate() error {
-	if !slices.Contains(signingBackends, c.Signing.Backend) {
-		return fmt.Errorf("unknown signing backend %q", c.Signing.Backend)
+	if err := c.Signing.Validate(); err != nil {
+		return fmt.Errorf("signing configuration is invalid: %w", err)
 	}
 
-	if len(c.Signing.Audience) == 0 {
-		return errors.New("token audience cannot be empty")
+	if err := c.Storage.Validate(); err != nil {
+		return fmt.Errorf("storage configuration is invalid: %w", err)
 	}
 
-	if c.Signing.Validity <= 0 {
-		return errors.New("token validity must be positive")
-	}
-
-	if c.Signing.Backend == "kms" && len(c.Signing.Key) == 0 {
-		return errors.New("missing key for kms backend")
-	}
-
-	if !slices.Contains(storageBackends, c.Storage.Backend) {
-		return fmt.Errorf("unknown storage backend %q", c.Storage.Backend)
-	}
-
-	if c.Storage.Backend == "filesystem" && len(c.Storage.Path) == 0 {
-		return errors.New("missing path for filesystem backend")
-	}
-
-	if len(cfg.Tailscale.Tailnet) == 0 {
-		return errors.New("a tailnet must be configured")
-	}
-
-	if (len(c.Tailscale.ApiKey) > 0) == c.Tailscale.OAuth.Enabled() {
-		return errors.New("exactly one tailscale authentication method must be enabled")
+	if err := c.Tailscale.Validate(); err != nil {
+		return fmt.Errorf("tailscale configuration is invalid: %w", err)
 	}
 
 	return nil
@@ -73,6 +47,22 @@ type signingConfig struct {
 	Validity time.Duration `koanf:"validity"`
 	Key      string        `koanf:"key"`
 	Audience string        `koanf:"audience"`
+}
+
+func (s *signingConfig) Validate() error {
+	if len(s.Audience) == 0 {
+		return errors.New("token audience cannot be empty")
+	}
+
+	if s.Validity <= 0 {
+		return errors.New("token validity must be positive")
+	}
+
+	if s.Backend == "kms" && len(s.Key) == 0 {
+		return errors.New("missing key for kms backend")
+	}
+
+	return nil
 }
 
 func (s *signingConfig) NewBackend(config aws.Config) (signing.Backend, error) {
@@ -91,6 +81,14 @@ type storageConfig struct {
 	Path    string `koanf:"path"`
 }
 
+func (s *storageConfig) Validate() error {
+	if s.Backend == "filesystem" && len(s.Path) == 0 {
+		return errors.New("missing path for filesystem backend")
+	}
+
+	return nil
+}
+
 func (s *storageConfig) NewBackend() (storage.Backend, error) {
 	switch s.Backend {
 	case "filesystem":
@@ -105,6 +103,18 @@ type tailscaleConfig struct {
 
 	ApiKey string               `koanf:"api-key"`
 	OAuth  tailscaleOAuthConfig `koanf:"oauth"`
+}
+
+func (t *tailscaleConfig) Validate() error {
+	if len(t.Tailnet) == 0 {
+		return errors.New("a tailnet must be configured")
+	}
+
+	if (len(t.ApiKey) > 0) == t.OAuth.Enabled() {
+		return errors.New("exactly one tailscale authentication method must be enabled")
+	}
+
+	return nil
 }
 
 func (t *tailscaleConfig) NewClient() *tailscale.API {
