@@ -39,9 +39,10 @@ func (s *s3) Save(ctx context.Context, key string, data any) error {
 	}
 
 	_, err = s.client.PutObject(ctx, &s3api.PutObjectInput{
-		Bucket: s.bucket,
-		Key:    &key,
-		Body:   bytes.NewReader(body),
+		Bucket:      s.bucket,
+		Key:         &key,
+		Body:        bytes.NewReader(body),
+		ContentType: aws.String("application/json"),
 	})
 	return err
 }
