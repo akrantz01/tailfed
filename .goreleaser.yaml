@@ -37,7 +37,7 @@ builds:
 
   - id: finalizer
     main: ./cmd/finalizer
-    binary: finalizer
+    binary: bootstrap
     goos:
       - linux
     goarch:
@@ -50,7 +50,7 @@ builds:
 
   - id: initializer
     main: ./cmd/initializer
-    binary: initializer
+    binary: bootstrap
     goos:
       - linux
     goarch:
@@ -63,7 +63,7 @@ builds:
 
   - id: verifier
     main: ./cmd/verifier
-    binary: verifier
+    binary: bootstrap
     goos:
       - linux
     goarch:
@@ -76,7 +76,7 @@ builds:
 
   - id: generator
     main: ./cmd/generator
-    binary: generator
+    binary: bootstrap
     goos:
       - linux
     goarch:
