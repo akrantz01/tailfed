@@ -1,21 +1,20 @@
 package signing
 
 import (
-	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
-	"crypto/x509"
-	"encoding/hex"
 	"fmt"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/google/uuid"
 )
 
 // inMemory generates ephemeral private and public keys for signing
 type inMemory struct {
 	id      string
 	private *rsa.PrivateKey
+	signer  jose.Signer
 }
 
 var _ Backend = (*inMemory)(nil)
@@ -27,22 +26,25 @@ func NewInMemory() (Backend, error) {
 		return nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
-	der, err := x509.MarshalPKIXPublicKey(&private.PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode public key to der: %w", err)
-	}
-	fingerprint := sha1.Sum(der)
-	id := hex.EncodeToString(fingerprint[:])
+	id := uuid.Must(uuid.NewV7()).String()
 
-	return &inMemory{id, private}, nil
+	signer, err := newKey(id, private, jose.RS256)
+	if err != nil {
+		return nil, err
+	}
+
+	return &inMemory{id, private, signer}, nil
 }
 
 func (m *inMemory) Sign(claims jwt.Claims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	token.Header["kid"] = m.id
-	return token.SignedString(m.private)
+	return jwt.Signed(m.signer).Claims(claims).Serialize()
 }
 
-func (m *inMemory) PublicKeys() (map[string]crypto.PublicKey, error) {
-	return map[string]crypto.PublicKey{m.id: m.private.PublicKey}, nil
+func (m *inMemory) PublicKey() (jose.JSONWebKey, error) {
+	return jose.JSONWebKey{
+		Use:       "sig",
+		KeyID:     m.id,
+		Key:       m.private.PublicKey,
+		Algorithm: string(jose.RS256),
+	}, nil
 }
