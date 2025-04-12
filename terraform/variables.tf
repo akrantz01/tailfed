@@ -38,7 +38,8 @@ variable "release_version" {
 
 variable "tailscale" {
   type = object({
-    tailnet = string
+    tailnet  = string
+    auth_key = string
 
     api_key = optional(string)
     oauth = optional(object({
@@ -51,6 +52,11 @@ variable "tailscale" {
   validation {
     condition     = length(var.tailscale.tailnet) > 0
     error_message = "A tailnet is required"
+  }
+
+  validation {
+    condition     = length(var.tailscale.auth_key) > 0
+    error_message = "An auth key is required"
   }
 
   validation {

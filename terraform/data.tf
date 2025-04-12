@@ -9,6 +9,18 @@ data "aws_iam_policy_document" "initializer" {
   }
 }
 
+data "aws_iam_policy_document" "verifier" {
+  statement {
+    sid    = "Storage"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [aws_dynamodb_table.storage.arn]
+  }
+}
+
 data "aws_iam_policy_document" "generator" {
   statement {
     sid     = "Metadata"
