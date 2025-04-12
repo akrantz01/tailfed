@@ -1,40 +1,7 @@
-resource "aws_s3_bucket" "openid_configuration" {
-  bucket_prefix = "tailfed-openid-configuration-"
-  force_destroy = true
-}
+module "openid_configuration" {
+  source = "./modules/bucket"
 
-resource "aws_s3_bucket_ownership_controls" "openid_configuration" {
-  bucket = aws_s3_bucket.openid_configuration.id
-  rule {
-    object_ownership = "BucketOwnerPreferred"
-  }
-}
-
-resource "aws_s3_bucket_acl" "openid_configuration" {
-  depends_on = [aws_s3_bucket_ownership_controls.openid_configuration]
-
-  bucket = aws_s3_bucket.openid_configuration.id
-  acl    = "private"
-}
-
-resource "aws_s3_bucket_public_access_block" "openid_configuration" {
-  bucket = aws_s3_bucket.openid_configuration.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "openid_configuration" {
-  bucket = aws_s3_bucket.openid_configuration.id
-
-  rule {
-    bucket_key_enabled = true
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
+  prefix = "tailfed-openid-configuration-"
 }
 
 resource "aws_iam_role" "openid_configuration" {
@@ -53,7 +20,7 @@ resource "aws_iam_role_policy_attachment" "openid_configuration" {
   policy_arn = aws_iam_policy.openid_configuration.arn
 }
 
-module "openid_configuration" {
+module "openid_configuration_discovery_document" {
   source = "./modules/apigateway-s3"
 
   rest_api_id = aws_api_gateway_rest_api.default.id
@@ -61,7 +28,7 @@ module "openid_configuration" {
 
   object = "openid-configuration"
   bucket = {
-    name   = aws_s3_bucket.openid_configuration.id
+    name   = module.openid_configuration.id
     region = var.region
   }
 
@@ -76,7 +43,7 @@ module "openid_configuration_jwks" {
 
   object = "jwks.json"
   bucket = {
-    name   = aws_s3_bucket.openid_configuration.id
+    name   = module.openid_configuration.id
     region = var.region
   }
 

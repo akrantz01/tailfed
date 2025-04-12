@@ -36,13 +36,16 @@ data "aws_iam_policy_document" "openid_configuration" {
   statement {
     effect    = "Allow"
     actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.openid_configuration.arn]
+    resources = [module.openid_configuration.arn]
   }
 
   statement {
-    effect    = "Allow"
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.openid_configuration.arn}/openid-configuration"]
+    effect  = "Allow"
+    actions = ["s3:GetObject"]
+    resources = [
+      "${module.openid_configuration.arn}/openid-configuration",
+      "${module.openid_configuration.arn}/jwks.json",
+    ]
   }
 }
 
