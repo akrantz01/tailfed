@@ -6,32 +6,35 @@ locals {
   })
 }
 
-# module "initializer" {
-#   source = "./modules/lambda"
-#
-#   name = "initializer"
-#
-#   registry = local.registry
-#   tag      = var.tag
-# }
+module "initializer" {
+  source = "./modules/lambda"
 
-# module "verifier" {
-#   source = "./modules/lambda"
-#
-#   name = "verifier"
-#
-#   registry = var.registry
-#   tag      = var.tag
-# }
-#
-# module "finalizer" {
-#   source = "./modules/lambda"
-#
-#   name = "finalizer"
-#
-#   registry = var.registry
-#   tag      = var.tag
-# }
+  name = "initializer"
+  arch = var.architecture
+
+  bucket   = module.artifacts_proxy.id
+  checksum = aws_s3_object_copy.artifacts["initializer"].checksum_sha256
+}
+
+module "verifier" {
+  source = "./modules/lambda"
+
+  name = "verifier"
+  arch = var.architecture
+
+  bucket   = module.artifacts_proxy.id
+  checksum = aws_s3_object_copy.artifacts["verifier"].checksum_sha256
+}
+
+module "finalizer" {
+  source = "./modules/lambda"
+
+  name = "finalizer"
+  arch = var.architecture
+
+  bucket   = module.artifacts_proxy.id
+  checksum = aws_s3_object_copy.artifacts["finalizer"].checksum_sha256
+}
 
 module "generator" {
   source = "./modules/lambda"
