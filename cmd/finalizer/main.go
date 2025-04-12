@@ -34,8 +34,10 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize signer")
 	}
 
-	// TODO: replace with dynamodb-backed implementation
-	var store storage.Backend = nil
+	store, err := storage.NewDynamo(awsConfig, config.Storage.Table)
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to initialize store")
+	}
 
 	handler := finalizer.New(config.Signing.Audience, config.Signing.Validity, signer, store)
 	lambda.Start(handler)
@@ -45,10 +47,15 @@ type Config struct {
 	LogLevel string `koanf:"log-level"`
 
 	Signing Signing `koanf:"signing"`
+	Storage Storage `koanf:"storage"`
 }
 
 type Signing struct {
 	Audience string        `koanf:"audience"`
 	Key      string        `koanf:"key"`
 	Validity time.Duration `koanf:"validity"`
+}
+
+type Storage struct {
+	Table string `koanf:"table"`
 }
