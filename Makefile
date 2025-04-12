@@ -1,6 +1,6 @@
 GO_ARGS :=
 
-LAMBDA_BINARIES := finalizer initializer verifier
+LAMBDA_BINARIES := finalizer generator initializer verifier
 STANDARD_BINARIES := client dev
 
 # Directory for build artifacts
