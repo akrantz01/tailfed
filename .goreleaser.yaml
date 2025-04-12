@@ -20,6 +20,7 @@ before:
 builds:
   - id: client
     main: ./cmd/client
+    binary: client
     goarch:
       - "386"
       - amd64
