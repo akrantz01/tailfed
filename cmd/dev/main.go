@@ -13,8 +13,6 @@ import (
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -73,12 +71,9 @@ func preRun(cmd *cobra.Command, _ []string) error {
 
 // run configures and launches the development gateway
 func run(*cobra.Command, []string) error {
-	var awsConfig aws.Config
-	if cfg.RequiresAWSConfig() {
-		var err error
-		if awsConfig, err = awsconfig.LoadDefaultConfig(context.Background()); err != nil {
-			return fmt.Errorf("failed to load AWS config: %w", err)
-		}
+	awsConfig, err := cfg.LoadAWSConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
 	signer, err := cfg.Signing.NewBackend(awsConfig)

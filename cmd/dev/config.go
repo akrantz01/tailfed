@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 )
 
 var cfg config
@@ -22,8 +24,12 @@ type config struct {
 	Tailscale tailscaleConfig `koanf:"tailscale"`
 }
 
-func (c *config) RequiresAWSConfig() bool {
-	return c.Signing.Backend == "kms"
+func (c *config) LoadAWSConfig() (aws.Config, error) {
+	if c.Signing.Backend == "kms" {
+		return awsconfig.LoadDefaultConfig(context.Background())
+	}
+
+	return aws.Config{}, nil
 }
 
 func (c *config) Validate() error {
