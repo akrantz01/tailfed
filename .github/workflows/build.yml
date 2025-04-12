@@ -48,6 +48,7 @@ jobs:
           - initializer
           - finalizer
           - verifier
+          - generator
         arch:
           - amd64
           - arm64
