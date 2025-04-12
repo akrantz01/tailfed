@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/verifier"
 	"github.com/aws/aws-lambda-go/lambda"
+	aws "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/sirupsen/logrus"
 	"tailscale.com/hostinfo"
 	"tailscale.com/tsnet"
@@ -30,8 +32,15 @@ func main() {
 		logrus.WithError(err).Fatal("failed to connect to tailscale")
 	}
 
-	// TODO: replace with dynamodb-backed implementation
-	var store storage.Backend = nil
+	awsConfig, err := aws.LoadDefaultConfig(context.Background())
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to load AWS config from environment")
+	}
+
+	store, err := storage.NewDynamo(awsConfig, config.Storage.Table)
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to initialize store")
+	}
 
 	handler := verifier.New(ts.HTTPClient(), store, config.Tailscale.Tailnet)
 	lambda.Start(handler.Serve)
@@ -40,12 +49,17 @@ func main() {
 type Config struct {
 	LogLevel string `koanf:"log-level"`
 
+	Storage   Storage   `koanf:"storage"`
 	Tailscale Tailscale `koanf:"tailscale"`
 }
 
 type Tailscale struct {
 	AuthKey string `koanf:"auth-key"`
 	Tailnet string `koanf:"tailnet"`
+}
+
+type Storage struct {
+	Table string `koanf:"table"`
 }
 
 func connectToTailscale(authKey string) error {
