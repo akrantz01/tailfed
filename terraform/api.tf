@@ -28,8 +28,8 @@ resource "aws_api_gateway_deployment" "default" {
       aws_api_gateway_resource.jwks,
       aws_api_gateway_resource.start,
       aws_api_gateway_resource.finalize,
-      module.openid_configuration_discovery_document.requires_redeployment,
-      module.openid_configuration_jwks.requires_redeployment,
+      module.openid_metadata_discovery_document.requires_redeployment,
+      module.openid_metadata_jwks.requires_redeployment,
       module.initializer_apigateway.requires_redeployment,
       module.finalizer_apigateway.requires_redeployment,
     ]))
