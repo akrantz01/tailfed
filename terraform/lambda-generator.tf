@@ -28,8 +28,12 @@ resource "aws_iam_role_policy" "generator" {
 }
 
 resource "aws_lambda_invocation" "generator" {
-  function_name   = module.generator.id
-  lifecycle_scope = "CRUD"
+  function_name = module.generator.id
 
   input = local.generator_input
+
+  lifecycle_scope = "CRUD"
+  triggers = {
+    updated = aws_s3_object_copy.artifacts["generator"].checksum_sha256
+  }
 }
