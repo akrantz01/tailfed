@@ -1,6 +1,6 @@
 locals {
   generator_input = jsonencode({
-    issuer = aws_api_gateway_deployment.default.invoke_url
+    issuer = aws_api_gateway_stage.production.invoke_url
   })
 }
 
