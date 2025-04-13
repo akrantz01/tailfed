@@ -21,6 +21,61 @@ data "aws_iam_policy_document" "verifier" {
   }
 }
 
+data "aws_iam_policy_document" "verifier_state_machine" {
+  statement {
+    sid       = "InvokeLambda"
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
+    resources = [module.verifier.arn]
+  }
+
+  statement {
+    sid    = "LoggingEvents"
+    effect = "Allow"
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:PutLogEvents",
+    ]
+    resources = ["${aws_cloudwatch_log_group.verifier_state_machine.arn}:*"]
+  }
+
+  statement {
+    sid    = "LoggingVendored"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogDelivery",
+      "logs:DeleteLogDelivery",
+      "logs:GetLogDelivery",
+      "logs:ListLogDeliveries",
+      "logs:UpdateLogDelivery",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "LoggingPolicies"
+    effect = "Allow"
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:DescribeResourcePolicies",
+      "logs:PutResourcePolicy",
+    ]
+    resources = ["arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+  }
+}
+
+data "aws_iam_policy_document" "verifier_state_machine_trust_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["states.amazonaws.com"]
+    }
+  }
+}
+
 data "aws_iam_policy_document" "finalizer" {
   statement {
     sid    = "Storage"
