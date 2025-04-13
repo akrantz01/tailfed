@@ -23,6 +23,8 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           release-type: go
+          skip-github-release: true
+          skip-labeling: true
 
   release:
     name: Release
