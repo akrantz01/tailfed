@@ -19,6 +19,8 @@ module "verifier" {
   bucket   = module.artifacts_proxy.id
   checksum = aws_s3_object_copy.artifacts["verifier"].checksum_sha256
 
+  timeout = 60
+
   environment = {
     TAILFED_LOG_LEVEL           = var.log_level
     TAILFED_STORAGE__TABLE      = aws_dynamodb_table.storage.name
