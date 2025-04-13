@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/logging"
@@ -42,7 +43,10 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize store")
 	}
 
-	handler := verifier.New(ts.HTTPClient(), store, config.Tailscale.Tailnet)
+	client := ts.HTTPClient()
+	client.Timeout = 5 * time.Second
+
+	handler := verifier.New(client, store, config.Tailscale.Tailnet)
 	lambda.Start(handler.Serve)
 }
 
