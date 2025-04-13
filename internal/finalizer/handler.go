@@ -3,6 +3,7 @@ package finalizer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -53,7 +54,8 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("challenge not verified", http.StatusForbidden), nil
 	}
 
-	claims := signing.NewClaims(req.RequestContext.DomainName, h.audience, flow.DNSName, h.validity)
+	issuer := fmt.Sprintf("https://%s/%s", req.RequestContext.DomainName, req.RequestContext.Stage)
+	claims := signing.NewClaims(issuer, h.audience, flow.DNSName, h.validity)
 	token, err := h.signer.Sign(claims)
 	if err != nil {
 		logger.WithError(err).Error("failed to sign JWT")

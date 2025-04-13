@@ -16,11 +16,11 @@ type Backend interface {
 }
 
 // NewClaims creates a new set of token claims for signing
-func NewClaims(domain, audience, host string, validity time.Duration) jwt.Claims {
+func NewClaims(issuer, audience, host string, validity time.Duration) jwt.Claims {
 	now := time.Now()
 
 	return jwt.Claims{
-		Issuer:    "https://" + domain,
+		Issuer:    issuer,
 		Audience:  jwt.Audience{audience},
 		Subject:   host,
 		IssuedAt:  jwt.NewNumericDate(now),
