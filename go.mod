@@ -45,6 +45,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.15 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sfn v1.35.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.44.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.18.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.7 // indirect

@@ -50,6 +50,8 @@ github.com/aws/aws-sdk-go-v2/service/kms v1.38.3 h1:RivOtUH3eEu6SWnUMFHKAW4MqDOz
 github.com/aws/aws-sdk-go-v2/service/kms v1.38.3/go.mod h1:cQn6tAF77Di6m4huxovNM7NVAozWTZLsDRp9t8Z/WYk=
 github.com/aws/aws-sdk-go-v2/service/s3 v1.79.2 h1:tWUG+4wZqdMl/znThEk9tcCy8tTMxq8dW0JTgamohrY=
 github.com/aws/aws-sdk-go-v2/service/s3 v1.79.2/go.mod h1:U5SNqwhXB3Xe6F47kXvWihPl/ilGaEDe8HD/50Z9wxc=
+github.com/aws/aws-sdk-go-v2/service/sfn v1.35.4 h1:ZMnm+rcxDPWjeIYVaZYr9o8y3LhEbDAxj0Qx8H9KH68=
+github.com/aws/aws-sdk-go-v2/service/sfn v1.35.4/go.mod h1:kXdSfltGTEP+CzJ9o7nc/+JBSlipQubNSCWeLI9rDOA=
 github.com/aws/aws-sdk-go-v2/service/ssm v1.44.7 h1:a8HvP/+ew3tKwSXqL3BCSjiuicr+XTU2eFYeogV9GJE=
 github.com/aws/aws-sdk-go-v2/service/ssm v1.44.7/go.mod h1:Q7XIWsMo0JcMpI/6TGD6XXcXcV1DbTj6e9BKNntIMIM=
 github.com/aws/aws-sdk-go-v2/service/sso v1.18.7 h1:eajuO3nykDPdYicLlP3AGgOyVN3MOlFmZv7WGTuJPow=

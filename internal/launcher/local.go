@@ -24,11 +24,3 @@ func (l *local) Launch(id string, addresses []netip.AddrPort) error {
 
 	return nil
 }
-
-// Request contains the information to start a new verification process for the local backend
-type Request struct {
-	// ID contains the flow identifier the request corresponds to
-	ID string
-	// Addresses contains the IP address-port pairs to check
-	Addresses []netip.AddrPort
-}
