@@ -80,7 +80,7 @@ resource "aws_sfn_state_machine" "verifier" {
         Next = "ForEachAddress"
         Assign = {
           retries    = 0
-          maxRetries = 8
+          maxRetries = 5
           waitTime   = 1
           waitJitter = 0.3
         }
@@ -126,7 +126,7 @@ resource "aws_sfn_state_machine" "verifier" {
           }
         }
         Output = {
-          success = "{% $reduce($states.result, function($acc, $v) { $acc or $v.success }) %}"
+          success = "{% $reduce($states.result, function($acc, $v) { $acc or $v.success }, false) %}"
         }
       }
 
@@ -149,7 +149,7 @@ resource "aws_sfn_state_machine" "verifier" {
 
       Wait = {
         Type    = "Wait"
-        Seconds = "{% $max($waitTime, 1) %}"
+        Seconds = "{% $max([$ceil($waitTime), 1]) %}"
         Next    = "ForEachAddress"
         Assign = {
           "retries"  = "{% $retries + 1 %}",
