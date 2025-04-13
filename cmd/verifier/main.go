@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	aws "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/sirupsen/logrus"
-	"tailscale.com/hostinfo"
 	"tailscale.com/tsnet"
 )
 
@@ -71,8 +70,6 @@ func connectToTailscale(authKey string) error {
 		return nil
 	}
 
-	hostinfo.SetApp("tailfed-verifier")
-
 	hostname, err := os.Hostname()
 	if err != nil {
 		return fmt.Errorf("could not get hostname: %w", err)
@@ -81,7 +78,7 @@ func connectToTailscale(authKey string) error {
 	ts = &tsnet.Server{
 		AuthKey:   authKey,
 		Ephemeral: true,
-		Hostname:  fmt.Sprintf("tailfed-initializer-%s-%s", os.Getenv("AWS_LAMBDA_FUNCTION_VERSION"), hostname),
+		Hostname:  fmt.Sprintf("%s-%s-%s", os.Getenv("AWS_LAMBDA_FUNCTION_NAME"), os.Getenv("AWS_REGION"), hostname),
 		Dir:       "/tmp",
 	}
 	if err := ts.Start(); err != nil {
