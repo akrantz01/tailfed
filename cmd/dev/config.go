@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/metadata"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
@@ -20,6 +21,7 @@ type config struct {
 	LogLevel string `koanf:"log-level"`
 	Address  string `koanf:"address"`
 
+	Launcher  launcherConfig  `koanf:"launcher"`
 	Metadata  metadataConfig  `koanf:"metadata"`
 	Signing   signingConfig   `koanf:"signing"`
 	Storage   storageConfig   `koanf:"storage"`
@@ -27,7 +29,10 @@ type config struct {
 }
 
 func (c *config) LoadAWSConfig() (aws.Config, error) {
-	if c.Metadata.Bucket == "s3" || c.Signing.Backend == "kms" || c.Storage.Backend == "dynamo" {
+	if c.Launcher.Backend == "step-function" ||
+		c.Metadata.Bucket == "s3" ||
+		c.Signing.Backend == "kms" ||
+		c.Storage.Backend == "dynamo" {
 		return awsconfig.LoadDefaultConfig(context.Background())
 	}
 
@@ -35,6 +40,10 @@ func (c *config) LoadAWSConfig() (aws.Config, error) {
 }
 
 func (c *config) Validate() error {
+	if err := c.Launcher.Validate(); err != nil {
+		return fmt.Errorf("launcher configuration is invalid: %w", err)
+	}
+
 	if err := c.Metadata.Validate(); err != nil {
 		return fmt.Errorf("metadata configuration is invalid: %w", err)
 	}
@@ -51,7 +60,35 @@ func (c *config) Validate() error {
 		return fmt.Errorf("tailscale configuration is invalid: %w", err)
 	}
 
+	if c.Launcher.Backend == "step-function" && c.Storage.Backend != "dynamo" {
+		return errors.New("step-function launcher backend requires dynamo storage backend")
+	}
+
 	return nil
+}
+
+type launcherConfig struct {
+	Backend      string `koanf:"backend"`
+	StateMachine string `koanf:"state-machine"`
+}
+
+func (l *launcherConfig) Validate() error {
+	if l.Backend == "step-function" && len(l.StateMachine) == 0 {
+		return errors.New("missing state machine arn for step-function backend")
+	}
+
+	return nil
+}
+
+func (l *launcherConfig) NewBackend(config aws.Config, bus chan<- launcher.Request) (launcher.Backend, error) {
+	switch l.Backend {
+	case "local":
+		return launcher.NewLocal(bus), nil
+	case "step-function":
+		return launcher.NewStepFunction(config, l.StateMachine)
+	default:
+		return nil, errors.New("unknown launcher backend")
+	}
 }
 
 type metadataConfig struct {

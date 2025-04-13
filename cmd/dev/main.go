@@ -32,6 +32,9 @@ func main() {
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The address and port combination to listen on")
 
+	cmd.Flags().String("launcher.backend", "local", "Where to launch the verification flow (choices: local, step-function)")
+	cmd.Flags().String("launcher.state-machine", "", "The ARN of the state machine to use for the step-function backend")
+
 	cmd.Flags().String("metadata.backend", "filesystem", "Where to store OpenID Connect metadata (choices: filesystem, s3)")
 	cmd.Flags().String("metadata.bucket", "", "The bucket to store metadata in for the s3 backend")
 	cmd.Flags().String("metadata.path", "metadata", "The directory path used by the filesystem backend")
@@ -84,6 +87,12 @@ func run(*cobra.Command, []string) error {
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
+	bus := make(chan launcher.Request, 3)
+	launch, err := cfg.Launcher.NewBackend(awsConfig, bus)
+	if err != nil {
+		return fmt.Errorf("failed to create launcher backend: %w", err)
+	}
+
 	meta, err := cfg.Metadata.NewBackend(awsConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create metadata backend: %w", err)
@@ -106,8 +115,12 @@ func run(*cobra.Command, []string) error {
 		return fmt.Errorf("failed to generate metadata documents: %w", err)
 	}
 
-	stopLauncher, bus := startLauncher(store, cfg.Tailscale.Tailnet)
-	launch := launcher.NewLocal(bus)
+	var stopLauncher func()
+	if cfg.Launcher.Backend == "local" {
+		stopLauncher = startLauncher(bus, store, cfg.Tailscale.Tailnet)
+	} else {
+		stopLauncher = func() {}
+	}
 
 	srv, serverErrors := startGateway(tsClient, launch, meta, signer, store)
 

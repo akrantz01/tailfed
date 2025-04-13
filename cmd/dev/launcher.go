@@ -18,13 +18,12 @@ const (
 	startInterval = 500 * time.Millisecond
 )
 
-func startLauncher(store storage.Backend, tailnet string) (context.CancelFunc, chan<- launcher.Request) {
-	bus := make(chan launcher.Request, 3)
+func startLauncher(bus <-chan launcher.Request, store storage.Backend, tailnet string) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go launcherLoop(ctx, store, tailnet, bus)
 
-	return cancel, bus
+	return cancel
 }
 
 func launcherLoop(ctx context.Context, store storage.Backend, tailnet string, bus <-chan launcher.Request) {
