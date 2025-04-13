@@ -34,3 +34,9 @@ variable "name" {
     error_message = "Unknown function binary (choices: initializer, verifier, finalizer, generator)"
   }
 }
+
+variable "timeout" {
+  type        = number
+  description = "The function timeout in seconds"
+  default     = 5
+}

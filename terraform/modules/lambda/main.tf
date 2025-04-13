@@ -27,6 +27,7 @@ resource "aws_lambda_function" "handler" {
 
   runtime = "provided.al2023"
   handler = "bootstrap"
+  timeout = var.timeout
 
   role = aws_iam_role.handler.arn
 
