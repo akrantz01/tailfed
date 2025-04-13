@@ -35,8 +35,10 @@ func main() {
 		logrus.WithError(err).Fatal("failed to create tailscale client")
 	}
 
-	// TODO: replace with step function-backed implementation
-	var launch launcher.Backend = nil
+	launch, err := launcher.NewStepFunction(awsConfig, config.Launcher.StateMachine)
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to initialize launcher")
+	}
 
 	store, err := storage.NewDynamo(awsConfig, config.Storage.Table)
 	if err != nil {
@@ -50,8 +52,13 @@ func main() {
 type Config struct {
 	LogLevel string `koanf:"log-level"`
 
+	Launcher  Launcher  `koanf:"launcher"`
 	Tailscale Tailscale `koanf:"tailscale"`
 	Storage   Storage   `koanf:"storage"`
+}
+
+type Launcher struct {
+	StateMachine string `koanf:"state-machine"`
 }
 
 type Tailscale struct {
