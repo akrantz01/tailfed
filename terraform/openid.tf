@@ -1,10 +1,3 @@
-resource "aws_iam_openid_connect_provider" "tailfed" {
-  depends_on = [aws_lambda_invocation.generator]
-
-  url            = local.invoke_url
-  client_id_list = [var.audience]
-}
-
 module "openid_metadata" {
   source = "./modules/bucket"
 
