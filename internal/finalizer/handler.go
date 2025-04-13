@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/http/gateway"
@@ -54,8 +55,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("challenge not verified", http.StatusForbidden), nil
 	}
 
-	issuer := fmt.Sprintf("https://%s/%s", req.RequestContext.DomainName, req.RequestContext.Stage)
-	claims := signing.NewClaims(issuer, h.audience, flow.DNSName, h.validity)
+	claims := signing.NewClaims(generateIssuer(&req.RequestContext), h.audience, flow.DNSName, h.validity)
 	token, err := h.signer.Sign(claims)
 	if err != nil {
 		logger.WithError(err).Error("failed to sign JWT")
@@ -68,4 +68,15 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 	}
 
 	return lambda.Success(&types.FinalizeResponse{IdentityToken: token}), nil
+}
+
+func generateIssuer(ctx *events.APIGatewayProxyRequestContext) string {
+	region := os.Getenv("AWS_REGION")
+	expected := fmt.Sprintf("%s.execute-api.%s.amazonaws.com", ctx.APIID, region)
+
+	if ctx.DomainName == expected {
+		return "https://" + expected + "/" + ctx.Stage
+	} else {
+		return "https://" + ctx.DomainName
+	}
 }
