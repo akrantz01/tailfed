@@ -13,11 +13,13 @@ locals {
 module "verifier" {
   source = "./modules/lambda"
 
+  depends_on = [aws_s3_object_copy.artifacts["verifier"]]
+
   name = "verifier"
   arch = var.architecture
 
   bucket   = module.artifacts_proxy.id
-  checksum = aws_s3_object_copy.artifacts["verifier"].checksum_sha256
+  checksum = local.artifact_hashes["verifier"]
 
   timeout = 60
 

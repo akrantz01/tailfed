@@ -1,5 +1,9 @@
 locals {
   artifacts = toset(["initializer", "verifier", "finalizer", "generator"])
+
+  artifact_hashes = {
+    for artifact in local.artifacts : artifact => base64sha256(data.aws_s3_object.artifacts[artifact].etag)
+  }
 }
 
 module "artifacts_proxy" {

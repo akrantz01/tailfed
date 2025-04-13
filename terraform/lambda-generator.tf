@@ -7,11 +7,13 @@ locals {
 module "generator" {
   source = "./modules/lambda"
 
+  depends_on = [aws_s3_object_copy.artifacts["generator"]]
+
   name = "generator"
   arch = var.architecture
 
   bucket   = module.artifacts_proxy.id
-  checksum = aws_s3_object_copy.artifacts["generator"].checksum_sha256
+  checksum = local.artifact_hashes["generator"]
 
   environment = {
     TAILFED_LOG_LEVEL        = var.log_level
@@ -34,6 +36,6 @@ resource "aws_lambda_invocation" "generator" {
 
   lifecycle_scope = "CRUD"
   triggers = {
-    updated = aws_s3_object_copy.artifacts["generator"].checksum_sha256
+    updated = local.artifact_hashes["generator"]
   }
 }

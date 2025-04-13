@@ -1,11 +1,13 @@
 module "initializer" {
   source = "./modules/lambda"
 
+  depends_on = [aws_s3_object_copy.artifacts["initializer"]]
+
   name = "initializer"
   arch = var.architecture
 
   bucket   = module.artifacts_proxy.id
-  checksum = aws_s3_object_copy.artifacts["initializer"].checksum_sha256
+  checksum = local.artifact_hashes["initializer"]
 
   environment = {
     TAILFED_LOG_LEVEL                      = var.log_level

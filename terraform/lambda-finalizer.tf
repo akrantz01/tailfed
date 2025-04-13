@@ -1,11 +1,13 @@
 module "finalizer" {
   source = "./modules/lambda"
 
+  depends_on = [aws_s3_object_copy.artifacts["finalizer"]]
+
   name = "finalizer"
   arch = var.architecture
 
   bucket   = module.artifacts_proxy.id
-  checksum = aws_s3_object_copy.artifacts["finalizer"].checksum_sha256
+  checksum = local.artifact_hashes["finalizer"]
 
   environment = {
     TAILFED_LOG_LEVEL         = var.log_level
