@@ -15,6 +15,13 @@ resource "aws_api_gateway_rest_api" "default" {
 }
 
 resource "aws_api_gateway_deployment" "default" {
+  depends_on = [
+    module.openid_metadata_discovery_document,
+    module.openid_metadata_jwks,
+    module.initializer_apigateway,
+    module.finalizer_apigateway,
+  ]
+
   rest_api_id = aws_api_gateway_rest_api.default.id
 
   lifecycle {
