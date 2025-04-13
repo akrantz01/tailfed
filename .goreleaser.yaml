@@ -19,7 +19,7 @@ before:
 
 nightly:
   publish_release: false
-  version_template: '{{ incminor .Version }}-nightly'
+  version_template: nightly
   tag_name: nightly
 
 builds:
