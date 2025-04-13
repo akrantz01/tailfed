@@ -17,6 +17,11 @@ before:
   hooks:
     - go mod tidy
 
+nightly:
+  publish_release: false
+  name_template: '{{ incminor .Version }}-nightly'
+  tag_name: nightly
+
 builds:
   - id: client
     main: ./cmd/client
