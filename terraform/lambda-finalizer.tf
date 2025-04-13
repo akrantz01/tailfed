@@ -33,3 +33,25 @@ module "finalizer_apigateway" {
 
   function = module.finalizer
 }
+
+data "aws_iam_policy_document" "finalizer" {
+  statement {
+    sid    = "Storage"
+    effect = "Allow"
+    actions = [
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+    ]
+    resources = [aws_dynamodb_table.storage.arn]
+  }
+
+  statement {
+    sid    = "Signer"
+    effect = "Allow"
+    actions = [
+      "kms:DescribeKey",
+      "kms:Sign",
+    ]
+    resources = [aws_kms_key.signer.arn]
+  }
+}

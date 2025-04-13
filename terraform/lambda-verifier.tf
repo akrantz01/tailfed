@@ -162,3 +162,70 @@ resource "aws_sfn_state_machine" "verifier" {
     },
   })
 }
+
+data "aws_iam_policy_document" "verifier_state_machine_trust_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["states.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "verifier" {
+  statement {
+    sid    = "Storage"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [aws_dynamodb_table.storage.arn]
+  }
+}
+
+data "aws_iam_policy_document" "verifier_state_machine" {
+  statement {
+    sid       = "InvokeLambda"
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
+    resources = ["${module.verifier.arn}:$LATEST"]
+  }
+
+  statement {
+    sid    = "LoggingEvents"
+    effect = "Allow"
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:PutLogEvents",
+    ]
+    resources = ["${aws_cloudwatch_log_group.verifier_state_machine.arn}:*"]
+  }
+
+  statement {
+    sid    = "LoggingVendored"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogDelivery",
+      "logs:DeleteLogDelivery",
+      "logs:GetLogDelivery",
+      "logs:ListLogDeliveries",
+      "logs:UpdateLogDelivery",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "LoggingPolicies"
+    effect = "Allow"
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:DescribeResourcePolicies",
+      "logs:PutResourcePolicy",
+    ]
+    resources = ["arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:*"]
+  }
+}

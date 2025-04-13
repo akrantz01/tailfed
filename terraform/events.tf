@@ -42,3 +42,23 @@ resource "aws_iam_role_policy" "generator_schedule" {
   role   = aws_iam_role.generator_schedule.id
   policy = data.aws_iam_policy_document.generator_schedule.json
 }
+
+data "aws_iam_policy_document" "generator_schedule_trust_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["scheduler.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "generator_schedule" {
+  statement {
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
+    resources = [module.generator.arn]
+  }
+}

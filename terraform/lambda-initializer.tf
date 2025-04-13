@@ -35,3 +35,22 @@ module "initializer_apigateway" {
 
   function = module.initializer
 }
+
+data "aws_iam_policy_document" "initializer" {
+  statement {
+    sid    = "Launcher"
+    effect = "Allow"
+    actions = [
+      "states:DescribeStateMachine",
+      "states:StartExecution",
+    ]
+    resources = [aws_sfn_state_machine.verifier.arn]
+  }
+
+  statement {
+    sid       = "Storage"
+    effect    = "Allow"
+    actions   = ["dynamodb:PutItem"]
+    resources = [aws_dynamodb_table.storage.arn]
+  }
+}
