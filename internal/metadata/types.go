@@ -21,7 +21,7 @@ type DiscoveryDocument struct {
 	Claims            []string                  `json:"claims_supported"`
 	ResponseTypes     []string                  `json:"response_types_supported"`
 	SigningAlgorithms []jose.SignatureAlgorithm `json:"id_token_signing_alg_values_supported"`
-	SubjectTypes      []string                  `json:"subject-types_supported"`
+	SubjectTypes      []string                  `json:"subject_types_supported"`
 }
 
 // NewDiscoveryDocument creates a new OpenID Connect discovery document from an issuer URL
