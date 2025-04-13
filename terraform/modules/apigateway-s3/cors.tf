@@ -35,6 +35,8 @@ resource "aws_api_gateway_integration_response" "cors" {
 }
 
 resource "aws_api_gateway_method_response" "cors" {
+  depends_on = [aws_api_gateway_integration.cors]
+
   rest_api_id = var.rest_api_id
   resource_id = var.resource_id
   http_method = aws_api_gateway_method.cors.http_method

@@ -48,6 +48,8 @@ resource "aws_api_gateway_integration_response" "s3" {
 }
 
 resource "aws_api_gateway_method_response" "s3" {
+  depends_on = [aws_api_gateway_integration.s3]
+
   rest_api_id = var.rest_api_id
   resource_id = var.resource_id
   http_method = aws_api_gateway_method.s3.http_method
