@@ -1,6 +1,13 @@
+locals {
+  custom_domain = var.domain != null
+  invoke_url    = local.custom_domain ? "https://${aws_api_gateway_domain_name.production[0].domain_name}" : aws_api_gateway_stage.production.invoke_url
+}
+
 resource "aws_api_gateway_rest_api" "default" {
   name        = "tailfed"
   description = "The API for generating tailnet node ID tokens"
+
+  disable_execute_api_endpoint = local.custom_domain
 
   endpoint_configuration {
     types = ["EDGE"]
@@ -65,4 +72,23 @@ resource "aws_api_gateway_resource" "jwks" {
   rest_api_id = aws_api_gateway_rest_api.default.id
   parent_id   = aws_api_gateway_resource.well_known.id
   path_part   = "jwks.json"
+}
+
+resource "aws_api_gateway_domain_name" "production" {
+  count = local.custom_domain ? 1 : 0
+
+  domain_name     = var.domain.name
+  certificate_arn = var.domain.certificate
+
+  endpoint_configuration {
+    types = ["EDGE"]
+  }
+}
+
+resource "aws_api_gateway_base_path_mapping" "production" {
+  count = local.custom_domain ? 1 : 0
+
+  api_id      = aws_api_gateway_rest_api.default.id
+  domain_name = aws_api_gateway_domain_name.production[count.index].domain_name
+  stage_name  = aws_api_gateway_stage.production.stage_name
 }

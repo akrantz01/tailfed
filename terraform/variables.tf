@@ -15,6 +15,15 @@ variable "audience" {
   default     = "sts.amazonaws.com"
 }
 
+variable "domain" {
+  type = object({
+    name        = string
+    certificate = string
+  })
+  description = "The custom domain and associated ACM certificate to use"
+  default     = null
+}
+
 variable "log_level" {
   type        = string
   description = "The level for functions to log at"
