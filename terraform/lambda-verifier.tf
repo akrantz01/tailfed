@@ -75,9 +75,8 @@ resource "aws_sfn_state_machine" "verifier" {
     States = {
       Initialize = {
         Type = "Pass"
-        Next = "AttemptVerification"
+        Next = "ForEachAddress"
         Assign = {
-          index      = 0
           retries    = 0
           maxRetries = 8
           waitTime   = 1
@@ -85,36 +84,48 @@ resource "aws_sfn_state_machine" "verifier" {
         }
       }
 
-      AttemptVerification = {
-        Type     = "Task"
-        Next     = "CheckResult"
-        Resource = "arn:aws:states:::lambda:invoke"
-        Arguments = {
-          FunctionName = "${module.verifier.arn}:$LATEST"
-          Payload = {
-            id      = "{% $states.context.Execution.Input.id %}"
-            address = "{% $states.context.Execution.Input.addresses[$index] %}"
+      ForEachAddress = {
+        Type  = "Map"
+        Next  = "CheckResult"
+        Items = "{% $states.context.Execution.Input.addresses %}"
+        ItemSelector = {
+          id      = "{% $states.context.Execution.Input.id %}"
+          address = "{% $states.context.Map.Item.Value %}"
+        }
+        ItemProcessor = {
+          ProcessorConfig = { Mode = "INLINE" }
+          StartAt         = "AttemptVerification"
+          States = {
+            AttemptVerification = {
+              Type     = "Task"
+              End      = true
+              Resource = "arn:aws:states:::lambda:invoke"
+              Arguments = {
+                FunctionName = "${module.verifier.arn}:$LATEST"
+                Payload      = "{% $states.input %}"
+              }
+              Output = "{% $states.result.Payload %}"
+              Retry = [
+                {
+                  Comment         = "On Lambda Failures"
+                  IntervalSeconds = 1
+                  MaxAttempts     = 3
+                  BackoffRate     = 2
+                  JitterStrategy  = "FULL"
+                  ErrorEquals = [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException",
+                  ]
+                }
+              ]
+            }
           }
         }
-        Output = "{% $states.result.Payload %}"
-        Assign = {
-          index = "{% ($index + 1) % $count($states.input.addresses) %}"
+        Output = {
+          success = "{% $reduce($states.result, function($acc, $v) { $acc or $v.success }) %}"
         }
-        Retry = [
-          {
-            Comment         = "On Lambda Failures"
-            IntervalSeconds = 1
-            MaxAttempts     = 3
-            BackoffRate     = 2
-            JitterStrategy  = "FULL"
-            ErrorEquals = [
-              "Lambda.ServiceException",
-              "Lambda.AWSLambdaException",
-              "Lambda.SdkClientException",
-              "Lambda.TooManyRequestsException",
-            ]
-          }
-        ]
       }
 
       CheckResult = {
@@ -137,7 +148,7 @@ resource "aws_sfn_state_machine" "verifier" {
       Wait = {
         Type    = "Wait"
         Seconds = "{% $max($waitTime, 1) %}"
-        Next    = "AttemptVerification"
+        Next    = "ForEachAddress"
         Assign = {
           "retries"  = "{% $retries + 1 %}",
           "waitTime" = "{% $waitTime * 2 * (1 + ($waitJitter * ($random() * 2 - 1))) %}"
