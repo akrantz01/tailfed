@@ -53,6 +53,8 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 
 	if flow.Status != storage.StatusSuccess {
 		return lambda.Error("challenge not verified", http.StatusForbidden), nil
+	} else if time.Time(flow.ExpiresAt).After(time.Now()) {
+		return lambda.Error("challenge expired", http.StatusForbidden), nil
 	}
 
 	claims := signing.NewClaims(generateIssuer(&req.RequestContext), h.audience, flow.DNSName, h.validity)
