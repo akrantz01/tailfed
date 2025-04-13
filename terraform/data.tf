@@ -26,7 +26,7 @@ data "aws_iam_policy_document" "verifier_state_machine" {
     sid       = "InvokeLambda"
     effect    = "Allow"
     actions   = ["lambda:InvokeFunction"]
-    resources = [module.verifier.arn]
+    resources = ["${module.verifier.arn}:$LATEST"]
   }
 
   statement {
