@@ -62,7 +62,7 @@ variable "tailscale" {
       client_secret = string
     }))
   })
-  description = "The Tailscale tailent and API authentication method"
+  description = "The Tailscale tailent and API authentication method. Values can be provided as parameter store or secrets manager ARNs."
 
   validation {
     condition     = length(var.tailscale.tailnet) > 0
