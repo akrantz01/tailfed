@@ -26,6 +26,73 @@ jobs:
           skip-github-release: true
           skip-labeling: true
 
+  prepare:
+    name: Prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux binaries
+          - os: ubuntu-latest
+            goos: linux
+            goarch: 386
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+
+          # MacOS binaries
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+
+          # Windows binaries
+          - os: windows-latest
+            goos: windows
+            goarch: "386"
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+    env:
+      flags: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          cache: true
+          cache-dependency-path: go.sum
+          go-version-file: go.mod
+
+      - name: For nightly release
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "flags=--nightly" >> "$GITHUB_ENV""
+
+      - uses: actions/cache@v4
+        with:
+          path: dist/${{ matrix.goos }}_${{ matrix.goarch }}
+          key: release-prepare-${{ matrix.goos }}_${{ matrix.goarch }}${{ env.flags }}-${{ github.sha }}
+          enableCrossOsArchive: true
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser-pro
+          version: ~> v2
+          args: release --clean --split ${{ env.flags }}
+        env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
   release:
     name: Release
     runs-on: ubuntu-latest

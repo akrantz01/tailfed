@@ -22,6 +22,9 @@ nightly:
   version_template: nightly
   tag_name: nightly
 
+partial:
+  by: target
+
 builds:
   - id: client
     main: ./cmd/client
