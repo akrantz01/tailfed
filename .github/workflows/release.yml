@@ -91,6 +91,8 @@ jobs:
           version: ~> v2
           args: release --clean --split ${{ env.flags }}
         env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
 
   release:
