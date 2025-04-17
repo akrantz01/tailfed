@@ -24,25 +24,34 @@ func Load(opts ...Option) (*koanf.Koanf, error) {
 
 	k := koanf.New(".")
 
+	secrets := newSecretLoader(options.awsConfig)
+	envCleaner := newEnvVarCleaner(options.envPrefix, secrets)
+
 	if len(options.file) != 0 {
 		if err := k.Load(file.Provider(options.file), yaml.Parser()); err != nil {
 			return nil, fmt.Errorf("failed to load from file %q: %w", options.file, err)
 		}
 	}
 
-	if err := k.Load(file.Provider(".env"), dotenv.ParserEnv(options.envPrefix, ".", cleanEnvVarKey(options.envPrefix))); err != nil {
+	if err := k.Load(file.Provider(".env"), dotenv.ParserEnvWithValue(options.envPrefix, ".", envCleaner)); err != nil {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("failed to load from dotenv: %w", err)
 		}
+	} else if err := secrets.Err(); err != nil {
+		return nil, fmt.Errorf("failed to load secret from dotenv: %w", err)
 	}
 
-	if err := k.Load(env.Provider(options.envPrefix, ".", cleanEnvVarKey(options.envPrefix)), nil); err != nil {
+	if err := k.Load(env.ProviderWithValue(options.envPrefix, ".", envCleaner), nil); err != nil {
 		return nil, fmt.Errorf("failed to load from env: %w", err)
+	} else if err := secrets.Err(); err != nil {
+		return nil, fmt.Errorf("failed to load secret from env: %w", err)
 	}
 
 	if options.flags != nil {
-		if err := k.Load(posflag.Provider(options.flags, ".", k), nil); err != nil {
+		if err := k.Load(posflag.ProviderWithValue(options.flags, ".", k, secrets.Load), nil); err != nil {
 			return nil, fmt.Errorf("failed to load from flags: %w", err)
+		} else if err := secrets.Err(); err != nil {
+			return nil, fmt.Errorf("failed to load secret from flags: %w", err)
 		}
 	}
 
@@ -63,10 +72,15 @@ func LoadInto[T any](dest *T, opts ...Option) error {
 	return nil
 }
 
-func cleanEnvVarKey(prefix string) func(string) string {
-	return func(s string) string {
+func newEnvVarCleaner(prefix string, secrets *secretLoader) func(string, string) (string, any) {
+	keyCleaner := func(s string) string {
 		formatted := strings.ToLower(strings.TrimPrefix(s, prefix))
 		nested := strings.Replace(formatted, "__", ".", -1)
 		return strings.Replace(nested, "_", "-", -1)
+	}
+
+	return func(key, value string) (string, interface{}) {
+		key = keyCleaner(key)
+		return secrets.Load(key, value)
 	}
 }

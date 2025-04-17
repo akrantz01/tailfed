@@ -1,11 +1,15 @@
 package configloader
 
-import "github.com/spf13/pflag"
+import (
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/spf13/pflag"
+)
 
 type options struct {
 	flags     *pflag.FlagSet
 	file      string
 	envPrefix string
+	awsConfig *aws.Config
 }
 
 type Option func(opts *options)
@@ -21,6 +25,13 @@ func WithFlags(flags *pflag.FlagSet) Option {
 func WithEnvPrefix(prefix string) Option {
 	return func(opts *options) {
 		opts.envPrefix = prefix
+	}
+}
+
+// WithSecrets allows loading secrets from AWS secrets manager and SSM parameter store
+func WithSecrets(config aws.Config) Option {
+	return func(opts *options) {
+		opts.awsConfig = &config
 	}
 }
 
