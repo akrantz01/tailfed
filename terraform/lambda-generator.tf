@@ -36,7 +36,8 @@ resource "aws_lambda_invocation" "generator" {
 
   lifecycle_scope = "CRUD"
   triggers = {
-    updated = local.artifact_hashes["generator"]
+    code_updated   = local.artifact_hashes["generator"]
+    lambda_updated = module.generator.sha256
   }
 }
 

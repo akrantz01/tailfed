@@ -27,3 +27,8 @@ output "role_id" {
   value       = aws_iam_role.handler.id
   description = "The ID of the Lambda execution role"
 }
+
+output "sha256" {
+  value       = aws_lambda_function.handler.code_sha256
+  description = "The SHA256 hash of the source zip"
+}
