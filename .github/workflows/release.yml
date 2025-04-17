@@ -8,8 +8,8 @@ on:
       - v*
 
 jobs:
-  generate-release:
-    name: Generate Release
+  generate-next-release:
+    name: Generate Next Release
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
