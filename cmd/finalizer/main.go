@@ -15,18 +15,18 @@ import (
 )
 
 func main() {
+	awsConfig, err := aws.LoadDefaultConfig(context.Background())
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to load AWS config from environment")
+	}
+
 	var config Config
-	if err := configloader.LoadInto(&config, configloader.WithEnvPrefix("TAILFED_")); err != nil {
+	if err := configloader.LoadInto(&config, configloader.WithEnvPrefix("TAILFED_"), configloader.WithSecrets(awsConfig)); err != nil {
 		logrus.WithError(err).Fatal("failed to load configuration")
 	}
 
 	if err := logging.Initialize(config.LogLevel); err != nil {
 		logrus.WithError(err).Fatal("failed to initialize logging")
-	}
-
-	awsConfig, err := aws.LoadDefaultConfig(context.Background())
-	if err != nil {
-		logrus.WithError(err).Fatal("failed to load AWS config from environment")
 	}
 
 	signer, err := signing.NewKMS(awsConfig, config.Signing.Key)
