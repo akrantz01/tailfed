@@ -92,7 +92,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.goos }}_${{ matrix.goarch }}
-          path: dist/${{ matrix.goos }}_${{ matrix.goarch }}
+          path: dist/
 
   release:
     name: Release
