@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -34,7 +35,7 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	apiClient, err := api.NewClient(r.Url)
+	apiClient, err := api.NewClient(http.DefaultClient, r.Url)
 	if err != nil {
 		return err
 	}

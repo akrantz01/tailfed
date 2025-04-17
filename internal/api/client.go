@@ -24,7 +24,7 @@ type Client struct {
 }
 
 // NewClient creates a new Tailfed API client
-func NewClient(baseUrl string) (*Client, error) {
+func NewClient(client *http.Client, baseUrl string) (*Client, error) {
 	base, err := parseBaseUrl(baseUrl)
 	if err != nil {
 		return nil, fmt.Errorf("invalid API base url: %w", err)
@@ -32,9 +32,8 @@ func NewClient(baseUrl string) (*Client, error) {
 
 	return &Client{
 		logger: logrus.WithField("component", "api"),
-		// TODO: allow customizing client
-		inner: http.DefaultClient,
-		base:  base,
+		inner:  client,
+		base:   base,
 	}, nil
 }
 
