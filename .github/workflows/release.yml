@@ -27,7 +27,7 @@ jobs:
           skip-labeling: true
 
   prepare:
-    name: Prepare
+    name: Prepare ${{ matrix.goos }} ${{ matrix.goarch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -77,7 +77,7 @@ jobs:
       - name: For nightly release
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "flags=--nightly" >> "$GITHUB_ENV""
+          echo "flags=--nightly" >> "$GITHUB_ENV"
 
       - uses: actions/cache@v4
         with:
