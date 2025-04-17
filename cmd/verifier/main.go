@@ -19,8 +19,13 @@ import (
 var ts *tsnet.Server
 
 func main() {
+	awsConfig, err := aws.LoadDefaultConfig(context.Background())
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to load AWS config from environment")
+	}
+
 	var config Config
-	if err := configloader.LoadInto(&config, configloader.WithEnvPrefix("TAILFED_")); err != nil {
+	if err := configloader.LoadInto(&config, configloader.WithEnvPrefix("TAILFED_"), configloader.WithSecrets(awsConfig)); err != nil {
 		logrus.WithError(err).Fatal("failed to load configuration")
 	}
 
@@ -30,11 +35,6 @@ func main() {
 
 	if err := connectToTailscale(config.Tailscale.AuthKey); err != nil {
 		logrus.WithError(err).Fatal("failed to connect to tailscale")
-	}
-
-	awsConfig, err := aws.LoadDefaultConfig(context.Background())
-	if err != nil {
-		logrus.WithError(err).Fatal("failed to load AWS config from environment")
 	}
 
 	store, err := storage.NewDynamo(awsConfig, config.Storage.Table)
