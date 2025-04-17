@@ -12,7 +12,7 @@ module "initializer" {
   environment = {
     TAILFED_LOG_LEVEL                      = var.log_level
     TAILFED_LAUNCHER__STATE_MACHINE        = aws_sfn_state_machine.verifier.arn
-    TAILFED_STORAGE__TABLE                 = aws_dynamodb_table.storage.name
+    TAILFED_STORAGE__TABLE                 = aws_dynamodb_table.storage.arn
     TAILFED_TAILSCALE__TAILNET             = var.tailscale.tailnet
     TAILFED_TAILSCALE__API_KEY             = var.tailscale.api_key
     TAILFED_TAILSCALE__OAUTH_CLIENT_ID     = var.tailscale.oauth.client_id

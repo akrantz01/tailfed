@@ -25,7 +25,7 @@ module "verifier" {
 
   environment = {
     TAILFED_LOG_LEVEL           = var.log_level
-    TAILFED_STORAGE__TABLE      = aws_dynamodb_table.storage.name
+    TAILFED_STORAGE__TABLE      = aws_dynamodb_table.storage.arn
     TAILFED_TAILSCALE__TAILNET  = var.tailscale.tailnet
     TAILFED_TAILSCALE__AUTH_KEY = var.tailscale.auth_key
   }

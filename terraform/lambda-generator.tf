@@ -18,7 +18,7 @@ module "generator" {
   environment = {
     TAILFED_LOG_LEVEL        = var.log_level
     TAILFED_METADATA__BUCKET = module.openid_metadata.id
-    TAILFED_SIGNING__KEY     = aws_kms_alias.signer.name
+    TAILFED_SIGNING__KEY     = aws_kms_alias.signer.arn
   }
 }
 

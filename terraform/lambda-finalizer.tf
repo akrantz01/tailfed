@@ -12,9 +12,9 @@ module "finalizer" {
   environment = {
     TAILFED_LOG_LEVEL         = var.log_level
     TAILFED_SIGNING__AUDIENCE = var.audience
-    TAILFED_SIGNING__KEY      = aws_kms_alias.signer.name
+    TAILFED_SIGNING__KEY      = aws_kms_alias.signer.arn
     TAILFED_SIGNING__VALIDITY = var.validity
-    TAILFED_STORAGE__TABLE    = aws_dynamodb_table.storage.name
+    TAILFED_STORAGE__TABLE    = aws_dynamodb_table.storage.arn
   }
 }
 
