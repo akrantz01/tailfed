@@ -57,7 +57,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("challenge expired", http.StatusForbidden), nil
 	}
 
-	claims := signing.NewClaims(generateIssuer(&req.RequestContext), h.audience, flow.DNSName, h.validity)
+	claims := signing.NewClaimsFromFlow(generateIssuer(&req.RequestContext), h.audience, h.validity, flow)
 	token, err := h.signer.Sign(claims)
 	if err != nil {
 		logger.WithError(err).Error("failed to sign JWT")
