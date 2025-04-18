@@ -12,20 +12,27 @@ type Backend interface {
 	// PublicKey returns details about the public key
 	PublicKey() (jose.JSONWebKey, error)
 	// Sign generates a signed JWT with the provided claims
-	Sign(claims jwt.Claims) (string, error)
+	Sign(claims Claims) (string, error)
+}
+
+// Claims contains the data that will be signed in the token
+type Claims struct {
+	jwt.Claims
 }
 
 // NewClaims creates a new set of token claims for signing
-func NewClaims(issuer, audience, host string, validity time.Duration) jwt.Claims {
+func NewClaims(issuer, audience, host string, validity time.Duration) Claims {
 	now := time.Now()
 
-	return jwt.Claims{
-		Issuer:    issuer,
-		Audience:  jwt.Audience{audience},
-		Subject:   host,
-		IssuedAt:  jwt.NewNumericDate(now),
-		NotBefore: jwt.NewNumericDate(now),
-		Expiry:    jwt.NewNumericDate(now.Add(validity)),
+	return Claims{
+		Claims: jwt.Claims{
+			Issuer:    issuer,
+			Audience:  jwt.Audience{audience},
+			Subject:   host,
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Expiry:    jwt.NewNumericDate(now.Add(validity)),
+		},
 	}
 }
 

@@ -57,7 +57,7 @@ func NewKMS(config aws.Config, alias string) (Backend, error) {
 	return &kmsBackend{*metadata.KeyId, metadata.Arn, algorithm, client, signer}, nil
 }
 
-func (k *kmsBackend) Sign(claims jwt.Claims) (string, error) {
+func (k *kmsBackend) Sign(claims Claims) (string, error) {
 	return jwt.Signed(k.signer).Claims(claims).Serialize()
 }
 

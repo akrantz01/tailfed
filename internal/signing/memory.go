@@ -36,7 +36,7 @@ func NewInMemory() (Backend, error) {
 	return &inMemory{id, private, signer}, nil
 }
 
-func (m *inMemory) Sign(claims jwt.Claims) (string, error) {
+func (m *inMemory) Sign(claims Claims) (string, error) {
 	return jwt.Signed(m.signer).Claims(claims).Serialize()
 }
 
