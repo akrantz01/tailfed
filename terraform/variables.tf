@@ -24,6 +24,12 @@ variable "domain" {
   default     = null
 }
 
+variable "execution_role_policies" {
+  type        = map(string)
+  description = "Additional policies to attach to the Lambda execution roles"
+  default     = {}
+}
+
 variable "log_level" {
   type        = string
   description = "The level for functions to log at"

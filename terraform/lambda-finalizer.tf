@@ -17,9 +17,7 @@ module "finalizer" {
     TAILFED_STORAGE__TABLE    = aws_dynamodb_table.storage.arn
   }
 
-  policies = {
-    Lambda = data.aws_iam_policy_document.finalizer.json
-  }
+  policies = merge({ Lambda = data.aws_iam_policy_document.finalizer.json }, var.execution_role_policies)
 }
 
 module "finalizer_apigateway" {

@@ -30,9 +30,7 @@ module "verifier" {
     TAILFED_TAILSCALE__AUTH_KEY = var.tailscale.auth_key
   }
 
-  policies = {
-    Lambda = data.aws_iam_policy_document.verifier.json
-  }
+  policies = merge({ Lambda = data.aws_iam_policy_document.verifier.json }, var.execution_role_policies)
 }
 
 resource "aws_iam_role" "verifier_state_machine" {

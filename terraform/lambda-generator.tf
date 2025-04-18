@@ -21,9 +21,7 @@ module "generator" {
     TAILFED_SIGNING__KEY     = aws_kms_alias.signer.arn
   }
 
-  policies = {
-    Lambda = data.aws_iam_policy_document.generator.json
-  }
+  policies = merge({ Lambda = data.aws_iam_policy_document.generator.json }, var.execution_role_policies)
 }
 
 resource "aws_lambda_invocation" "generator" {

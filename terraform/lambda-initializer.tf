@@ -19,9 +19,7 @@ module "initializer" {
     TAILFED_TAILSCALE__OAUTH_CLIENT_SECRET = var.tailscale.oauth.client_secret
   }
 
-  policies = {
-    Lambda = data.aws_iam_policy_document.initializer.json
-  }
+  policies = merge({ Lambda = data.aws_iam_policy_document.initializer.json }, var.execution_role_policies)
 }
 
 module "initializer_apigateway" {
