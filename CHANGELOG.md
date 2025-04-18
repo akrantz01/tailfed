@@ -1,5 +1,71 @@
 # Changelog
 
+## [1.2.0](https://github.com/akrantz01/tailfed/compare/v1.1.0...v1.2.0) (2025-04-18)
+
+
+### Features
+
+* **configloader:** allow loading values from parameter store and secrets manager ([62edaf8](https://github.com/akrantz01/tailfed/commit/62edaf82020a174d63f818abe949458c03eb6831))
+* **dev:** allow switching between local and step function launcher ([399617c](https://github.com/akrantz01/tailfed/commit/399617ccd8dc865173ad3757018ef26f05f8ab96))
+* **finalizer:** add support for custom domains ([0e1a16a](https://github.com/akrantz01/tailfed/commit/0e1a16ab0540bfd0816f3566cdf7fe60e2d18c82))
+* **finalizer:** allow loading config from secrets ([80c3581](https://github.com/akrantz01/tailfed/commit/80c358113d37500337ba66aa691144caa6e3cd7b))
+* **finalizer:** manually construct issuer url ([5659d2d](https://github.com/akrantz01/tailfed/commit/5659d2d334de90051d16567b1092e120cb9a939c))
+* **generator:** allow loading config from secrets ([22e05eb](https://github.com/akrantz01/tailfed/commit/22e05eb7b07c91fcfd061a7c677ee9c7a852c90e))
+* **initializer:** allow loading config from secrets ([8f7ca7d](https://github.com/akrantz01/tailfed/commit/8f7ca7d1fb99589cc3a5168bc70824b5c3103a6f))
+* **initializer:** use step function-backed launcher ([b77ec9a](https://github.com/akrantz01/tailfed/commit/b77ec9a71b4eb6ef88dc99fcf0ca4434fd93cb53))
+* **launcher:** add step function-backed implementation ([2810daa](https://github.com/akrantz01/tailfed/commit/2810daa6a6e8c15906aef847229ccd349ed4a7a0))
+* **metadata:** include extra claims in metadata document ([a572fc9](https://github.com/akrantz01/tailfed/commit/a572fc97e703406f2cc29dae15278d3ec0a9f221))
+* **signing:** extend claims in token ([cbf8f5d](https://github.com/akrantz01/tailfed/commit/cbf8f5dcd6c629b9d4b09800f2b81989b507f3a4))
+* **storage:** add extra api fields to flow metadata ([2891b53](https://github.com/akrantz01/tailfed/commit/2891b53fdb8ced4c42714c6cda14a4ab777804ed))
+* **tailscale:** extend information returned for nodes ([9fb9c5b](https://github.com/akrantz01/tailfed/commit/9fb9c5bd3ed1b692faeb3741aa6999e2cf39da08))
+* **terraform:** add module for binding lambda to api gateway ([fcce5df](https://github.com/akrantz01/tailfed/commit/fcce5df9b7824b0698d74225dc421fc795d01660))
+* **terraform:** add other lambda functions ([b1c0d71](https://github.com/akrantz01/tailfed/commit/b1c0d71a9badede160e2c482c8e6fa09c9704cb4))
+* **terraform:** add required iam permissions for generator ([6229762](https://github.com/akrantz01/tailfed/commit/62297625bd88fa7bb52c3608fed02fd252f0076b))
+* **terraform:** add support for custom domains ([82f054b](https://github.com/akrantz01/tailfed/commit/82f054b85b969456ca34632f17670716dcf94f4e))
+* **terraform:** allow applying additional lambda execution role policies ([d102f89](https://github.com/akrantz01/tailfed/commit/d102f8956df5c1b6eae50a04fe367aec3cb15736))
+* **terraform:** configure api gateway throttling ([09b8fbd](https://github.com/akrantz01/tailfed/commit/09b8fbd44cd1cf6f1f09b35d3fb3a6335c4b17dc))
+* **terraform:** configure finalizer lambda ([27ab6c0](https://github.com/akrantz01/tailfed/commit/27ab6c0be592f1063765639ae93669447e4b5b9a))
+* **terraform:** configure function log level ([193be93](https://github.com/akrantz01/tailfed/commit/193be933e5ad621526ac09f5a596b28ea51ba7c0))
+* **terraform:** configure initializer lambda ([61511fb](https://github.com/akrantz01/tailfed/commit/61511fbac320546504145421207de30f9f9016db))
+* **terraform:** configure verifier lambda ([5720b5c](https://github.com/akrantz01/tailfed/commit/5720b5c582c38cc53628f408c4f1938e9bd9f711))
+* **terraform:** create openid connect provider for tailfed ([8fb78c0](https://github.com/akrantz01/tailfed/commit/8fb78c0d97b61ed17f4fa8880cb093dca44eab57))
+* **terraform:** create step function workflow ([2432082](https://github.com/akrantz01/tailfed/commit/243208269219b2f3d15838e197e52f4db7ed1e8b))
+* **terraform:** enable cors for s3 proxied resources ([daf830b](https://github.com/akrantz01/tailfed/commit/daf830b4f85395a6da396aae6cefcaf2cacfb43a))
+* **terraform:** expose lambda function timeout ([f028645](https://github.com/akrantz01/tailfed/commit/f028645e97659293144f1f2f9793153d0503bad9))
+* **terraform:** extend verifier function timeout ([22768f3](https://github.com/akrantz01/tailfed/commit/22768f306e5c0abcb5ab9c5eb5dfb9df889d13d2))
+* **terraform:** generate required outputs ([f3c5d74](https://github.com/akrantz01/tailfed/commit/f3c5d74fa9e0173cdd50c60bb143148d92284a65))
+* **terraform:** link finalizer lambda to gateway route ([b6cc409](https://github.com/akrantz01/tailfed/commit/b6cc4095df1b8007c0eea67d8e92fbf7cd7d22cc))
+* **terraform:** link initializer lambda to gateway route ([9e0fc0e](https://github.com/akrantz01/tailfed/commit/9e0fc0ea76587507d0f38ff270a79265596ebc50))
+* **terraform:** parallelize address verification ([98b3596](https://github.com/akrantz01/tailfed/commit/98b359607f69aec715f1a62c058e550a990b8811))
+* **terraform:** pass full resource arns ([49902c6](https://github.com/akrantz01/tailfed/commit/49902c6d992b9f9b30921ef30bc0fddfdaf7ee15))
+* **terraform:** re-trigger api gateway deployment on resource change ([eb55185](https://github.com/akrantz01/tailfed/commit/eb551855249aaf017cbb5836a7ef02dabefb0d33))
+* **terraform:** turn configuration into a module ([d9546b8](https://github.com/akrantz01/tailfed/commit/d9546b86bcf6d7b8a264eeaa49313f644d9ea52b))
+* **terraform:** update lambda functions on artifact modification ([075a739](https://github.com/akrantz01/tailfed/commit/075a739b42e1e7644e5699ec8e7eb3924d601b4f))
+* **verifier:** allow loading config from secrets ([dcebd93](https://github.com/akrantz01/tailfed/commit/dcebd93d7d3598e6d5f622791f51f87fa9819a16))
+
+
+### Bug Fixes
+
+* **finalizer:** flip challenge expiry check ([e622e0a](https://github.com/akrantz01/tailfed/commit/e622e0ae22e91daa3986b0b00e4ec0878c000107))
+* **finalizer:** prevent issuing for expired flows ([c5510c8](https://github.com/akrantz01/tailfed/commit/c5510c8562f91557a462b1691e54692416f2eb6c))
+* **metadata:** fix subject types marshalled name ([9520eed](https://github.com/akrantz01/tailfed/commit/9520eedaa76cc3710fb65cf2326582da0c886d36))
+* **metadata:** store with json content type for s3 backend ([265e8a5](https://github.com/akrantz01/tailfed/commit/265e8a5ed69c472e892658b0681458d97f7eb406))
+* **terraform:** add permissions for step functions to initializer ([604b76a](https://github.com/akrantz01/tailfed/commit/604b76a08afb7516bb0d1ceebed1d5ed9e1390c4))
+* **terraform:** configure launcher state machine ([d532599](https://github.com/akrantz01/tailfed/commit/d53259951d0beacb94b8a648a12f305b39eb2ea3))
+* **terraform:** correct cloudwatch logs permissions ([d2b67ac](https://github.com/akrantz01/tailfed/commit/d2b67acf1e7fa67f9cc41e46793e7a4aefa33141))
+* **terraform:** ensure api gateway deployed after resources created ([406abc7](https://github.com/akrantz01/tailfed/commit/406abc747031a23c7eb14c7ca753cc1c08b588fc))
+* **terraform:** ensure auto-update of lambda handlers ([514d43d](https://github.com/akrantz01/tailfed/commit/514d43d9dd4825516522600cb15e7d7c4cce0687))
+* **terraform:** ensure generator is invoked when lambda config is changed ([6f73d6e](https://github.com/akrantz01/tailfed/commit/6f73d6e55ec8eddfd0c5d37131bf6223998d8b7b))
+* **terraform:** ensure lambda function can write to log group ([008aa4a](https://github.com/akrantz01/tailfed/commit/008aa4a3574468bcab85cfb649839a37cc4e8428))
+* **terraform:** ensure s3 api gateway methods always create successfully ([aee1e01](https://github.com/akrantz01/tailfed/commit/aee1e0193f96edbb01b0a2ea3e8afd1f47bdea4d))
+* **terraform:** ensure state machine has correct invoke permissions ([407870a](https://github.com/akrantz01/tailfed/commit/407870aea80ca83f976fb4840d66c3bb5650b9ee))
+* **terraform:** prevent edge cases in state machine ([3e070d3](https://github.com/akrantz01/tailfed/commit/3e070d3800876ca59d6347ba566cee6c2f5a0750))
+* **terraform:** remove auto-creation of iam oidc provider ([1e35ec8](https://github.com/akrantz01/tailfed/commit/1e35ec8f8049ac89375f71883daa5173a6bcce5f))
+* **terraform:** use correct issuer url for generator ([f61c1ee](https://github.com/akrantz01/tailfed/commit/f61c1eebff6054a8af754b315b4b03490b1216f8))
+* **verifier:** add http request timeout ([de41b98](https://github.com/akrantz01/tailfed/commit/de41b98e46704feec6356fbff2cc2d1f953452ac))
+* **verifier:** correct tailscale hostname ([d44246e](https://github.com/akrantz01/tailfed/commit/d44246e777456f5e40120f8c9e31dd7712031bad))
+* **verifier:** wait for tailscale connection to be successful ([3dec890](https://github.com/akrantz01/tailfed/commit/3dec890bb653c61ee60ac53e62363e11f1e9c392))
+
 ## [1.1.0](https://github.com/akrantz01/tailfed/compare/v1.0.0...v1.1.0) (2025-04-12)
 
 
