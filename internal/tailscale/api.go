@@ -34,8 +34,18 @@ type NodeInfo struct {
 	Key string
 	// The DNS name of the node within the network
 	DNSName string
+	// The hostname of the node
+	Hostname string
+	// The name of the Tailnet
+	Tailnet string
 	// The machine's operating system
 	OS string
+	// All ACL tags that are applied to the machine
+	Tags []string
+	// Whether the device is authorized to join the tailnet
+	Authorized bool
+	// Whether the device is shared in to the tailnet
+	External bool
 }
 
 // NodeInfo retrieves details about a particular node by its ID
@@ -55,10 +65,15 @@ func (a *API) NodeInfo(ctx context.Context, id string) (*NodeInfo, error) {
 	}
 
 	return &NodeInfo{
-		ID:        node.NodeID,
-		Addresses: addresses,
-		Key:       node.NodeKey,
-		DNSName:   node.Name,
-		OS:        node.OS,
+		ID:         node.NodeID,
+		Addresses:  addresses,
+		Key:        node.NodeKey,
+		DNSName:    node.Name,
+		Hostname:   node.Hostname,
+		Tailnet:    a.inner.Tailnet,
+		OS:         node.OS,
+		Tags:       node.Tags,
+		Authorized: node.Authorized,
+		External:   node.IsExternal,
 	}, nil
 }
