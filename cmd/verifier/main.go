@@ -70,21 +70,40 @@ func connectToTailscale(authKey string) error {
 		return nil
 	}
 
+	logger := logrus.WithField("component", "tailscale")
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		return fmt.Errorf("could not get hostname: %w", err)
 	}
+	tsHostname := fmt.Sprintf("%s-%s-%s", os.Getenv("AWS_LAMBDA_FUNCTION_NAME"), os.Getenv("AWS_REGION"), hostname)
+	logger.WithField("hostname", hostname).Info("determined hostname")
 
 	ts = &tsnet.Server{
 		AuthKey:   authKey,
 		Ephemeral: true,
-		Hostname:  fmt.Sprintf("%s-%s-%s", os.Getenv("AWS_LAMBDA_FUNCTION_NAME"), os.Getenv("AWS_REGION"), hostname),
+		Hostname:  tsHostname,
 		Dir:       "/tmp",
+		UserLogf:  logger.Infof,
 	}
-	if err := ts.Start(); err != nil {
-		ts = nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	status, err := ts.Up(ctx)
+	if err != nil {
 		return err
 	}
 
+	fields := map[string]any{"status": status.BackendState}
+	if status.CurrentTailnet != nil {
+		fields["tailnet"] = status.CurrentTailnet.Name
+	}
+	if status.Self != nil {
+		fields["id"] = status.Self.ID
+		fields["ips"] = status.Self.TailscaleIPs
+	}
+
+	logger.WithFields(fields).Info("successfully connected to tailscale")
 	return nil
 }
