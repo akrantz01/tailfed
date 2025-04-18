@@ -53,7 +53,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 
 	if flow.Status != storage.StatusSuccess {
 		return lambda.Error("challenge not verified", http.StatusForbidden), nil
-	} else if time.Time(flow.ExpiresAt).After(time.Now()) {
+	} else if time.Now().After(time.Time(flow.ExpiresAt)) {
 		return lambda.Error("challenge expired", http.StatusForbidden), nil
 	}
 
