@@ -27,9 +27,13 @@ type DiscoveryDocument struct {
 // NewDiscoveryDocument creates a new OpenID Connect discovery document from an issuer URL
 func NewDiscoveryDocument(issuer string) DiscoveryDocument {
 	return DiscoveryDocument{
-		Issuer:        issuer,
-		JwksUri:       issuer + "/.well-known/jwks.json",
-		Claims:        []string{"aud", "iat", "iss", "sub"},
+		Issuer:  issuer,
+		JwksUri: issuer + "/.well-known/jwks.json",
+		Claims: []string{
+			"aud", "iat", "iss", "sub", "exp", "nbf",
+			"tailnet", "dns_name", "machine_name", "host_name",
+			"os", "tags", "authorized", "external",
+		},
 		ResponseTypes: []string{"id_token"},
 		SigningAlgorithms: []jose.SignatureAlgorithm{
 			jose.RS256, jose.RS384, jose.RS512,
