@@ -28,11 +28,17 @@ type Flow struct {
 	Status    Status
 	ExpiresAt UnixTime
 
-	Secret    []byte
-	Node      string
-	PublicKey string
-	DNSName   string
-	OS        string
+	Secret      []byte
+	Node        string
+	PublicKey   string
+	DNSName     string
+	MachineName string
+	Hostname    string
+	Tailnet     string
+	OS          string
+	Tags        []string
+	Authorized  bool
+	External    bool
 }
 
 // Status represents the current status of the flow

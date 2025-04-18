@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/http/gateway"
@@ -73,15 +74,23 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("internal server error", http.StatusInternalServerError), nil
 	}
 
+	dnsNameParts := strings.Split(info.DNSName, ".")
+
 	err = h.store.Put(ctx, &storage.Flow{
-		ID:        id,
-		Status:    storage.StatusPending,
-		ExpiresAt: storage.UnixTime(time.Now().UTC().Add(5 * time.Minute)),
-		Secret:    secret,
-		Node:      info.ID,
-		PublicKey: info.Key,
-		DNSName:   info.DNSName,
-		OS:        info.OS,
+		ID:          id,
+		Status:      storage.StatusPending,
+		ExpiresAt:   storage.UnixTime(time.Now().UTC().Add(5 * time.Minute)),
+		Secret:      secret,
+		Node:        info.ID,
+		PublicKey:   info.Key,
+		DNSName:     info.DNSName,
+		MachineName: dnsNameParts[0],
+		Hostname:    info.Hostname,
+		Tailnet:     info.Tailnet,
+		OS:          info.OS,
+		Tags:        info.Tags,
+		Authorized:  info.Authorized,
+		External:    info.External,
 	})
 	if err != nil {
 		logger.WithError(err).Error("failed to save flow")
