@@ -13,6 +13,9 @@ project_name: tailfed
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
 
+checksum:
+  name_template: checksums.txt
+
 before:
   hooks:
     - go mod tidy
