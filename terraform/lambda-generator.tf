@@ -20,13 +20,10 @@ module "generator" {
     TAILFED_METADATA__BUCKET = module.openid_metadata.id
     TAILFED_SIGNING__KEY     = aws_kms_alias.signer.arn
   }
-}
 
-resource "aws_iam_role_policy" "generator" {
-  role = module.generator.role_id
-
-  name   = "Lambda"
-  policy = data.aws_iam_policy_document.generator.json
+  policies = {
+    Lambda = data.aws_iam_policy_document.generator.json
+  }
 }
 
 resource "aws_lambda_invocation" "generator" {

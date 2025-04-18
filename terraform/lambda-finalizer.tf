@@ -16,13 +16,10 @@ module "finalizer" {
     TAILFED_SIGNING__VALIDITY = var.validity
     TAILFED_STORAGE__TABLE    = aws_dynamodb_table.storage.arn
   }
-}
 
-resource "aws_iam_role_policy" "finalizer" {
-  role = module.finalizer.role_id
-
-  name   = "Lambda"
-  policy = data.aws_iam_policy_document.finalizer.json
+  policies = {
+    Lambda = data.aws_iam_policy_document.finalizer.json
+  }
 }
 
 module "finalizer_apigateway" {

@@ -18,13 +18,10 @@ module "initializer" {
     TAILFED_TAILSCALE__OAUTH_CLIENT_ID     = var.tailscale.oauth.client_id
     TAILFED_TAILSCALE__OAUTH_CLIENT_SECRET = var.tailscale.oauth.client_secret
   }
-}
 
-resource "aws_iam_role_policy" "initializer" {
-  role = module.initializer.role_id
-
-  name   = "Lambda"
-  policy = data.aws_iam_policy_document.initializer.json
+  policies = {
+    Lambda = data.aws_iam_policy_document.initializer.json
+  }
 }
 
 module "initializer_apigateway" {

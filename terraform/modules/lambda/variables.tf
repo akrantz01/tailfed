@@ -35,6 +35,12 @@ variable "name" {
   }
 }
 
+variable "policies" {
+  type        = map(string)
+  description = "Additional policies to attach to the execution role"
+  default     = {}
+}
+
 variable "timeout" {
   type        = number
   description = "The function timeout in seconds"

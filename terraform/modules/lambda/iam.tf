@@ -12,6 +12,14 @@ resource "aws_iam_role_policy" "handler" {
   policy = data.aws_iam_policy_document.permissions_policy.json
 }
 
+resource "aws_iam_role_policy" "additional_policy" {
+  for_each = var.policies
+
+  role   = aws_iam_role.handler.id
+  name   = each.key
+  policy = each.value
+}
+
 data "aws_iam_policy_document" "permissions_policy" {
   statement {
     sid    = "CloudWatchLogStream"
