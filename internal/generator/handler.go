@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/akrantz01/tailfed/internal/metadata"
+	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/types"
 	"github.com/go-jose/go-jose/v4"
@@ -41,6 +42,6 @@ func (h *Handler) writeJwkSet(ctx context.Context, _ types.GenerateRequest) erro
 }
 
 func (h *Handler) writeDiscoveryDocument(ctx context.Context, req types.GenerateRequest) error {
-	doc := metadata.NewDiscoveryDocument(req.Issuer)
+	doc := oidc.NewDiscoveryDocument(req.Issuer)
 	return h.meta.Save(ctx, "openid-configuration", doc)
 }

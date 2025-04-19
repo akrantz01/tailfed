@@ -11,6 +11,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/http/gateway"
 	"github.com/akrantz01/tailfed/internal/http/lambda"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/types"
@@ -57,7 +58,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("challenge expired", http.StatusForbidden), nil
 	}
 
-	claims := signing.NewClaimsFromFlow(generateIssuer(&req.RequestContext), h.audience, h.validity, flow)
+	claims := oidc.NewClaimsFromFlow(generateIssuer(&req.RequestContext), h.audience, h.validity, flow)
 	token, err := h.signer.Sign(claims)
 	if err != nil {
 		logger.WithError(err).Error("failed to sign JWT")

@@ -23,7 +23,7 @@ func (r *Refresher) complete(ctx context.Context, id string) {
 	}
 
 	expBackoff := backoff.NewExponentialBackOff()
-	expBackoff.InitialInterval = 5 * time.Second
+	expBackoff.InitialInterval = 1 * time.Second
 
 	token, err := backoff.Retry(ctx, operation,
 		backoff.WithBackOff(expBackoff),
