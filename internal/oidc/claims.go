@@ -1,6 +1,8 @@
 package oidc
 
 import (
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/storage"
@@ -43,4 +45,24 @@ func NewClaimsFromFlow(issuer, audience string, validity time.Duration, flow *st
 		Authorized:  flow.Authorized,
 		External:    flow.External,
 	}
+}
+
+func claimsKeys() []string {
+	t := reflect.TypeFor[Claims]()
+	return structKeys(t)
+}
+
+func structKeys(t reflect.Type) []string {
+	var keys []string
+	for i := range t.NumField() {
+		f := t.Field(i)
+		if f.Anonymous {
+			keys = append(keys, structKeys(f.Type)...)
+		} else if value, ok := f.Tag.Lookup("json"); ok {
+			parts := strings.Split(value, ",")
+			keys = append(keys, parts[0])
+		}
+	}
+
+	return keys
 }
