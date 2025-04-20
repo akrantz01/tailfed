@@ -135,7 +135,7 @@ resource "aws_sfn_state_machine" "verifier" {
             Condition = "{% $states.input.success %}"
           },
           {
-            Next      = "Fail"
+            Next      = "MarkFailed"
             Comment   = "Max Retries Reached?"
             Condition = "{% $retries >= $maxRetries %}"
           },
@@ -149,6 +149,25 @@ resource "aws_sfn_state_machine" "verifier" {
         Assign = {
           "retries"  = "{% $retries + 1 %}",
           "waitTime" = "{% $waitTime * 2 * (1 + ($waitJitter * ($random() * 2 - 1))) %}"
+        }
+      }
+
+      MarkFailed = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::dynamodb:updateItem"
+        Next     = "Fail"
+        Arguments = {
+          TableName = aws_dynamodb_table.storage.name
+          Key = {
+            ID = { S = "{% $states.context.Execution.Input.id %}" }
+          }
+          UpdateExpression = "SET #s = :s"
+          ExpressionAttributeNames = {
+            "#s" = "Status"
+          }
+          ExpressionAttributeValues = {
+            ":s" = { S = "failed" }
+          }
         }
       }
 
@@ -188,6 +207,13 @@ data "aws_iam_policy_document" "verifier_state_machine" {
     effect    = "Allow"
     actions   = ["lambda:InvokeFunction"]
     resources = ["${module.verifier.arn}:$LATEST"]
+  }
+
+  statement {
+    sid       = "MarkFailed"
+    effect    = "Allow"
+    actions   = ["dynamodb:UpdateItem"]
+    resources = [aws_dynamodb_table.storage.arn]
   }
 
   statement {
