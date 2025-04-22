@@ -46,7 +46,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 	flow, err := h.store.Get(ctx, body.ID)
 	if err != nil {
 		logger.WithError(err).Error("failed to get flow")
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	} else if flow == nil {
 		logger.Warn("flow not found")
 		return lambda.Error("flow not found", http.StatusNotFound), nil
@@ -62,12 +62,12 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 	token, err := h.signer.Sign(claims)
 	if err != nil {
 		logger.WithError(err).Error("failed to sign JWT")
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	}
 
 	if err := h.store.Delete(ctx, flow.ID); err != nil {
 		logger.WithError(err).Error("failed to delete flow")
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	}
 
 	return lambda.Success(&types.FinalizeResponse{IdentityToken: token}), nil
