@@ -55,7 +55,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 	info, err := h.ts.NodeInfo(ctx, body.Node)
 	if err != nil {
 		logger.WithError(err).Error("getting node info failed")
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	} else if info == nil {
 		logger.Warn("attempt to start token issuance for non-existent node")
 		return lambda.Error("node not found", http.StatusUnprocessableEntity), nil
@@ -63,7 +63,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 
 	if len(info.Addresses) != 2 {
 		logger.Errorf("expected 2 addresses, got %d", len(info.Addresses))
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	}
 
 	id := uuid.Must(uuid.NewV7()).String()
@@ -71,7 +71,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 	secret := make([]byte, 64)
 	if _, err := rand.Read(secret); err != nil {
 		logger.WithError(err).Error("failed to generate signing secret")
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	}
 
 	dnsNameParts := strings.Split(info.DNSName, ".")
@@ -94,7 +94,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 	})
 	if err != nil {
 		logger.WithError(err).Error("failed to save flow")
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	}
 
 	addresses := make([]netip.AddrPort, 0, 2)
@@ -111,7 +111,7 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 
 	if err := h.launch.Launch(id, addresses); err != nil {
 		logger.WithError(err).Error("failed to launch verifier")
-		return lambda.Error("internal server error", http.StatusInternalServerError), nil
+		return lambda.InternalServerError(), nil
 	}
 
 	return lambda.Success(&types.StartResponse{ID: id, SigningSecret: secret}), nil
