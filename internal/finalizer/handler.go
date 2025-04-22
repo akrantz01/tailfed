@@ -52,8 +52,10 @@ func (h *Handler) Serve(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return lambda.Error("flow not found", http.StatusNotFound), nil
 	}
 
-	if flow.Status != storage.StatusSuccess {
-		return lambda.Error("challenge not verified", http.StatusForbidden), nil
+	if flow.Status == storage.StatusPending {
+		return lambda.Error("challenge not verified", http.StatusConflict), nil
+	} else if flow.Status == storage.StatusFailed {
+		return lambda.Error("challenge failed", http.StatusForbidden), nil
 	} else if time.Now().After(time.Time(flow.ExpiresAt)) {
 		return lambda.Error("challenge expired", http.StatusForbidden), nil
 	}
