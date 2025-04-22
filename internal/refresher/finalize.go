@@ -2,13 +2,16 @@ package refresher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/cenkalti/backoff/v5"
 )
 
@@ -16,7 +19,16 @@ func (r *Refresher) complete(ctx context.Context, id string) {
 	logger := r.logger.WithField("flow", id)
 
 	operation := func() (string, error) {
-		return r.api.Finalize(ctx, id)
+		token, err := r.api.Finalize(ctx, id)
+		if err == nil {
+			return token, nil
+		}
+
+		var httpErr *api.Error
+		if errors.As(err, &httpErr) && httpErr.StatusCode() != http.StatusConflict {
+			err = backoff.Permanent(err)
+		}
+		return "", err
 	}
 	notify := func(err error, next time.Duration) {
 		logger.WithField("next", next).WithError(err).Warn("finalization not yet complete")
