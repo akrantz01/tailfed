@@ -25,6 +25,8 @@ module "generator" {
 }
 
 resource "aws_lambda_invocation" "generator" {
+  depends_on = [module.generator]
+
   function_name = module.generator.id
 
   input = local.generator_input
