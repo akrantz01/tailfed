@@ -48,7 +48,7 @@ func performVerifyRequest(ctx context.Context, store storage.Backend, tailnet st
 	attempts := 1
 	wait := startInterval
 
-	instance := verifier.New(http.DefaultClient, store, tailnet)
+	instance := verifier.New(&http.Client{Timeout: time.Second}, store, tailnet)
 
 	for {
 		logger.WithField("attempt", attempts).Debug("attempting verification")
@@ -58,8 +58,8 @@ func performVerifyRequest(ctx context.Context, store storage.Backend, tailnet st
 			Address: req.Addresses[attempts%len(req.Addresses)],
 		})
 		if err != nil {
-			// TODO: disambiguate between fatal and non-fatal errors
 			logger.WithError(err).Error("verifier execution failed")
+			go markFlowFailed(ctx, store, logger, req.ID)
 			return
 		}
 
@@ -70,6 +70,7 @@ func performVerifyRequest(ctx context.Context, store storage.Backend, tailnet st
 			attempts += 1
 			if attempts > maxAttempts {
 				logger.Error("verification failed")
+				go markFlowFailed(ctx, store, logger, req.ID)
 				return
 			}
 
@@ -86,4 +87,24 @@ func performVerifyRequest(ctx context.Context, store storage.Backend, tailnet st
 			wait *= 2
 		}
 	}
+}
+
+func markFlowFailed(ctx context.Context, store storage.Backend, logger logrus.FieldLogger, id string) {
+	flow, err := store.Get(ctx, id)
+	if err != nil {
+		logger.WithError(err).Error("failed to get flow")
+		return
+	} else if flow == nil {
+		logger.Error("flow no longer exists")
+		return
+	}
+
+	flow.Status = storage.StatusFailed
+
+	if err := store.Put(ctx, flow); err != nil {
+		logger.WithError(err).Error("failed to mark flow as failed")
+		return
+	}
+
+	logger.Debug("flow marked as failed")
 }
