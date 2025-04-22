@@ -127,5 +127,8 @@ func doRequest[R any](c *Client, ctx context.Context, name, path string, body an
 		return resBody.Data, nil
 	}
 
-	return nil, fmt.Errorf("http error: %s (code: %d)", resBody.Error, res.StatusCode)
+	return nil, &Error{
+		message: resBody.Error,
+		status:  res.StatusCode,
+	}
 }
