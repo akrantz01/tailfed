@@ -16,6 +16,11 @@ func Success[T any](data *T) *events.APIGatewayProxyResponse {
 	}, http.StatusOK)
 }
 
+// InternalServerError creates an error HTTP response for unexpected server errors
+func InternalServerError() *events.APIGatewayProxyResponse {
+	return Error("internal server error", http.StatusInternalServerError)
+}
+
 // Error creates an error HTTP response with a message and status code
 func Error(message string, statusCode int) *events.APIGatewayProxyResponse {
 	return makeJsonResponse(&types.Response[struct{}]{
