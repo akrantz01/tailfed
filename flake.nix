@@ -35,7 +35,11 @@
 
       devShells.default = pkgs.mkShell {
         buildInputs = with pkgs; [go gopls gotools go-tools];
-        packages = with pkgs; [alejandra];
+        packages = with pkgs; [alejandra just];
+
+        shellHook = ''
+          alias j=just
+        '';
       };
     });
 }
