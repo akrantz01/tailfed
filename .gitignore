@@ -84,3 +84,6 @@ tailfed.yml
 
 # Added by goreleaser init:
 dist/
+
+# Nix
+result
