@@ -33,6 +33,13 @@
         default = tailfed;
       };
 
+      nixosModules = let
+        module = import ./nix/module.nix {inherit tailfed;};
+      in {
+        tailfed = module;
+        default = module;
+      };
+
       devShells.default = pkgs.mkShell {
         buildInputs = with pkgs; [go gopls gotools go-tools];
         packages = with pkgs; [alejandra just];
