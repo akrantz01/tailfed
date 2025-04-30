@@ -25,6 +25,8 @@ func startGateway(tsClient *tailscale.API, launch launcher.Backend, meta metadat
 	mux := http.NewServeMux()
 	srv := newServer(cfg.Address, mux, requestid.Middleware, logging.Middleware)
 
+	mux.Handle("GET /health", http.HandlerFunc(health))
+
 	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, launch, store)))
 	mux.Handle("POST /finalize", lambdaHandler(finalizer.New(cfg.Signing.Audience, cfg.Signing.Validity, signer, store)))
 
@@ -100,6 +102,10 @@ func metadataHandler[T any](key string, meta metadata.Backend) http.Handler {
 			logger.WithError(err).Error("failed to write metadata response")
 		}
 	})
+}
+
+func health(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func internalServerError(w http.ResponseWriter) {
