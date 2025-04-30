@@ -32,6 +32,8 @@
       packages = {
         inherit tailfed;
         default = tailfed;
+
+        mock-api = pkgs.callPackage ./nix/mock-api.nix {};
       };
 
       nixosModules = let
@@ -48,6 +50,11 @@
         shellHook = ''
           alias j=just
         '';
+      };
+
+      checks = import ./nix/tests.nix {
+        inherit pkgs;
+        module = self.nixosModules.${system}.default;
       };
     });
 }

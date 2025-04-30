@@ -86,4 +86,5 @@ tailfed.yml
 dist/
 
 # Nix
+.nixos-test-history
 result
