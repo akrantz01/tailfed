@@ -16,21 +16,22 @@
       pkgs = import nixpkgs {inherit system;};
       lib = pkgs.lib;
 
-      version = "1.1.0";
-
-      tailfed = pkgs.buildGoModule {
-        pname = "tailfed";
-        inherit version;
-
+      buildCmd = pname: dir: pkgs.buildGoModule {
+        inherit pname;
+        version = "1.1.0";
         src = lib.sources.sourceByRegex ./. ["^cmd$" "^cmd/.*" "^internal$" "^internal/.*" "^go\.(mod|sum)$"];
-        vendorHash = "sha256-vUrZEApfPWEoijJCEHsHJeAUNiUpV25A2VtRbR2icCs=";
+        vendorHash = "sha256-45snGcxMjoyAS4xYf89BtDHWQLj6U8hubuyzDLWd+6I=";
 
-        subPackages = ["cmd/client"];
+        subPackages = ["cmd/${dir}"];
         env.CGO_ENABLED = 0;
       };
+
+      tailfed = buildCmd "tailfed" "client";
+      dev = buildCmd "tailfed-dev" "dev";
+      tscontrol = buildCmd "tailfed-tscontrol" "tscontrol";
     in {
       packages = {
-        inherit tailfed;
+        inherit tailfed dev tscontrol;
         default = tailfed;
 
         mock-api = pkgs.callPackage ./nix/mock-api.nix {};
