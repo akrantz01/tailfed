@@ -16,22 +16,22 @@
       pkgs = import nixpkgs {inherit system;};
       lib = pkgs.lib;
 
-      buildCmd = pname: dir: pkgs.buildGoModule {
-        inherit pname;
-        version = "1.1.0";
-        src = lib.sources.sourceByRegex ./. ["^cmd$" "^cmd/.*" "^internal$" "^internal/.*" "^go\.(mod|sum)$"];
-        vendorHash = "sha256-45snGcxMjoyAS4xYf89BtDHWQLj6U8hubuyzDLWd+6I=";
+      buildCmd = pname: dir:
+        pkgs.buildGoModule {
+          inherit pname;
+          version = "1.1.0";
+          src = lib.sources.sourceByRegex ./. ["^cmd$" "^cmd/.*" "^internal$" "^internal/.*" "^go\.(mod|sum)$"];
+          vendorHash = "sha256-vUrZEApfPWEoijJCEHsHJeAUNiUpV25A2VtRbR2icCs=";
 
-        subPackages = ["cmd/${dir}"];
-        env.CGO_ENABLED = 0;
-      };
+          subPackages = ["cmd/${dir}"];
+          env.CGO_ENABLED = 0;
+        };
 
       tailfed = buildCmd "tailfed" "client";
       dev = buildCmd "tailfed-dev" "dev";
-      tscontrol = buildCmd "tailfed-tscontrol" "tscontrol";
     in {
       packages = {
-        inherit tailfed dev tscontrol;
+        inherit tailfed dev;
         default = tailfed;
 
         mock-api = pkgs.callPackage ./nix/mock-api.nix {};
@@ -54,7 +54,7 @@
       };
 
       checks = import ./nix/tests.nix {
-        inherit pkgs tscontrol;
+        inherit pkgs dev;
         module = self.nixosModules.${system}.default;
       };
     });
