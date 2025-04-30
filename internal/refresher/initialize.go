@@ -7,17 +7,24 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"time"
+
+	"github.com/akrantz01/tailfed/internal/scheduler"
+	"github.com/akrantz01/tailfed/internal/tailscale"
 )
 
 // Job performs a single run of the refresh flow
 func (r *Refresher) Job(ctx context.Context) error {
 	status, err := r.ts.Status(ctx)
 	if err != nil {
+		if errors.Is(err, tailscale.ErrUninitialized) {
+			err = scheduler.Retry(3*time.Second, err)
+		}
 		return err
 	}
 
 	if !status.Ready {
-		return errors.New("node is not ready")
+		return scheduler.Retry(3*time.Second, errors.New("node is not ready"))
 	} else if !status.Healthy {
 		r.logger.Warn("node is unhealthy")
 	}
