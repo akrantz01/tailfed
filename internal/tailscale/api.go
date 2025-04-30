@@ -2,7 +2,9 @@ package tailscale
 
 import (
 	"context"
+	"fmt"
 	"net/netip"
+	"net/url"
 
 	"tailscale.com/client/tailscale/v2"
 )
@@ -13,11 +15,22 @@ type API struct {
 }
 
 // NewAPI creates a new control plane API client
-func NewAPI(tailnet string, auth Authentication) *API {
-	client := &tailscale.Client{Tailnet: tailnet}
+func NewAPI(baseUrl, tailnet string, auth Authentication) (*API, error) {
+	base, err := url.Parse(baseUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base url %q: %w", baseUrl, err)
+	}
+	if base.Scheme != "http" && base.Scheme != "https" {
+		return nil, fmt.Errorf("invalid base url scheme %q", base.Scheme)
+	}
+
+	client := &tailscale.Client{
+		BaseURL: base,
+		Tailnet: tailnet,
+	}
 	auth.apply(client)
 
-	return &API{client}
+	return &API{client}, nil
 }
 
 // Tailnet retrieves the name of the connected tailnet

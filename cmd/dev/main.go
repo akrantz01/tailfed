@@ -47,6 +47,7 @@ func main() {
 	cmd.Flags().String("storage.path", "flows", "The directory path used by the filesystem backend")
 	cmd.Flags().String("storage.table", "", "The name of the DynamoDB table used by the dynamo backend")
 
+	cmd.Flags().String("tailscale.base-url", "https://api.tailscale.com", "The base URL to use for the Tailscale API")
 	cmd.Flags().String("tailscale.tailnet", "", "The name of the tailnet to issue tokens for")
 	cmd.Flags().String("tailscale.api-key", "", "The Tailscale API key to authenticate with")
 	cmd.Flags().String("tailscale.oauth.client-id", "", "The Tailscale OAuth client ID to authenticate with")
@@ -108,7 +109,10 @@ func run(*cobra.Command, []string) error {
 		return fmt.Errorf("failed to open storage: %w", err)
 	}
 
-	tsClient := cfg.Tailscale.NewClient()
+	tsClient, err := cfg.Tailscale.NewClient()
+	if err != nil {
+		return fmt.Errorf("failed to create tailscale api client: %w", err)
+	}
 
 	logrus.Info("generating metadata documents")
 	if err := generator.New(meta, signer).Serve(context.Background(), types.GenerateRequest{Issuer: gateway.BaseUrl}); err != nil {

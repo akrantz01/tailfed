@@ -184,6 +184,8 @@ func (s *storageConfig) NewBackend(config aws.Config) (storage.Backend, error) {
 }
 
 type tailscaleConfig struct {
+	BaseUrl string `koanf:"base-url"`
+
 	Tailnet string `koanf:"tailnet"`
 
 	ApiKey string               `koanf:"api-key"`
@@ -191,6 +193,10 @@ type tailscaleConfig struct {
 }
 
 func (t *tailscaleConfig) Validate() error {
+	if len(t.BaseUrl) == 0 {
+		return errors.New("a base url must be configured")
+	}
+
 	if len(t.Tailnet) == 0 {
 		return errors.New("a tailnet must be configured")
 	}
@@ -202,8 +208,8 @@ func (t *tailscaleConfig) Validate() error {
 	return nil
 }
 
-func (t *tailscaleConfig) NewClient() *tailscale.API {
-	return tailscale.NewAPI(t.Tailnet, t.Authentication())
+func (t *tailscaleConfig) NewClient() (*tailscale.API, error) {
+	return tailscale.NewAPI(t.BaseUrl, t.Tailnet, t.Authentication())
 }
 
 func (t *tailscaleConfig) Authentication() tailscale.Authentication {

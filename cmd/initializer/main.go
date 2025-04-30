@@ -62,6 +62,7 @@ type Launcher struct {
 }
 
 type Tailscale struct {
+	BaseUrl           string `koanf:"base-url"`
 	Tailnet           string `koanf:"tailnet"`
 	ApiKey            string `koanf:"api-key"`
 	OAuthClientId     string `koanf:"oauth-client-id"`
@@ -86,7 +87,11 @@ func (t *Tailscale) Client() (*tailscale.API, error) {
 		auth = tailscale.OAuth(t.OAuthClientId, t.OAuthClientSecret)
 	}
 
-	return tailscale.NewAPI(t.Tailnet, auth), nil
+	if len(t.BaseUrl) == 0 {
+		t.BaseUrl = "https://api.tailscale.com"
+	}
+
+	return tailscale.NewAPI(t.BaseUrl, t.Tailnet, auth)
 }
 
 type Storage struct {
