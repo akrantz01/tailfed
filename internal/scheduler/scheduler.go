@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jonboulle/clockwork"
@@ -13,8 +14,9 @@ type JobFn func(ctx context.Context) error
 type Scheduler struct {
 	logger *logrus.Entry
 
-	clock  clockwork.Clock
-	ticker clockwork.Ticker
+	clock clockwork.Clock
+	loop  clockwork.Ticker
+	retry clockwork.Timer
 
 	shutdownCtx      context.Context
 	shutdownFn       context.CancelFunc
@@ -32,7 +34,8 @@ func NewScheduler(ctx context.Context, frequency time.Duration, job JobFn) *Sche
 	return &Scheduler{
 		logger: logrus.WithField("logger", "scheduler"),
 		clock:  clock,
-		ticker: clock.NewTicker(frequency),
+		loop:   clock.NewTicker(frequency),
+		retry:  clock.NewTimer(0 * time.Second),
 
 		shutdownCtx:      shutdownCtx,
 		shutdownFn:       shutdownFn,
@@ -51,12 +54,13 @@ func (s *Scheduler) Start() {
 func (s *Scheduler) scheduler() {
 	s.logger.Debug("scheduler started")
 
-	s.run()
-
-	c := s.ticker.Chan()
+	loopC := s.loop.Chan()
+	retryC := s.retry.Chan()
 	for {
 		select {
-		case <-c:
+		case <-retryC:
+			s.run()
+		case <-loopC:
 			s.run()
 		case <-s.shutdownCtx.Done():
 			s.logger.Debug("scheduler shutdown")
@@ -69,7 +73,15 @@ func (s *Scheduler) scheduler() {
 func (s *Scheduler) run() {
 	s.logger.Debug("starting job execution")
 	if err := s.job(s.jobCtx); err != nil {
-		s.logger.WithError(err).Error("job execution failed")
+		logger := s.logger.WithError(err)
+
+		var retryErr *retryError
+		if errors.As(err, &retryErr) {
+			s.retry.Reset(retryErr.after)
+			logger = logger.WithField("retry", retryErr.after)
+		}
+
+		logger.WithError(err).Error("job execution failed")
 	} else {
 		s.logger.Debug("job execution complete")
 	}
@@ -77,7 +89,7 @@ func (s *Scheduler) run() {
 
 // Stop finishes any jobs in progress and halt the scheduler
 func (s *Scheduler) Stop() {
-	s.ticker.Stop()
+	s.loop.Stop()
 	s.shutdownFn()
 	<-s.shutdownComplete
 }
