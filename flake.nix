@@ -14,6 +14,7 @@
   }:
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {inherit system;};
+      lib = pkgs.lib;
 
       version = "1.1.0";
 
@@ -21,7 +22,7 @@
         pname = "tailfed";
         inherit version;
 
-        src = ./.;
+        src = lib.sources.sourceByRegex ./. ["^cmd$" "^cmd/.*" "^internal$" "^internal/.*" "^go\.(mod|sum)$"];
         vendorHash = "sha256-vUrZEApfPWEoijJCEHsHJeAUNiUpV25A2VtRbR2icCs=";
 
         subPackages = ["cmd/client"];
