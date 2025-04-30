@@ -9,6 +9,8 @@ import (
 	"tailscale.com/client/tailscale"
 )
 
+var ErrUninitialized = errors.New("current node is uninitialized")
+
 // Local connects to the local Tailscale instance
 type Local struct {
 	inner tailscale.LocalClient
@@ -51,7 +53,7 @@ func (c *Local) Status(ctx context.Context) (*Status, error) {
 	}
 
 	if status.CurrentTailnet == nil || status.Self == nil {
-		return nil, errors.New("current node is uninitialized")
+		return nil, ErrUninitialized
 	}
 
 	return &Status{
