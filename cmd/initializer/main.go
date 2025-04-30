@@ -69,7 +69,7 @@ type Tailscale struct {
 	OAuthClientSecret string `koanf:"oauth-client-secret"`
 }
 
-func (t *Tailscale) Client() (*tailscale.API, error) {
+func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 	if len(t.Tailnet) == 0 {
 		return nil, errors.New("missing tailnet name")
 	}
@@ -91,7 +91,7 @@ func (t *Tailscale) Client() (*tailscale.API, error) {
 		t.BaseUrl = "https://api.tailscale.com"
 	}
 
-	return tailscale.NewAPI(t.BaseUrl, t.Tailnet, auth)
+	return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, auth)
 }
 
 type Storage struct {

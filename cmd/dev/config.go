@@ -208,8 +208,8 @@ func (t *tailscaleConfig) Validate() error {
 	return nil
 }
 
-func (t *tailscaleConfig) NewClient() (*tailscale.API, error) {
-	return tailscale.NewAPI(t.BaseUrl, t.Tailnet, t.Authentication())
+func (t *tailscaleConfig) NewClient() (tailscale.ControlPlane, error) {
+	return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, t.Authentication())
 }
 
 func (t *tailscaleConfig) Authentication() tailscale.Authentication {

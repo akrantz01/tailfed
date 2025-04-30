@@ -21,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func startGateway(tsClient *tailscale.API, launch launcher.Backend, meta metadata.Backend, signer signing.Backend, store storage.Backend) (*http.Server, <-chan error) {
+func startGateway(tsClient tailscale.ControlPlane, launch launcher.Backend, meta metadata.Backend, signer signing.Backend, store storage.Backend) (*http.Server, <-chan error) {
 	mux := http.NewServeMux()
 	srv := newServer(cfg.Address, mux, requestid.Middleware, logging.Middleware)
 

@@ -25,13 +25,13 @@ import (
 type Handler struct {
 	launch launcher.Backend
 	store  storage.Backend
-	ts     *tailscale.API
+	ts     tailscale.ControlPlane
 }
 
 var _ gateway.Handler = (*Handler)(nil)
 
 // New creates a new handler
-func New(client *tailscale.API, launch launcher.Backend, store storage.Backend) *Handler {
+func New(client tailscale.ControlPlane, launch launcher.Backend, store storage.Backend) *Handler {
 	return &Handler{
 		store:  store,
 		launch: launch,
