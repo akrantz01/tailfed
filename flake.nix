@@ -54,7 +54,7 @@
       };
 
       checks = import ./nix/tests.nix {
-        inherit pkgs;
+        inherit pkgs tscontrol;
         module = self.nixosModules.${system}.default;
       };
     });
