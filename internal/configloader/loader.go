@@ -29,7 +29,9 @@ func Load(opts ...Option) (*koanf.Koanf, error) {
 
 	if len(options.file) != 0 {
 		if err := k.Load(file.Provider(options.file), yaml.Parser()); err != nil {
-			return nil, fmt.Errorf("failed to load from file %q: %w", options.file, err)
+			if !os.IsNotExist(err) {
+				return nil, fmt.Errorf("failed to load from file %q: %w", options.file, err)
+			}
 		}
 	}
 
