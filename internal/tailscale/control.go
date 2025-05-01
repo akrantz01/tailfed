@@ -12,7 +12,9 @@ import (
 	headscale "github.com/juanfont/headscale/gen/go/headscale/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 	"tailscale.com/client/tailscale/v2"
 )
 
@@ -171,6 +173,13 @@ func (h *HeadscaleControlPlane) NodeInfo(ctx context.Context, id string) (*NodeI
 	h.logger.WithField("id", nodeId).Debug("fetching node information")
 	resp, err := h.inner.GetNode(ctx, &headscale.GetNodeRequest{NodeId: uint64(nodeId)})
 	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.Unknown && s.Message() == "record not found" {
+				h.logger.Debug("node not found")
+				return nil, nil
+			}
+		}
+
 		return nil, err
 	}
 	node := resp.Node
