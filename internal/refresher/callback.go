@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net"
@@ -78,9 +79,13 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	buf.WriteRune('|')
 	buf.WriteString(status.OS)
 
+	ch.logger.WithField("message", buf.String()).Debug("generated message for mac")
+
 	mac := hmac.New(sha256.New, ch.secret)
 	_, _ = mac.Write(buf.Bytes())
 	signature := mac.Sum(nil)
+
+	ch.logger.WithField("signature", hex.EncodeToString(signature)).Debug("signed message with shared secret")
 
 	response(w, &types.Response[types.ChallengeResponse]{
 		Success: true,
