@@ -3,6 +3,8 @@ package configloader
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -10,6 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
+
+const filePrefix = "file://"
+
+type fetcherFn func(string) (string, error)
 
 // secretLoader retrieves values from AWS secrets manager and SSM parameter store
 type secretLoader struct {
@@ -36,26 +42,11 @@ func newSecretLoader(config *aws.Config) *secretLoader {
 // Load reads a value from secrets manager or SSM parameter store if the value looks
 // like an ARN and is for the correct service
 func (s *secretLoader) Load(key, value string) (string, any) {
-	if !s.configured {
-		return key, value
+	fetcher := s.fetcherFromFile(value)
+	if fetcher == nil {
+		fetcher = s.fetcherFromAws(value)
 	}
-
-	arn, err := arns.Parse(value)
-	if err != nil {
-		return key, value
-	}
-
-	var fetcher func(string) (string, error)
-	switch arn.Service {
-	case "secretsmanager":
-		fetcher = s.fromSecretsManager
-	case "ssm":
-		if !strings.HasPrefix(arn.Resource, "parameter/") {
-			return key, value
-		}
-
-		fetcher = s.fromParameterStore
-	default:
+	if fetcher == nil {
 		return key, value
 	}
 
@@ -74,6 +65,54 @@ func (s *secretLoader) Err() error {
 	}
 
 	return s.errs
+}
+
+func (s *secretLoader) fetcherFromFile(value string) fetcherFn {
+	if strings.HasPrefix(value, filePrefix) {
+		return s.fromFile
+	}
+
+	return nil
+}
+
+func (s *secretLoader) fromFile(value string) (string, error) {
+	path := strings.TrimPrefix(value, filePrefix)
+	file, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("could not open %q: %w", path, err)
+	}
+	defer file.Close()
+
+	contents, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %q: %w", path, err)
+	}
+
+	return string(contents), nil
+}
+
+func (s *secretLoader) fetcherFromAws(value string) fetcherFn {
+	if !s.configured {
+		return nil
+	}
+
+	arn, err := arns.Parse(value)
+	if err != nil {
+		return nil
+	}
+
+	switch arn.Service {
+	case "secretsmanager":
+		return s.fromSecretsManager
+	case "ssm":
+		if !strings.HasPrefix(arn.Resource, "parameter/") {
+			return nil
+		}
+
+		return s.fromParameterStore
+	default:
+		return nil
+	}
 }
 
 func (s *secretLoader) fromParameterStore(key string) (string, error) {
