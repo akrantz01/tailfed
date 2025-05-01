@@ -241,7 +241,7 @@ func (t *tailscaleConfig) NewClient() (tailscale.ControlPlane, error) {
 	case "hosted":
 		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, t.Authentication())
 	case "headscale":
-		return tailscale.NewHeadscaleControlPlane(logger, t.Backend, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
+		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
 	default:
 		return nil, errors.New("unknown tailscale backend")
 	}
