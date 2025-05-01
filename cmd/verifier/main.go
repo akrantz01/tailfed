@@ -37,7 +37,7 @@ func main() {
 		logrus.WithError(err).Fatal("failed to connect to tailscale")
 	}
 
-	store, err := storage.NewDynamo(awsConfig, config.Storage.Table)
+	store, err := storage.NewDynamo(logrus.WithField("component", "storage"), awsConfig, config.Storage.Table)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to initialize store")
 	}

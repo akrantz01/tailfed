@@ -186,11 +186,15 @@ func (s *storageConfig) Validate() error {
 }
 
 func (s *storageConfig) NewBackend(config aws.Config) (storage.Backend, error) {
+	logger := logrus.WithFields(map[string]any{
+		"component": "storage",
+		"backend":   s.Backend,
+	})
 	switch s.Backend {
 	case "filesystem":
-		return storage.NewFilesystem(s.Path)
+		return storage.NewFilesystem(logger, s.Path)
 	case "dynamo":
-		return storage.NewDynamo(config, s.Table)
+		return storage.NewDynamo(logger, config, s.Table)
 	default:
 		return nil, errors.New("unknown storage backend")
 	}
