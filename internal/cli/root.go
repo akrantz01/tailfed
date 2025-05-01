@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
@@ -14,7 +16,10 @@ type root struct {
 	cmd  *cobra.Command
 	exit func(int)
 
+	wrotePid bool
+
 	LogLevel string `koanf:"log-level"`
+	PidFile  string `koanf:"pid-file"`
 	*run     `koanf:",squash"`
 }
 
@@ -33,14 +38,16 @@ func NewRoot(exit func(int)) Executable {
 		Long: `
 A daemon for refreshing AWS web identity federation tokens issued by Tailfed. Tailfed uses your
 Tailscale network to prove a host's identity, allowing it to retrieve temporary AWS credentials.`,
-		SilenceUsage:      true,
-		SilenceErrors:     true,
-		PersistentPreRunE: root.PersistentPreRun,
-		RunE:              root.Run,
+		SilenceUsage:       true,
+		SilenceErrors:      true,
+		PersistentPreRunE:  root.PersistentPreRun,
+		RunE:               root.Run,
+		PersistentPostRunE: root.PersistentPostRun,
 	}
 
 	cmd.PersistentFlags().StringP("config", "c", "tailfed.yml", "The path to the configuration file")
 	cmd.PersistentFlags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
+	cmd.PersistentFlags().String("pid-file", "/run/tailfed/pid", "The path to read/write the daemon's PID")
 
 	cmd.Flags().StringP("path", "p", "/run/tailfed/token", "The path to write the generated web identity token to")
 	cmd.Flags().DurationP("frequency", "f", 1*time.Hour, "How often to refresh the token")
@@ -53,7 +60,7 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 }
 
 // PersistentPreRun performs the common initializations for all commands
-func (r *root) PersistentPreRun(*cobra.Command, []string) error {
+func (r *root) PersistentPreRun(cmd *cobra.Command, _ []string) error {
 	flags := r.cmd.Flags()
 	path, _ := flags.GetString("config")
 	err := configloader.LoadInto(r,
@@ -69,6 +76,10 @@ func (r *root) PersistentPreRun(*cobra.Command, []string) error {
 		return err
 	}
 
+	if err := r.writePidFile(cmd.Name()); err != nil {
+		logrus.WithField("path", r.PidFile).WithError(err).Error("failed to write pid file")
+	}
+
 	return nil
 }
 
@@ -81,4 +92,37 @@ func (r *root) Execute(args []string) {
 		logrus.Error(err.Error())
 		r.exit(1)
 	}
+}
+
+// PersistentPostRun performs common cleanup for all commands
+func (r *root) PersistentPostRun(*cobra.Command, []string) error {
+	if r.wrotePid {
+		if err := os.Remove(r.PidFile); err != nil {
+			logrus.WithField("path", r.PidFile).WithError(err).Error("failed to remove pid file")
+		}
+	}
+
+	return nil
+}
+
+// writePidFile writes the process' PID to the given file
+func (r *root) writePidFile(cmd string) error {
+	if cmd != "tailfed-client" && cmd != "run" {
+		return nil
+	}
+
+	pid := os.Getpid()
+
+	file, err := os.Create(r.PidFile)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(strconv.Itoa(pid)); err != nil {
+		return fmt.Errorf("failed to write pid: %w", err)
+	}
+
+	r.wrotePid = true
+	return nil
 }

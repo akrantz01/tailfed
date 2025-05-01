@@ -7,6 +7,10 @@
 # Default: info
 log-level: info
 
+# The path to read/write the daemon's PID
+# Default: /run/tailfed/pid
+pid-file: /run/tailfed/pid
+
 # The path to write the generated web identity token to
 # Default: /run/tailfed/token
 path: /run/tailfed/token
