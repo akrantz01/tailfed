@@ -88,8 +88,6 @@ func (h *Handler) generateMac(logger logrus.FieldLogger, flow *storage.Flow) []b
 	buf.WriteString(flow.DNSName)
 	buf.WriteRune('|')
 	buf.WriteString(flow.PublicKey)
-	buf.WriteRune('|')
-	buf.WriteString(flow.OS)
 
 	logger.WithField("message", buf.String()).Debug("generated expected message for mac")
 

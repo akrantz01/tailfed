@@ -76,8 +76,6 @@ func (ch *challengeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	buf.WriteString(status.DNSName)
 	buf.WriteRune('|')
 	buf.WriteString(status.PublicKey)
-	buf.WriteRune('|')
-	buf.WriteString(status.OS)
 
 	ch.logger.WithField("message", buf.String()).Debug("generated message for mac")
 
