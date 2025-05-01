@@ -33,7 +33,7 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize metadata")
 	}
 
-	signer, err := signing.NewKMS(awsConfig, config.Signing.Key)
+	signer, err := signing.NewKMS(logrus.WithField("component", "signer"), awsConfig, config.Signing.Key)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to initialize signer")
 	}
