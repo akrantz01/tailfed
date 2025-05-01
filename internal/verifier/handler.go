@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/types"
+	"github.com/sirupsen/logrus"
 )
 
 // Handler is triggered by a step function, performing a single verification request for an address
@@ -61,9 +63,12 @@ func (h *Handler) Serve(ctx context.Context, req types.VerifyRequest) (*types.Ve
 		return &types.VerifyResponse{Success: false}, nil
 	}
 
-	expected := h.generateMac(flow)
+	expected := h.generateMac(logger, flow)
 	if !hmac.Equal(challenge.Data.Signature, expected) {
-		logger.Warn("invalid signature")
+		logger.WithFields(map[string]any{
+			"want": hex.EncodeToString(expected),
+			"got":  hex.EncodeToString(challenge.Data.Signature),
+		}).Warn("invalid signature")
 		return &types.VerifyResponse{Success: false}, nil
 	}
 
@@ -76,7 +81,7 @@ func (h *Handler) Serve(ctx context.Context, req types.VerifyRequest) (*types.Ve
 	return &types.VerifyResponse{Success: true}, nil
 }
 
-func (h *Handler) generateMac(flow *storage.Flow) []byte {
+func (h *Handler) generateMac(logger logrus.FieldLogger, flow *storage.Flow) []byte {
 	var buf bytes.Buffer
 	buf.WriteString(h.tailnet)
 	buf.WriteRune('|')
@@ -85,6 +90,8 @@ func (h *Handler) generateMac(flow *storage.Flow) []byte {
 	buf.WriteString(flow.PublicKey)
 	buf.WriteRune('|')
 	buf.WriteString(flow.OS)
+
+	logger.WithField("message", buf.String()).Debug("generated expected message for mac")
 
 	mac := hmac.New(sha256.New, flow.Secret)
 	_, _ = mac.Write(buf.Bytes())
