@@ -62,13 +62,13 @@ type Launcher struct {
 }
 
 type Tailscale struct {
-	Backend               string `koanf:"backend"`
-	BaseUrl               string `koanf:"base-url"`
-	Tailnet               string `koanf:"tailnet"`
-	ApiKey                string `koanf:"api-key"`
-	OAuthClientId         string `koanf:"oauth-client-id"`
-	OAuthClientSecret     string `koanf:"oauth-client-secret"`
-	SkipCertificateVerify bool   `koanf:"skip-certificate-verify"`
+	Backend           string            `koanf:"backend"`
+	BaseUrl           string            `koanf:"base-url"`
+	Tailnet           string            `koanf:"tailnet"`
+	ApiKey            string            `koanf:"api-key"`
+	OAuthClientId     string            `koanf:"oauth-client-id"`
+	OAuthClientSecret string            `koanf:"oauth-client-secret"`
+	TLSMode           tailscale.TLSMode `koanf:"tls-mode"`
 }
 
 func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
@@ -102,7 +102,7 @@ func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 	case "hosted":
 		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, auth)
 	case "headscale":
-		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
+		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, t.ApiKey, t.TLSMode)
 	default:
 		return nil, errors.New("unknown tailscale backend")
 	}

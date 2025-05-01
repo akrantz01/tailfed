@@ -53,7 +53,7 @@ func main() {
 	cmd.Flags().String("tailscale.api-key", "", "The Tailscale API key to authenticate with")
 	cmd.Flags().String("tailscale.oauth.client-id", "", "The Tailscale OAuth client ID to authenticate with")
 	cmd.Flags().String("tailscale.oauth.client-secret", "", "The Tailscale OAuth client secret to authenticate with")
-	cmd.Flags().Bool("tailscale.skip-certificate-verify", false, "Don't perform server certificate verification (only used for the headscale backend)")
+	cmd.Flags().String("tailscale.tls-mode", "full", "The level of TLS security for the headscale connection (choices: none, insecure, full)")
 
 	err := cmd.Execute()
 	if err != nil {

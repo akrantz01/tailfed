@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"tailscale.com/client/tailscale/v2"
 )
@@ -129,13 +130,17 @@ type HeadscaleControlPlane struct {
 var _ ControlPlane = (*HeadscaleControlPlane)(nil)
 
 // NewHeadscaleControlPlane creates a new control plane client for a self-hosted Headscale instance
-func NewHeadscaleControlPlane(logger logrus.FieldLogger, baseUrl, tailnet, apiKey string, skipVerifyCerts bool) (ControlPlane, error) {
+func NewHeadscaleControlPlane(logger logrus.FieldLogger, baseUrl, tailnet, apiKey string, tlsMode TLSMode) (ControlPlane, error) {
 	var transport credentials.TransportCredentials
-	if skipVerifyCerts {
-		logger.Debug("skipping certificate verification")
+	switch tlsMode {
+	case TLSModeNone:
+		transport = insecure.NewCredentials()
+	case TLSModeInsecure:
 		transport = credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
-	} else {
+	case TLSModeFull:
 		transport = credentials.NewClientTLSFromCert(nil, "")
+	default:
+		return nil, ErrUnknownTLSMode
 	}
 
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(transport)}
@@ -214,5 +219,5 @@ func (t *tokenAuth) GetRequestMetadata(context.Context, ...string) (map[string]s
 }
 
 func (t *tokenAuth) RequireTransportSecurity() bool {
-	return true
+	return false
 }

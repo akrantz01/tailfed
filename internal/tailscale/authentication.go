@@ -1,9 +1,25 @@
 package tailscale
 
 import (
+	"errors"
+
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/tailscale/v2"
 )
+
+// TLSMode determines how the headscale control plane client should establish its connection
+type TLSMode string
+
+const (
+	// TLSModeNone uses a plaintext connection
+	TLSModeNone TLSMode = "none"
+	// TLSModeInsecure uses TLS but does not verify certificates
+	TLSModeInsecure TLSMode = "insecure"
+	// TLSModeFull uses TLS and verifies certificates
+	TLSModeFull TLSMode = "full"
+)
+
+var ErrUnknownTLSMode = errors.New("unknown TLS security mode")
 
 // Authentication determines how the client will authenticate with the Tailscale API
 type Authentication interface {
