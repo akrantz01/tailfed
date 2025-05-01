@@ -2,10 +2,15 @@ package tailscale
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
 	"net/url"
+	"strconv"
 
+	headscale "github.com/juanfont/headscale/gen/go/headscale/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"tailscale.com/client/tailscale/v2"
 )
 
@@ -46,7 +51,9 @@ type HostedControlPlane struct {
 	inner *tailscale.Client
 }
 
-// NewHostedControlPlane creates a new control plane HostedControlPlane client
+var _ ControlPlane = (*HostedControlPlane)(nil)
+
+// NewHostedControlPlane creates a new control plane client for the SaaS Tailscale offering
 func NewHostedControlPlane(baseUrl, tailnet string, auth Authentication) (ControlPlane, error) {
 	base, err := url.Parse(baseUrl)
 	if err != nil {
@@ -98,4 +105,77 @@ func (h *HostedControlPlane) NodeInfo(ctx context.Context, id string) (*NodeInfo
 		Authorized: node.Authorized,
 		External:   node.IsExternal,
 	}, nil
+}
+
+// HeadscaleControlPlane connects to a self-hosted Headscale control plane
+type HeadscaleControlPlane struct {
+	tailnet string
+	inner   headscale.HeadscaleServiceClient
+}
+
+var _ ControlPlane = (*HeadscaleControlPlane)(nil)
+
+// NewHeadscaleControlPlane creates a new control plane client for a self-hosted Headscale instance
+func NewHeadscaleControlPlane(baseUrl, tailnet, apiKey string) (ControlPlane, error) {
+	var opts []grpc.DialOption
+	if len(apiKey) > 0 {
+		opts = append(opts, grpc.WithPerRPCCredentials(&tokenAuth{apiKey}))
+	}
+
+	conn, err := grpc.NewClient(baseUrl, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("could not create client for %q: %w", baseUrl, err)
+	}
+	client := headscale.NewHeadscaleServiceClient(conn)
+
+	return &HeadscaleControlPlane{tailnet, client}, nil
+}
+
+func (h *HeadscaleControlPlane) Tailnet() string {
+	return h.tailnet
+}
+
+func (h *HeadscaleControlPlane) NodeInfo(ctx context.Context, id string) (*NodeInfo, error) {
+	nodeId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil || nodeId <= 0 {
+		return nil, errors.New("invalid node id")
+	}
+
+	resp, err := h.inner.GetNode(ctx, &headscale.GetNodeRequest{NodeId: uint64(nodeId)})
+	if err != nil {
+		return nil, err
+	}
+	node := resp.Node
+
+	addresses := make([]netip.Addr, len(node.IpAddresses))
+	for _, raw := range node.IpAddresses {
+		addresses = append(addresses, netip.MustParseAddr(raw))
+	}
+
+	return &NodeInfo{
+		ID:         fmt.Sprintf("%d", node.Id),
+		Addresses:  addresses,
+		Key:        node.NodeKey,
+		DNSName:    node.GivenName,
+		Hostname:   node.Name,
+		Tailnet:    h.tailnet,
+		OS:         "unknown",
+		Tags:       node.ForcedTags,
+		Authorized: true,
+		External:   false,
+	}, nil
+}
+
+type tokenAuth struct {
+	token string
+}
+
+var _ credentials.PerRPCCredentials = (*tokenAuth)(nil)
+
+func (t *tokenAuth) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
+	return map[string]string{"authorization": "Bearer " + t.token}, nil
+}
+
+func (t *tokenAuth) RequireTransportSecurity() bool {
+	return true
 }
