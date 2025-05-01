@@ -189,7 +189,7 @@ func (h *HeadscaleControlPlane) NodeInfo(ctx context.Context, id string) (*NodeI
 	}
 	node := resp.Node
 
-	addresses := make([]netip.Addr, len(node.IpAddresses))
+	addresses := make([]netip.Addr, 0, len(node.IpAddresses))
 	for _, raw := range node.IpAddresses {
 		addresses = append(addresses, netip.MustParseAddr(raw))
 	}
