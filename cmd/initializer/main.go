@@ -62,6 +62,7 @@ type Launcher struct {
 }
 
 type Tailscale struct {
+	Backend           string `koanf:"backend"`
 	BaseUrl           string `koanf:"base-url"`
 	Tailnet           string `koanf:"tailnet"`
 	ApiKey            string `koanf:"api-key"`
@@ -84,6 +85,10 @@ func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 	if apiKeyEnabled {
 		auth = tailscale.ApiKey(t.ApiKey)
 	} else {
+		if t.Backend == "headscale" {
+			return nil, errors.New("oauth-based authentication unsupported for headscale control plane")
+		}
+
 		auth = tailscale.OAuth(t.OAuthClientId, t.OAuthClientSecret)
 	}
 
@@ -91,7 +96,14 @@ func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 		t.BaseUrl = "https://api.tailscale.com"
 	}
 
-	return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, auth)
+	switch t.Backend {
+	case "hosted":
+		return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, auth)
+	case "headscale":
+		return tailscale.NewHeadscaleControlPlane(t.Backend, t.Tailnet, t.ApiKey)
+	default:
+		return nil, errors.New("unknown tailscale backend")
+	}
 }
 
 type Storage struct {
