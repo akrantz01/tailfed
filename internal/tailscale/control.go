@@ -2,6 +2,7 @@ package tailscale
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -116,8 +117,16 @@ type HeadscaleControlPlane struct {
 var _ ControlPlane = (*HeadscaleControlPlane)(nil)
 
 // NewHeadscaleControlPlane creates a new control plane client for a self-hosted Headscale instance
-func NewHeadscaleControlPlane(baseUrl, tailnet, apiKey string) (ControlPlane, error) {
-	var opts []grpc.DialOption
+func NewHeadscaleControlPlane(baseUrl, tailnet, apiKey string, skipVerifyCerts bool) (ControlPlane, error) {
+	var transport credentials.TransportCredentials
+	if skipVerifyCerts {
+		transport = credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+	} else {
+		transport = credentials.NewClientTLSFromCert(nil, "")
+	}
+
+	opts := []grpc.DialOption{grpc.WithTransportCredentials(transport)}
+
 	if len(apiKey) > 0 {
 		opts = append(opts, grpc.WithPerRPCCredentials(&tokenAuth{apiKey}))
 	}

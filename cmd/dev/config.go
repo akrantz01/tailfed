@@ -191,6 +191,8 @@ type tailscaleConfig struct {
 
 	ApiKey string               `koanf:"api-key"`
 	OAuth  tailscaleOAuthConfig `koanf:"oauth"`
+
+	SkipCertificateVerify bool `koanf:"skip-certificate-verify"`
 }
 
 func (t *tailscaleConfig) Validate() error {
@@ -218,7 +220,7 @@ func (t *tailscaleConfig) NewClient() (tailscale.ControlPlane, error) {
 	case "hosted":
 		return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, t.Authentication())
 	case "headscale":
-		return tailscale.NewHeadscaleControlPlane(t.Backend, t.Tailnet, t.ApiKey)
+		return tailscale.NewHeadscaleControlPlane(t.Backend, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
 	default:
 		return nil, errors.New("unknown tailscale backend")
 	}
