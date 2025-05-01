@@ -33,7 +33,7 @@ func (r *run) NewRunCommand() *cobra.Command {
 
 func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	apiClient, err := api.NewClient(http.DefaultClient, r.Url)
 	if err != nil {
@@ -48,7 +48,19 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sched.Start()
 
 	logrus.Info("daemon started")
-	<-sigs
+
+signals:
+	for {
+		switch <-sigs {
+		case syscall.SIGHUP:
+			sched.RunNow()
+			logrus.Info("reload received, refreshing token now")
+
+		case syscall.SIGINT, syscall.SIGTERM:
+			break signals
+		}
+	}
+
 	logrus.Info("signal received, shutting down...")
 
 	sched.Stop()
