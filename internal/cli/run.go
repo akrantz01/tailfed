@@ -40,7 +40,7 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	tsClient := tailscale.NewLocal()
+	tsClient := tailscale.NewLocal(logrus.WithField("component", "tailscale"))
 	refresh := refresher.New(apiClient, tsClient, r.Path)
 
 	sched := scheduler.NewScheduler(cmd.Context(), r.Frequency, refresh.Job)

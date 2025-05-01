@@ -1,10 +1,13 @@
 package tailscale
 
-import "tailscale.com/client/tailscale/v2"
+import (
+	"github.com/sirupsen/logrus"
+	"tailscale.com/client/tailscale/v2"
+)
 
 // Authentication determines how the client will authenticate with the Tailscale API
 type Authentication interface {
-	apply(c *tailscale.Client)
+	apply(logger logrus.FieldLogger, c *tailscale.Client)
 }
 
 type apiKey struct {
@@ -18,7 +21,8 @@ func ApiKey(key string) Authentication {
 	return &apiKey{key}
 }
 
-func (a *apiKey) apply(c *tailscale.Client) {
+func (a *apiKey) apply(logger logrus.FieldLogger, c *tailscale.Client) {
+	logger.Debug("using api key authentication")
 	c.APIKey = a.key
 }
 
@@ -34,7 +38,8 @@ func OAuth(clientId, clientSecret string) Authentication {
 	return &oauth{clientId, clientSecret}
 }
 
-func (o *oauth) apply(c *tailscale.Client) {
+func (o *oauth) apply(logger logrus.FieldLogger, c *tailscale.Client) {
+	logger.Debug("using oauth authentication")
 	config := tailscale.OAuthConfig{
 		ClientID:     o.id,
 		ClientSecret: o.secret,

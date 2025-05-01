@@ -233,11 +233,15 @@ func (t *tailscaleConfig) Validate() error {
 }
 
 func (t *tailscaleConfig) NewClient() (tailscale.ControlPlane, error) {
+	logger := logrus.WithFields(map[string]any{
+		"component": "tailscale",
+		"backend":   t.Backend,
+	})
 	switch t.Backend {
 	case "hosted":
-		return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, t.Authentication())
+		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, t.Authentication())
 	case "headscale":
-		return tailscale.NewHeadscaleControlPlane(t.Backend, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
+		return tailscale.NewHeadscaleControlPlane(logger, t.Backend, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
 	default:
 		return nil, errors.New("unknown tailscale backend")
 	}

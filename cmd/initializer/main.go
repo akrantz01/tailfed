@@ -97,11 +97,12 @@ func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 		t.BaseUrl = "https://api.tailscale.com"
 	}
 
+	logger := logrus.WithField("component", "tailscale")
 	switch t.Backend {
 	case "hosted":
-		return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, auth)
+		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, auth)
 	case "headscale":
-		return tailscale.NewHeadscaleControlPlane(t.Backend, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
+		return tailscale.NewHeadscaleControlPlane(logger, t.Backend, t.Tailnet, t.ApiKey, t.SkipCertificateVerify)
 	default:
 		return nil, errors.New("unknown tailscale backend")
 	}

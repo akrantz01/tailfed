@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	headscale "github.com/juanfont/headscale/gen/go/headscale/v1"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"tailscale.com/client/tailscale/v2"
@@ -49,13 +50,14 @@ type NodeInfo struct {
 
 // HostedControlPlane connects to the Tailscale control plane
 type HostedControlPlane struct {
-	inner *tailscale.Client
+	logger logrus.FieldLogger
+	inner  *tailscale.Client
 }
 
 var _ ControlPlane = (*HostedControlPlane)(nil)
 
 // NewHostedControlPlane creates a new control plane client for the SaaS Tailscale offering
-func NewHostedControlPlane(baseUrl, tailnet string, auth Authentication) (ControlPlane, error) {
+func NewHostedControlPlane(logger logrus.FieldLogger, baseUrl, tailnet string, auth Authentication) (ControlPlane, error) {
 	base, err := url.Parse(baseUrl)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base url %q: %w", baseUrl, err)
@@ -68,9 +70,15 @@ func NewHostedControlPlane(baseUrl, tailnet string, auth Authentication) (Contro
 		BaseURL: base,
 		Tailnet: tailnet,
 	}
-	auth.apply(client)
+	auth.apply(logger, client)
 
-	return &HostedControlPlane{client}, nil
+	logger.
+		WithFields(map[string]any{
+			"base-url": baseUrl,
+			"tailnet":  tailnet,
+		}).
+		Info("created new hosted control plane client")
+	return &HostedControlPlane{logger, client}, nil
 }
 
 // Tailnet retrieves the name of the connected tailnet
@@ -80,6 +88,7 @@ func (h *HostedControlPlane) Tailnet() string {
 
 // NodeInfo retrieves details about a particular node by its ID
 func (h *HostedControlPlane) NodeInfo(ctx context.Context, id string) (*NodeInfo, error) {
+	h.logger.WithField("id", id).Debug("fetching node information")
 	node, err := h.inner.Devices().Get(ctx, id)
 	if err != nil {
 		if tailscale.IsNotFound(err) {
@@ -110,6 +119,7 @@ func (h *HostedControlPlane) NodeInfo(ctx context.Context, id string) (*NodeInfo
 
 // HeadscaleControlPlane connects to a self-hosted Headscale control plane
 type HeadscaleControlPlane struct {
+	logger  logrus.FieldLogger
 	tailnet string
 	inner   headscale.HeadscaleServiceClient
 }
@@ -117,9 +127,10 @@ type HeadscaleControlPlane struct {
 var _ ControlPlane = (*HeadscaleControlPlane)(nil)
 
 // NewHeadscaleControlPlane creates a new control plane client for a self-hosted Headscale instance
-func NewHeadscaleControlPlane(baseUrl, tailnet, apiKey string, skipVerifyCerts bool) (ControlPlane, error) {
+func NewHeadscaleControlPlane(logger logrus.FieldLogger, baseUrl, tailnet, apiKey string, skipVerifyCerts bool) (ControlPlane, error) {
 	var transport credentials.TransportCredentials
 	if skipVerifyCerts {
+		logger.Debug("skipping certificate verification")
 		transport = credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 	} else {
 		transport = credentials.NewClientTLSFromCert(nil, "")
@@ -128,6 +139,7 @@ func NewHeadscaleControlPlane(baseUrl, tailnet, apiKey string, skipVerifyCerts b
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(transport)}
 
 	if len(apiKey) > 0 {
+		logger.Debug("attaching api key for authentication")
 		opts = append(opts, grpc.WithPerRPCCredentials(&tokenAuth{apiKey}))
 	}
 
@@ -137,7 +149,13 @@ func NewHeadscaleControlPlane(baseUrl, tailnet, apiKey string, skipVerifyCerts b
 	}
 	client := headscale.NewHeadscaleServiceClient(conn)
 
-	return &HeadscaleControlPlane{tailnet, client}, nil
+	logger.
+		WithFields(map[string]any{
+			"bsae-url": baseUrl,
+			"tailnet":  tailnet,
+		}).
+		Info("created new headscale control plane client")
+	return &HeadscaleControlPlane{logger, tailnet, client}, nil
 }
 
 func (h *HeadscaleControlPlane) Tailnet() string {
@@ -150,6 +168,7 @@ func (h *HeadscaleControlPlane) NodeInfo(ctx context.Context, id string) (*NodeI
 		return nil, errors.New("invalid node id")
 	}
 
+	h.logger.WithField("id", nodeId).Debug("fetching node information")
 	resp, err := h.inner.GetNode(ctx, &headscale.GetNodeRequest{NodeId: uint64(nodeId)})
 	if err != nil {
 		return nil, err

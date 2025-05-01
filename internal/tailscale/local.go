@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"tailscale.com/client/tailscale"
 )
 
@@ -13,13 +14,15 @@ var ErrUninitialized = errors.New("current node is uninitialized")
 
 // Local connects to the local Tailscale instance
 type Local struct {
-	inner tailscale.LocalClient
+	logger logrus.FieldLogger
+	inner  tailscale.LocalClient
 }
 
 // NewLocal connects to the local Tailscale socket
-func NewLocal() *Local {
+func NewLocal(logger logrus.FieldLogger) *Local {
 	return &Local{
-		inner: tailscale.LocalClient{},
+		logger: logger,
+		inner:  tailscale.LocalClient{},
 	}
 }
 
@@ -47,12 +50,14 @@ type Status struct {
 
 // Status retrieves information about the current node
 func (c *Local) Status(ctx context.Context) (*Status, error) {
+	c.logger.Debug("getting local tailscale node info")
 	status, err := c.inner.StatusWithoutPeers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if status.CurrentTailnet == nil || status.Self == nil {
+		c.logger.Debug("client is uninitialized")
 		return nil, ErrUninitialized
 	}
 
