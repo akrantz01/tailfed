@@ -184,6 +184,7 @@ func (s *storageConfig) NewBackend(config aws.Config) (storage.Backend, error) {
 }
 
 type tailscaleConfig struct {
+	Backend string `koanf:"backend"`
 	BaseUrl string `koanf:"base-url"`
 
 	Tailnet string `koanf:"tailnet"`
@@ -205,11 +206,22 @@ func (t *tailscaleConfig) Validate() error {
 		return errors.New("exactly one tailscale authentication method must be enabled")
 	}
 
+	if t.Backend == "headscale" && t.OAuth.Enabled() {
+		return errors.New("oauth-based authentication not supported by headscale")
+	}
+
 	return nil
 }
 
 func (t *tailscaleConfig) NewClient() (tailscale.ControlPlane, error) {
-	return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, t.Authentication())
+	switch t.Backend {
+	case "hosted":
+		return tailscale.NewHostedControlPlane(t.BaseUrl, t.Tailnet, t.Authentication())
+	case "headscale":
+		return tailscale.NewHeadscaleControlPlane(t.Backend, t.Tailnet, t.ApiKey)
+	default:
+		return nil, errors.New("unknown tailscale backend")
+	}
 }
 
 func (t *tailscaleConfig) Authentication() tailscale.Authentication {
