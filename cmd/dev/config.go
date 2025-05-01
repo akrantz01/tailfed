@@ -13,6 +13,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/sirupsen/logrus"
 )
 
 var cfg config
@@ -81,11 +82,15 @@ func (l *launcherConfig) Validate() error {
 }
 
 func (l *launcherConfig) NewBackend(config aws.Config, bus chan<- launcher.Request) (launcher.Backend, error) {
+	logger := logrus.WithFields(map[string]any{
+		"component": "launcher",
+		"backend":   l.Backend,
+	})
 	switch l.Backend {
 	case "local":
-		return launcher.NewLocal(bus), nil
+		return launcher.NewLocal(logger, bus), nil
 	case "step-function":
-		return launcher.NewStepFunction(config, l.StateMachine)
+		return launcher.NewStepFunction(logger, config, l.StateMachine)
 	default:
 		return nil, errors.New("unknown launcher backend")
 	}

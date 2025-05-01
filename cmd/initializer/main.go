@@ -35,7 +35,7 @@ func main() {
 		logrus.WithError(err).Fatal("failed to create tailscale client")
 	}
 
-	launch, err := launcher.NewStepFunction(awsConfig, config.Launcher.StateMachine)
+	launch, err := launcher.NewStepFunction(logrus.WithField("component", "launcher"), awsConfig, config.Launcher.StateMachine)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to initialize launcher")
 	}
