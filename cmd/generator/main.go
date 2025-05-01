@@ -28,7 +28,7 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize logging")
 	}
 
-	meta, err := metadata.NewS3(awsConfig, config.Metadata.Bucket)
+	meta, err := metadata.NewS3(logrus.WithField("component", "metadata"), awsConfig, config.Metadata.Bucket)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to initialize metadata")
 	}

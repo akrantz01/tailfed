@@ -115,11 +115,15 @@ func (m *metadataConfig) Validate() error {
 }
 
 func (m *metadataConfig) NewBackend(config aws.Config) (metadata.Backend, error) {
+	logger := logrus.WithFields(map[string]any{
+		"component": "metadata",
+		"backend":   m.Backend,
+	})
 	switch m.Backend {
 	case "filesystem":
-		return metadata.NewFilesystem(m.Path)
+		return metadata.NewFilesystem(logger, m.Path)
 	case "s3":
-		return metadata.NewS3(config, m.Bucket)
+		return metadata.NewS3(logger, config, m.Bucket)
 	default:
 		return nil, errors.New("unknown metadata backend")
 	}
