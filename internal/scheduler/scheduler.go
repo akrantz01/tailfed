@@ -18,6 +18,8 @@ type Scheduler struct {
 	loop  clockwork.Ticker
 	retry clockwork.Timer
 
+	immediate chan struct{}
+
 	shutdownCtx      context.Context
 	shutdownFn       context.CancelFunc
 	shutdownComplete chan struct{}
@@ -36,6 +38,8 @@ func NewScheduler(ctx context.Context, frequency time.Duration, job JobFn) *Sche
 		clock:  clock,
 		loop:   clock.NewTicker(frequency),
 		retry:  clock.NewTimer(0 * time.Second),
+
+		immediate: make(chan struct{}),
 
 		shutdownCtx:      shutdownCtx,
 		shutdownFn:       shutdownFn,
@@ -58,6 +62,8 @@ func (s *Scheduler) scheduler() {
 	retryC := s.retry.Chan()
 	for {
 		select {
+		case <-s.immediate:
+			s.run()
 		case <-retryC:
 			s.run()
 		case <-loopC:
@@ -68,6 +74,11 @@ func (s *Scheduler) scheduler() {
 			return
 		}
 	}
+}
+
+// RunNow enqueues a run immediately
+func (s *Scheduler) RunNow() {
+	s.immediate <- struct{}{}
 }
 
 func (s *Scheduler) run() {
