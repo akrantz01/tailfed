@@ -7,6 +7,7 @@ import (
 
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -26,14 +27,17 @@ var _ Executable = (*root)(nil)
 
 // NewRoot creates the root command for the client
 func NewRoot(exit func(int)) Executable {
+	info := version.GetInfo()
+
 	root := &root{
 		exit: exit,
 		run:  &run{},
 	}
 
 	cmd := &cobra.Command{
-		Use:   "tailfed-client",
-		Short: "A daemon for refreshing AWS identity tokens via Tailfed.",
+		Use:     "tailfed-client",
+		Version: info.Version,
+		Short:   "A daemon for refreshing AWS identity tokens via Tailfed.",
 		Long: `
 A daemon for refreshing AWS web identity federation tokens issued by Tailfed. Tailfed uses your
 Tailscale network to prove a host's identity, allowing it to retrieve temporary AWS credentials.`,
@@ -43,6 +47,8 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 		RunE:               root.Run,
 		PersistentPostRunE: root.PersistentPostRun,
 	}
+
+	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.PersistentFlags().StringP("config", "c", "tailfed.yml", "The path to the configuration file")
 	cmd.PersistentFlags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
