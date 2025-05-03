@@ -31,8 +31,8 @@ build-binary binary:
 mock port="8080":
     docker build -t tailfed-wiremock:latest wiremock/
     docker run --rm \
-      --publish mode=host,target={{ port }},published=8080,protocol=tcp \
-      --volume type=bind,source=$PWD/wiremock/stubs,target=/home/wiremock \
+      --publish {{ port }}:8080/tcp \
+      --volume $PWD/wiremock/stubs:/home/wiremock:ro \
       tailfed-wiremock:latest
 
 # Remove the generated files
