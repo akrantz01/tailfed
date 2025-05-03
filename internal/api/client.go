@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -37,6 +38,11 @@ func NewClient(client *http.Client, baseUrl string) (*Client, error) {
 	}, nil
 }
 
+// GetConfig retrieves the daemon config
+func (c *Client) GetConfig(ctx context.Context) (*types.ConfigResponse, error) {
+	return doRequest[types.ConfigResponse](c, ctx, "get-config", "GET", "/config.json", nil)
+}
+
 // Start begins the ID token issuance process
 func (c *Client) Start(ctx context.Context, node string, addresses []string) (*types.StartResponse, error) {
 	ports := types.Ports{}
@@ -52,12 +58,12 @@ func (c *Client) Start(ctx context.Context, node string, addresses []string) (*t
 		}
 	}
 
-	return doRequest[types.StartResponse](c, ctx, "start", "/start", &types.StartRequest{Node: node, Ports: ports})
+	return doRequest[types.StartResponse](c, ctx, "start", "POST", "/start", &types.StartRequest{Node: node, Ports: ports})
 }
 
 // Finalize attempts to finish the request flow and issue a token
 func (c *Client) Finalize(ctx context.Context, id string) (string, error) {
-	res, err := doRequest[types.FinalizeResponse](c, ctx, "finalize", "/finalize", &types.FinalizeRequest{ID: id})
+	res, err := doRequest[types.FinalizeResponse](c, ctx, "finalize", "POST", "/finalize", &types.FinalizeRequest{ID: id})
 	if err != nil {
 		return "", err
 	}
@@ -85,26 +91,33 @@ func parseBaseUrl(baseUrl string) (*url.URL, error) {
 
 // doRequest makes a request to the Tailfed server. This should be a method, but Go does not support generics
 // in methods yet so we make do
-func doRequest[R any](c *Client, ctx context.Context, name, path string, body any) (*R, error) {
+func doRequest[R any](c *Client, ctx context.Context, name, method, path string, body any) (*R, error) {
 	logger := c.logger.WithFields(map[string]any{
 		"request": name,
 		"path":    path,
-		"method":  "POST",
+		"method":  method,
 	})
 
-	encoded, err := json.Marshal(body)
-	if err != nil {
-		logger.WithError(err).Panic("failed to encode body (this should never happen)")
-	}
-	logger.WithField("body", body).Trace("encoded body")
+	var reqBody io.Reader
+	if body != nil {
+		encoded, err := json.Marshal(body)
+		if err != nil {
+			logger.WithError(err).Panic("failed to encode body (this should never happen)")
+		}
+		logger.WithField("body", body).Trace("encoded body")
 
-	req, err := http.NewRequestWithContext(ctx, "POST", c.base.JoinPath(path).String(), bytes.NewReader(encoded))
+		reqBody = bytes.NewReader(encoded)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, c.base.JoinPath(path).String(), reqBody)
 	if err != nil {
 		logger.WithError(err).Error("failed to build request")
 		return nil, fmt.Errorf("failed to build request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	req.Header.Set("Accept", "application/json")
 
 	logger.Debug("sending request...")
