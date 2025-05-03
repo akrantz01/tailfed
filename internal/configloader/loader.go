@@ -1,6 +1,7 @@
 package configloader
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -13,8 +14,15 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
+// RawConfig contains the raw configuration keys before structuring or validation.
+type RawConfig struct {
+	inner *koanf.Koanf
+}
+
+type rawConfigKey struct{}
+
 // Load retrieves configuration from at least the environment and command line arguments
-func Load(opts ...Option) (*koanf.Koanf, error) {
+func Load(opts ...Option) (*RawConfig, error) {
 	options := &options{}
 	for _, opt := range opts {
 		if opt != nil {
@@ -57,21 +65,44 @@ func Load(opts ...Option) (*koanf.Koanf, error) {
 		}
 	}
 
-	return k, nil
+	return &RawConfig{k}, nil
 }
 
 // LoadInto retrieves configuration from at least the environment and command line arguments and extracts it into a struct
 func LoadInto[T any](dest *T, opts ...Option) error {
-	k, err := Load(opts...)
+	raw, err := Load(opts...)
 	if err != nil {
 		return err
 	}
 
-	if err := k.Unmarshal("", dest); err != nil {
+	if err := raw.Structure(dest); err != nil {
 		return fmt.Errorf("unable to unmarshal config: %w", err)
 	}
 
 	return nil
+}
+
+// FromContext retrieves a RawConfig instance from a context
+func FromContext(ctx context.Context) *RawConfig {
+	value := ctx.Value(rawConfigKey{})
+	if value == nil {
+		return nil
+	}
+	if r, ok := value.(*RawConfig); ok {
+		return r
+	} else {
+		panic("value at RawConfig key is not a *RawConfig")
+	}
+}
+
+// Structure populates a struct with configuration values
+func (r *RawConfig) Structure(dest any) error {
+	return r.inner.Unmarshal("", dest)
+}
+
+// InContext adds the RawConfig instance to a context
+func (r *RawConfig) InContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, rawConfigKey{}, r)
 }
 
 func newEnvVarCleaner(prefix string, secrets *secretLoader) func(string, string) (string, any) {
