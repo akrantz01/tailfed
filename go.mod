@@ -14,6 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sfn v1.35.4
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.45.0
 	github.com/cenkalti/backoff/v5 v5.0.2
+	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/go-jose/go-jose/v4 v4.1.0
 	github.com/google/uuid v1.6.0
 	github.com/jonboulle/clockwork v0.5.0

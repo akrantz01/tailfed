@@ -10,6 +10,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/akrantz01/tailfed/internal/refresher"
 	"github.com/akrantz01/tailfed/internal/scheduler"
+	"github.com/akrantz01/tailfed/internal/systemd"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -32,6 +33,7 @@ func (r *run) NewRunCommand() *cobra.Command {
 
 func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+	systemd.EnableWatchdog()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -59,13 +61,18 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sched.Start()
 
 	logrus.Info("daemon started")
+	systemd.Ready()
 
 signals:
 	for {
 		switch <-sigs {
 		case syscall.SIGHUP:
+			systemd.Reloading()
+
 			sched.RunNow()
 			logrus.Info("reload received, refreshing token now")
+
+			systemd.Ready()
 
 		case syscall.SIGINT, syscall.SIGTERM:
 			break signals
@@ -73,6 +80,7 @@ signals:
 	}
 
 	logrus.Info("signal received, shutting down...")
+	systemd.Stopping()
 
 	sched.Stop()
 	refresh.ShutdownInFlight()
