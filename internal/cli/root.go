@@ -53,7 +53,7 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 	cmd.Flags().DurationP("frequency", "f", 1*time.Hour, "How often to refresh the token")
 	cmd.Flags().StringP("url", "u", "", "The URL of the Tailfed API")
 
-	cmd.AddCommand(root.NewRunCommand(), generateConfigCmd, newVersion())
+	cmd.AddCommand(root.NewRunCommand(), newGenerateConfig(), newVersion())
 
 	root.cmd = cmd
 	return root
@@ -61,9 +61,9 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 
 // PersistentPreRun performs the common initializations for all commands
 func (r *root) PersistentPreRun(cmd *cobra.Command, _ []string) error {
-	flags := r.cmd.Flags()
+	flags := cmd.Flags()
 	path, _ := flags.GetString("config")
-	err := configloader.LoadInto(r,
+	config, err := configloader.Load(
 		configloader.WithFlags(flags),
 		configloader.WithEnvPrefix("TAILFED_"),
 		configloader.IncludeConfigFile(path),
@@ -71,6 +71,13 @@ func (r *root) PersistentPreRun(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	if err := config.Structure(r); err != nil {
+		return fmt.Errorf("failed to structure root config: %w", err)
+	}
+
+	ctx := config.InContext(cmd.Context())
+	cmd.SetContext(ctx)
 
 	if err := logging.Initialize(r.LogLevel); err != nil {
 		return err

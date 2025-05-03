@@ -17,26 +17,26 @@ var (
 	configTemplate = template.Must(template.New("tailfed.yml").Parse(configTemplateSrc))
 )
 
-var generateConfigCmd = &cobra.Command{
-	Use:           "generate-config",
-	Short:         "Generate a new configuration file",
-	Long:          "Generates a new configuration file in the current directory using the provided backend API URL.",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Args:          cobra.ExactArgs(1),
-	RunE:          generateConfig,
+type generateConfig struct {
+	Path string `koanf:"config"`
 }
 
-func generateConfig(cmd *cobra.Command, args []string) error {
-	var path string
-	flag := cmd.Flag("config")
-	if flag.Changed {
-		path = flag.Value.String()
-	} else {
-		path = flag.DefValue
+func newGenerateConfig() *cobra.Command {
+	gc := &generateConfig{}
+	return &cobra.Command{
+		Use:           "generate-config",
+		Short:         "Generate a new configuration file",
+		Long:          "Generates a new configuration file in the current directory using the provided backend API URL.",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Args:          cobra.ExactArgs(1),
+		PreRunE:       structureConfigInto(gc),
+		RunE:          gc.Run,
 	}
+}
 
-	file, err := os.Create(path)
+func (gc *generateConfig) Run(_ *cobra.Command, args []string) error {
+	file, err := os.Create(gc.Path)
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
@@ -49,6 +49,6 @@ func generateConfig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate config file: %w", err)
 	}
 
-	logrus.WithField("path", path).Info("generated config file")
+	logrus.WithField("path", gc.Path).Info("generated config file")
 	return nil
 }
