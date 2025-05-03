@@ -15,9 +15,5 @@ pid-file: /run/tailfed/pid
 # Default: /run/tailfed/token
 path: /run/tailfed/token
 
-# How often to refresh the token, specified using Go duration syntax
-# Default: 1h
-frequency: 1h
-
 # The URL of the Tailfed API (required)
 url: {{ .Url }}

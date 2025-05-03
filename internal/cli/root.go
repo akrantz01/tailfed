@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/logging"
@@ -50,7 +49,6 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 	cmd.PersistentFlags().String("pid-file", "/run/tailfed/pid", "The path to read/write the daemon's PID")
 
 	cmd.Flags().StringP("path", "p", "/run/tailfed/token", "The path to write the generated web identity token to")
-	cmd.Flags().DurationP("frequency", "f", 1*time.Hour, "How often to refresh the token")
 	cmd.Flags().StringP("url", "u", "", "The URL of the Tailfed API")
 
 	cmd.AddCommand(root.NewRunCommand(), newGenerateConfig(), newRefresh(), newVersion())

@@ -1,11 +1,11 @@
 package cli
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/akrantz01/tailfed/internal/refresher"
@@ -16,9 +16,8 @@ import (
 )
 
 type run struct {
-	Path      string        `koanf:"path"`
-	Frequency time.Duration `koanf:"frequency"`
-	Url       string        `koanf:"url"`
+	Path string `koanf:"path"`
+	Url  string `koanf:"url"`
 }
 
 func (r *run) NewRunCommand() *cobra.Command {
@@ -32,6 +31,8 @@ func (r *run) NewRunCommand() *cobra.Command {
 }
 
 func (r *run) Run(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
@@ -43,7 +44,17 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	tsClient := tailscale.NewLocal(logrus.WithField("component", "tailscale"))
 	refresh := refresher.New(apiClient, tsClient, r.Path)
 
-	sched := scheduler.NewScheduler(cmd.Context(), r.Frequency, refresh.Job)
+	config, err := apiClient.GetConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get daemon config from api: %w", err)
+	}
+	logrus.
+		WithFields(map[string]any{
+			"frequency": config.Frequency,
+		}).
+		Info("got daemon config")
+
+	sched := scheduler.NewScheduler(ctx, config.Frequency, refresh.Job)
 
 	sched.Start()
 
