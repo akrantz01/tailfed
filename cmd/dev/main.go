@@ -117,7 +117,8 @@ func run(*cobra.Command, []string) error {
 	}
 
 	logrus.Info("generating metadata documents")
-	if err := generator.New(meta, signer).Serve(context.Background(), types.GenerateRequest{Issuer: gateway.BaseUrl}); err != nil {
+	gen := generator.New(cfg.Signing.Validity, meta, signer)
+	if err := gen.Serve(context.Background(), types.GenerateRequest{Issuer: gateway.BaseUrl}); err != nil {
 		return fmt.Errorf("failed to generate metadata documents: %w", err)
 	}
 
