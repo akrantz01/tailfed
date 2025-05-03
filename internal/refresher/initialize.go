@@ -41,7 +41,7 @@ func (r *Refresher) Job(ctx context.Context) error {
 	res, err := r.api.Start(ctx, status.ID, addresses)
 	if err != nil {
 		r.releaseListeners(listeners)
-		return err
+		return scheduler.Retry(5*time.Second, err)
 	}
 
 	servers := make([]*http.Server, 0, len(listeners))
