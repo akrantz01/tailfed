@@ -53,7 +53,7 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 	cmd.Flags().DurationP("frequency", "f", 1*time.Hour, "How often to refresh the token")
 	cmd.Flags().StringP("url", "u", "", "The URL of the Tailfed API")
 
-	cmd.AddCommand(root.NewRunCommand(), newGenerateConfig(), newVersion())
+	cmd.AddCommand(root.NewRunCommand(), newGenerateConfig(), newRefresh(), newVersion())
 
 	root.cmd = cmd
 	return root
