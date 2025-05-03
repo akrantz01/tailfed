@@ -41,7 +41,7 @@ func (h *Handler) writeConfig(ctx context.Context, _ types.GenerateRequest) erro
 	return h.meta.Save(ctx, "config.json", &types.Response[types.ConfigResponse]{
 		Success: true,
 		Data: &types.ConfigResponse{
-			Frequency: (h.validity / 4) * 3, // Refresh after 75% of the duration has elapsed
+			Frequency: types.Duration((h.validity / 4) * 3), // Refresh after 75% of the duration has elapsed
 		},
 	})
 }

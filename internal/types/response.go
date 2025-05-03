@@ -1,7 +1,5 @@
 package types
 
-import "time"
-
 // Response is the general structure of the HTTP response payload
 type Response[T any] struct {
 	// Success signifies whether the response was a success
@@ -15,7 +13,7 @@ type Response[T any] struct {
 // ConfigResponse provides configuration to the daemon
 type ConfigResponse struct {
 	// Frequency determines how often the token should be refreshed
-	Frequency time.Duration `json:"frequency"`
+	Frequency Duration `json:"frequency"`
 }
 
 // StartResponse is returned by the start handler

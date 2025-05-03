@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/akrantz01/tailfed/internal/refresher"
@@ -52,11 +53,11 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	}
 	logrus.
 		WithFields(map[string]any{
-			"frequency": config.Frequency,
+			"frequency": config.Frequency.String(),
 		}).
 		Info("got daemon config")
 
-	sched := scheduler.NewScheduler(ctx, config.Frequency, refresh.Job)
+	sched := scheduler.NewScheduler(ctx, time.Duration(config.Frequency), refresh.Job)
 
 	sched.Start()
 
