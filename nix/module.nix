@@ -53,7 +53,9 @@ in {
       };
 
       serviceConfig = {
-        Type = "simple";
+        Type = "notify";
+        WatchdogSec = 30;
+
         User = "tailfed";
         DynamicUser = "yes";
         SyslogIdentifier = "tailfed";
@@ -61,10 +63,6 @@ in {
 
         ExecStart = "${cfg.package}/bin/client";
         Restart = "on-failure";
-
-        # TODO: add systemd integration
-        # Type = "notify"
-        # WatchdogSec = 30;
       };
     };
   };
