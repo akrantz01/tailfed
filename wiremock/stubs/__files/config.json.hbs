@@ -1,0 +1,20 @@
+{{~#assign "minutes"~}}
+  {{randomInt lower=5 upper=60}}
+{{~/assign~}}
+{{~#assign "nanoseconds"~}}
+  {{math minutes '*' 60000000000}}
+{{~/assign~}}
+{{~#assign "string"~}}
+  "{{arrayJoin '' minutes 'm'}}"
+{{~/assign~}}
+{
+  "success": true,
+  "data": {
+    "__frequency": {
+      "minutes": {{minutes}},
+      "nanos": {{nanoseconds}},
+      "string": {{string}}
+    },
+    "frequency": {{pickRandom nanoseconds string}}
+  }
+}
