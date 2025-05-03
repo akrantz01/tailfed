@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/generator"
@@ -38,7 +39,7 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize signer")
 	}
 
-	handler := generator.New(meta, signer)
+	handler := generator.New(config.Signing.Validity, meta, signer)
 	lambda.Start(handler.Serve)
 }
 
@@ -54,5 +55,6 @@ type Metadata struct {
 }
 
 type Signing struct {
-	Key string `koanf:"key"`
+	Key      string        `koanf:"key"`
+	Validity time.Duration `koanf:"validity"`
 }

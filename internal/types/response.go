@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 // Response is the general structure of the HTTP response payload
 type Response[T any] struct {
 	// Success signifies whether the response was a success
@@ -8,6 +10,12 @@ type Response[T any] struct {
 	Data *T `json:"data,omitempty"`
 	// Error is a description of what went wrong, only present when Success is `false`
 	Error string `json:"error,omitempty"`
+}
+
+// ConfigResponse provides configuration to the daemon
+type ConfigResponse struct {
+	// Frequency determines how often the token should be refreshed
+	Frequency time.Duration `json:"frequency"`
 }
 
 // StartResponse is returned by the start handler
