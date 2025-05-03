@@ -16,19 +16,26 @@ import (
 	"github.com/akrantz01/tailfed/internal/launcher"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/types"
+	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func main() {
+	info := version.GetInfo()
+
 	cmd := &cobra.Command{
 		Use:           "dev",
+		Version:       info.Version,
 		Short:         "Mimics the API gateway and step function for coordinating the Lambda functions",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRunE:       preRun,
 		RunE:          run,
 	}
+
+	cmd.SetVersionTemplate("{{.Version}}\n")
+
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
 	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The address and port combination to listen on")
 
