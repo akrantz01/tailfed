@@ -2,7 +2,9 @@ package cli
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"text/template"
 
@@ -36,6 +38,39 @@ func newGenerateConfig() *cobra.Command {
 }
 
 func (gc *generateConfig) Run(_ *cobra.Command, args []string) error {
+	apiUrl, err := gc.parseUrl(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid api url %q: %w", args[0], err)
+	}
+
+	// TODO: test url is valid
+
+	if err := gc.writeConfig(apiUrl); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	logrus.WithField("path", gc.Path).Info("generated config file")
+	return nil
+}
+
+func (gc *generateConfig) parseUrl(raw string) (*url.URL, error) {
+	apiUrl, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid format: %w", err)
+	}
+
+	if apiUrl.Scheme != "http" && apiUrl.Scheme != "https" {
+		return nil, errors.New("must be either 'http' or 'https'")
+	}
+
+	if len(apiUrl.Hostname()) == 0 {
+		return nil, errors.New("missing hostname")
+	}
+
+	return apiUrl, nil
+}
+
+func (gc *generateConfig) writeConfig(apiUrl *url.URL) error {
 	file, err := os.Create(gc.Path)
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
@@ -43,12 +78,11 @@ func (gc *generateConfig) Run(_ *cobra.Command, args []string) error {
 	defer file.Close()
 
 	ctx := map[string]any{
-		"Url": args[0],
+		"Url": apiUrl.String(),
 	}
 	if err := configTemplate.Execute(file, ctx); err != nil {
 		return fmt.Errorf("failed to generate config file: %w", err)
 	}
 
-	logrus.WithField("path", gc.Path).Info("generated config file")
 	return nil
 }
