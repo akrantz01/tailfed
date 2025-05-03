@@ -14,9 +14,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sfn v1.35.4
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.45.0
 	github.com/cenkalti/backoff/v5 v5.0.2
+	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/go-jose/go-jose/v4 v4.1.0
 	github.com/google/uuid v1.6.0
+	github.com/hashicorp/go-version v1.7.0
 	github.com/jonboulle/clockwork v0.5.0
 	github.com/juanfont/headscale v0.25.1
 	github.com/knadh/koanf/parsers/dotenv v1.0.0
@@ -29,7 +31,6 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	google.golang.org/grpc v1.71.0
-	sigs.k8s.io/release-utils v0.11.0
 	tailscale.com v1.80.3
 	tailscale.com/client/tailscale/v2 v2.0.0-20250311144508-3a768d66e695
 )
@@ -57,7 +58,6 @@ require (
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
 	github.com/coder/websocket v1.8.12 // indirect
-	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/coreos/go-iptables v0.7.1-0.20240112124308-65c67c9f46e6 // indirect
 	github.com/dblohm7/wingoes v0.0.0-20240123200102-b75a8a7d7eb0 // indirect
 	github.com/digitalocean/go-smbios v0.0.0-20180907143718-390a4f403a8e // indirect

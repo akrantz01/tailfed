@@ -9,6 +9,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/types"
+	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/go-jose/go-jose/v4"
 )
 
@@ -29,12 +30,13 @@ func (h *Handler) Serve(ctx context.Context, req types.GenerateRequest) error {
 	var wg sync.WaitGroup
 
 	configErrCh := wrapWriteJob(ctx, req, &wg, h.writeConfig)
+	versionErrCh := wrapWriteJob(ctx, req, &wg, h.writeVersion)
 
 	jwkErrCh := wrapWriteJob(ctx, req, &wg, h.writeJwkSet)
 	discoveryDocumentErrCh := wrapWriteJob(ctx, req, &wg, h.writeDiscoveryDocument)
 
 	wg.Wait()
-	return combineErrors(configErrCh, jwkErrCh, discoveryDocumentErrCh)
+	return combineErrors(configErrCh, versionErrCh, jwkErrCh, discoveryDocumentErrCh)
 }
 
 func (h *Handler) writeConfig(ctx context.Context, _ types.GenerateRequest) error {
@@ -44,6 +46,10 @@ func (h *Handler) writeConfig(ctx context.Context, _ types.GenerateRequest) erro
 			Frequency: types.Duration((h.validity / 4) * 3), // Refresh after 75% of the duration has elapsed
 		},
 	})
+}
+
+func (h *Handler) writeVersion(ctx context.Context, _ types.GenerateRequest) error {
+	return h.meta.Save(ctx, "version.json", version.GetInfo())
 }
 
 func (h *Handler) writeJwkSet(ctx context.Context, _ types.GenerateRequest) error {
