@@ -48,6 +48,7 @@ in {
 
       environment = {
         TAILFED_LOG_LEVEL = cfg.logLevel;
+        TAILFED_PID_FILE = "%S/tailfed/pid";
         TAILFED_PATH = cfg.tokenPath;
         TAILFED_URL = cfg.url;
       };
@@ -62,6 +63,7 @@ in {
         StateDirectory = "tailfed";
 
         ExecStart = "${cfg.package}/bin/client";
+        ExecReload = "${cfg.package}/bin/client refresh --wait";
         Restart = "on-failure";
       };
     };
