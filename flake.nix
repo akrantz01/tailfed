@@ -17,7 +17,7 @@
       lib = pkgs.lib;
 
       buildCmd = pname: dir:
-        pkgs.buildGoModule {
+        pkgs.buildGoModule rec {
           inherit pname;
           version = "1.1.0";
           src = lib.sources.sourceByRegex ./. ["^cmd$" "^cmd/.*" "^internal$" "^internal/.*" "^go\.(mod|sum)$"];
@@ -25,6 +25,16 @@
 
           subPackages = ["cmd/${dir}"];
           env.CGO_ENABLED = 0;
+
+          meta = {
+            description = "Turn your Tailscale network into an AWS web identity federation-compatible OpenID Connect provider";
+            homepage = "https://github.com/akrantz01/tailfed";
+            changelog = "https://github.com/akrantz01/tailfed/blob/v${version}/CHANGELOG.md";
+            releases = "https://github.com/akrantz01/tailfed/releases/latest";
+            mainProgram = dir;
+            license = lib.licenses.mit;
+            platforms = lib.platforms.all;
+          };
         };
 
       tailfed = buildCmd "tailfed" "client";
