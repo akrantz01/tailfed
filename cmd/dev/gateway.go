@@ -27,7 +27,7 @@ func startGateway(tsClient tailscale.ControlPlane, launch launcher.Backend, meta
 
 	mux.Handle("GET /health", http.HandlerFunc(health))
 
-	mux.Handle("GET /config.json", metadataHandler[types.Response[types.ConfigResponse]]("config.json", meta))
+	mux.Handle("GET /config.json", metadataHandler[types.ConfigResponse]("config.json", meta))
 	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, launch, store)))
 	mux.Handle("POST /finalize", lambdaHandler(finalizer.New(cfg.Signing.Audience, cfg.Signing.Validity, signer, store)))
 

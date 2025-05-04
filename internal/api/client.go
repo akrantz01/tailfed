@@ -40,7 +40,8 @@ func NewClient(client *http.Client, baseUrl string) (*Client, error) {
 
 // GetConfig retrieves the daemon config
 func (c *Client) GetConfig(ctx context.Context) (*types.ConfigResponse, error) {
-	return doRequest[types.ConfigResponse](c, ctx, "get-config", "GET", "/config.json", nil)
+	info, _, err := doRequest[types.ConfigResponse](c, ctx, "get-config", "GET", "/config.json", nil)
+	return info, err
 }
 
 // Start begins the ID token issuance process
@@ -58,12 +59,12 @@ func (c *Client) Start(ctx context.Context, node string, addresses []string) (*t
 		}
 	}
 
-	return doRequest[types.StartResponse](c, ctx, "start", "POST", "/start", &types.StartRequest{Node: node, Ports: ports})
+	return doApiRequest[types.StartResponse](c, ctx, "start", "POST", "/start", &types.StartRequest{Node: node, Ports: ports})
 }
 
 // Finalize attempts to finish the request flow and issue a token
 func (c *Client) Finalize(ctx context.Context, id string) (string, error) {
-	res, err := doRequest[types.FinalizeResponse](c, ctx, "finalize", "POST", "/finalize", &types.FinalizeRequest{ID: id})
+	res, err := doApiRequest[types.FinalizeResponse](c, ctx, "finalize", "POST", "/finalize", &types.FinalizeRequest{ID: id})
 	if err != nil {
 		return "", err
 	}
@@ -89,9 +90,27 @@ func parseBaseUrl(baseUrl string) (*url.URL, error) {
 	return base, nil
 }
 
+// doApiRequest makes a request to the Tailfed server. It expects a response wrapped in a [types.Response] to determine
+// whether the action was a success or failure.
+func doApiRequest[R any](c *Client, ctx context.Context, name, method, path string, body any) (*R, error) {
+	res, status, err := doRequest[types.Response[R]](c, ctx, name, method, path, body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Success {
+		return res.Data, nil
+	}
+
+	return nil, &Error{
+		message: res.Error,
+		status:  status,
+	}
+}
+
 // doRequest makes a request to the Tailfed server. This should be a method, but Go does not support generics
 // in methods yet so we make do
-func doRequest[R any](c *Client, ctx context.Context, name, method, path string, body any) (*R, error) {
+func doRequest[R any](c *Client, ctx context.Context, name, method, path string, body any) (*R, int, error) {
 	logger := c.logger.WithFields(map[string]any{
 		"request": name,
 		"path":    path,
@@ -112,7 +131,7 @@ func doRequest[R any](c *Client, ctx context.Context, name, method, path string,
 	req, err := http.NewRequestWithContext(ctx, method, c.base.JoinPath(path).String(), reqBody)
 	if err != nil {
 		logger.WithError(err).Error("failed to build request")
-		return nil, fmt.Errorf("failed to build request: %w", err)
+		return nil, 0, fmt.Errorf("failed to build request: %w", err)
 	}
 
 	if body != nil {
@@ -124,24 +143,17 @@ func doRequest[R any](c *Client, ctx context.Context, name, method, path string,
 	res, err := c.inner.Do(req)
 	if err != nil {
 		logger.WithError(err).Error("failed to send request")
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return nil, 0, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer res.Body.Close()
 	logger.WithField("status", res.StatusCode).Debug("got response")
 
-	var resBody types.Response[R]
-	if err := json.NewDecoder(res.Body).Decode(&resBody); err != nil {
+	var data R
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		logger.WithError(err).Error("failed to deserialize response")
-		return nil, fmt.Errorf("failed to deserialize response: %w", err)
+		return nil, 0, fmt.Errorf("failed to deserialize response: %w", err)
 	}
-	logger.WithField("body", resBody).Trace("decoded response")
+	logger.WithField("body", data).Trace("decoded response")
 
-	if resBody.Success {
-		return resBody.Data, nil
-	}
-
-	return nil, &Error{
-		message: resBody.Error,
-		status:  res.StatusCode,
-	}
+	return &data, res.StatusCode, nil
 }

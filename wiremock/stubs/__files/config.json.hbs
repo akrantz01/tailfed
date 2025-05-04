@@ -8,13 +8,10 @@
   "{{arrayJoin '' minutes 'm'}}"
 {{~/assign~}}
 {
-  "success": true,
-  "data": {
-    "__frequency": {
-      "minutes": {{minutes}},
-      "nanos": {{nanoseconds}},
-      "string": {{string}}
-    },
-    "frequency": {{pickRandom nanoseconds string}}
-  }
+  "__frequency": {
+    "minutes": {{minutes}},
+    "nanos": {{nanoseconds}},
+    "string": {{string}}
+  },
+  "frequency": {{pickRandom nanoseconds string}}
 }

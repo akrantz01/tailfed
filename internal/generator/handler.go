@@ -40,11 +40,8 @@ func (h *Handler) Serve(ctx context.Context, req types.GenerateRequest) error {
 }
 
 func (h *Handler) writeConfig(ctx context.Context, _ types.GenerateRequest) error {
-	return h.meta.Save(ctx, "config.json", &types.Response[types.ConfigResponse]{
-		Success: true,
-		Data: &types.ConfigResponse{
-			Frequency: types.Duration((h.validity / 4) * 3), // Refresh after 75% of the duration has elapsed
-		},
+	return h.meta.Save(ctx, "config.json", &types.ConfigResponse{
+		Frequency: types.Duration((h.validity / 4) * 3), // Refresh after 75% of the duration has elapsed
 	})
 }
 
