@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/akrantz01/tailfed/internal/types"
+	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,6 +37,12 @@ func NewClient(client *http.Client, baseUrl string) (*Client, error) {
 		inner:  client,
 		base:   base,
 	}, nil
+}
+
+// GetVersion retrieves version information for the remove API
+func (c *Client) GetVersion(ctx context.Context) (*version.Info, error) {
+	info, _, err := doRequest[version.Info](c, ctx, "get-version", "GET", "/version.json", nil)
+	return info, err
 }
 
 // GetConfig retrieves the daemon config
