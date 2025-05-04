@@ -17,8 +17,6 @@ import (
 	"tailscale.com/tsnet"
 )
 
-var ts *tsnet.Server
-
 func main() {
 	awsConfig, err := aws.LoadDefaultConfig(context.Background())
 	if err != nil {
@@ -37,7 +35,8 @@ func main() {
 		logrus.WithError(err).Fatal("failed to initialize logging")
 	}
 
-	if err := connectToTailscale(config.Tailscale.AuthKey); err != nil {
+	ts, err := config.Tailscale.Connect()
+	if err != nil {
 		logrus.WithError(err).Fatal("failed to connect to tailscale")
 	}
 
@@ -89,34 +88,18 @@ func (t *Tailscale) Validate() error {
 	return nil
 }
 
-type Storage struct {
-	Table string `koanf:"table"`
-}
-
-func (s *Storage) Validate() error {
-	if len(s.Table) == 0 {
-		return errors.New("missing DynamoDB table name")
-	}
-
-	return nil
-}
-
-func connectToTailscale(authKey string) error {
-	if ts != nil {
-		return nil
-	}
-
+func (t *Tailscale) Connect() (*tsnet.Server, error) {
 	logger := logrus.WithField("component", "tailscale")
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return fmt.Errorf("could not get hostname: %w", err)
+		return nil, fmt.Errorf("could not get hostname: %w", err)
 	}
 	tsHostname := fmt.Sprintf("%s-%s-%s", os.Getenv("AWS_LAMBDA_FUNCTION_NAME"), os.Getenv("AWS_REGION"), hostname)
 	logger.WithField("hostname", hostname).Info("determined hostname")
 
-	ts = &tsnet.Server{
-		AuthKey:   authKey,
+	ts := &tsnet.Server{
+		AuthKey:   t.AuthKey,
 		Ephemeral: true,
 		Hostname:  tsHostname,
 		Dir:       "/tmp",
@@ -128,7 +111,11 @@ func connectToTailscale(authKey string) error {
 
 	status, err := ts.Up(ctx)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	if status.CurrentTailnet.Name != t.Tailnet {
+		return nil, fmt.Errorf("mismatch tailnets: expected %q but got %q", t.Tailnet, status.CurrentTailnet.Name)
 	}
 
 	fields := map[string]any{"status": status.BackendState}
@@ -141,5 +128,17 @@ func connectToTailscale(authKey string) error {
 	}
 
 	logger.WithFields(fields).Info("successfully connected to tailscale")
+	return ts, nil
+}
+
+type Storage struct {
+	Table string `koanf:"table"`
+}
+
+func (s *Storage) Validate() error {
+	if len(s.Table) == 0 {
+		return errors.New("missing DynamoDB table name")
+	}
+
 	return nil
 }
