@@ -16,9 +16,10 @@ module "generator" {
   checksum = local.artifact_hashes["generator"]
 
   environment = {
-    TAILFED_LOG_LEVEL        = var.log_level
-    TAILFED_METADATA__BUCKET = module.openid_metadata.id
-    TAILFED_SIGNING__KEY     = aws_kms_alias.signer.arn
+    TAILFED_LOG_LEVEL         = var.log_level
+    TAILFED_METADATA__BUCKET  = module.openid_metadata.id
+    TAILFED_SIGNING__KEY      = aws_kms_alias.signer.arn
+    TAILFED_SIGNING__VALIDITY = var.validity
   }
 
   policies = merge({ Lambda = data.aws_iam_policy_document.generator.json }, var.execution_role_policies)
