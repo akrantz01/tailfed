@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"tailscale.com/client/tailscale"
+	"tailscale.com/client/local"
 )
 
 var ErrUninitialized = errors.New("current node is uninitialized")
@@ -15,14 +15,14 @@ var ErrUninitialized = errors.New("current node is uninitialized")
 // Local connects to the local Tailscale instance
 type Local struct {
 	logger logrus.FieldLogger
-	inner  tailscale.LocalClient
+	inner  local.Client
 }
 
 // NewLocal connects to the local Tailscale socket
 func NewLocal(logger logrus.FieldLogger) *Local {
 	return &Local{
 		logger: logger,
-		inner:  tailscale.LocalClient{},
+		inner:  local.Client{},
 	}
 }
 
