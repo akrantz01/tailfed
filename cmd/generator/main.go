@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
@@ -23,6 +25,9 @@ func main() {
 	var config Config
 	if err := configloader.LoadInto(&config, configloader.WithEnvPrefix("TAILFED_"), configloader.WithSecrets(awsConfig)); err != nil {
 		logrus.WithError(err).Fatal("failed to load configuration")
+	}
+	if err := config.Validate(); err != nil {
+		logrus.WithError(err).Fatal("invalid configuration")
 	}
 
 	if err := logging.Initialize(config.LogLevel); err != nil {
@@ -50,11 +55,43 @@ type Config struct {
 	Signing  Signing  `koanf:"signing"`
 }
 
+func (c *Config) Validate() error {
+	if err := c.Metadata.Validate(); err != nil {
+		return fmt.Errorf("invalid metadata config: %w", err)
+	}
+
+	if err := c.Signing.Validate(); err != nil {
+		return fmt.Errorf("invalid signing config: %w", err)
+	}
+
+	return nil
+}
+
 type Metadata struct {
 	Bucket string `koanf:"bucket"`
+}
+
+func (m *Metadata) Validate() error {
+	if len(m.Bucket) == 0 {
+		return errors.New("missing bucket name")
+	}
+
+	return nil
 }
 
 type Signing struct {
 	Key      string        `koanf:"key"`
 	Validity time.Duration `koanf:"validity"`
+}
+
+func (s *Signing) Validate() error {
+	if len(s.Key) == 0 {
+		return errors.New("missing KMS signing key")
+	}
+
+	if s.Validity <= 0 {
+		return errors.New("token validity must be positive")
+	}
+
+	return nil
 }
