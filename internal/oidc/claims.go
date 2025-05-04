@@ -3,7 +3,6 @@ package oidc
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -31,16 +30,22 @@ func NewClaimsFromFlow(issuer, audience string, validity time.Duration, flow *st
 	now := time.Now()
 	nowNumeric := jwt.NewNumericDate(now)
 
-	amr := make([]string, 0, len(flow.Tags)+3)
-	amr = append(amr, "os:"+flow.OS, "authorized:"+strconv.FormatBool(flow.Authorized), "external:"+strconv.FormatBool(flow.External))
+	amr := make([]string, 0, len(flow.Tags))
 	amr = append(amr, flow.Tags...)
+
+	if !flow.Authorized {
+		amr = append(amr, "unauthorized")
+	}
+	if flow.External {
+		amr = append(amr, "external")
+	}
 
 	return Claims{
 		AuthenticatedMethodsReference: amr,
 		Claims: jwt.Claims{
 			Issuer:    issuer,
 			Audience:  jwt.Audience{audience},
-			Subject:   fmt.Sprintf("%s:%s:%s:%s", flow.Tailnet, flow.DNSName, flow.MachineName, flow.Node),
+			Subject:   fmt.Sprintf("tailnet:%s:dns:%s:host:%s:id:%s", flow.Tailnet, flow.DNSName, flow.MachineName, flow.Node),
 			IssuedAt:  nowNumeric,
 			NotBefore: nowNumeric,
 			Expiry:    jwt.NewNumericDate(now.Add(validity)),
