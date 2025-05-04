@@ -17,6 +17,7 @@ import (
 
 func (r *Refresher) complete(ctx context.Context, id string) {
 	logger := r.logger.WithField("flow", id)
+	defer r.stopServersFor(id)
 
 	operation := func() (string, error) {
 		token, err := r.api.Finalize(ctx, id)
@@ -76,4 +77,13 @@ func (r *Refresher) writeToken(token string) error {
 	}
 
 	return nil
+}
+
+func (r *Refresher) stopServersFor(id string) {
+	inFlight, ok := r.inFlight[id]
+	if !ok {
+		return
+	}
+
+	r.stopServers(inFlight.servers)
 }
