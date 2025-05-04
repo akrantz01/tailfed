@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"os/signal"
@@ -39,7 +40,13 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	apiClient, err := api.NewClient(http.DefaultClient, r.Url)
+	client := &http.Client{
+		Transport: newAddHeaderTransport(nil, http.Header{
+			"User-Agent": []string{fmt.Sprintf("tailfed-client/%s", cmd.Root().Version)},
+		}),
+	}
+
+	apiClient, err := api.NewClient(client, r.Url)
 	if err != nil {
 		return err
 	}
@@ -87,4 +94,24 @@ signals:
 	refresh.ShutdownInFlight()
 
 	return nil
+}
+
+type addHeaderTransport struct {
+	inner   http.RoundTripper
+	headers http.Header
+}
+
+var _ http.RoundTripper = (*addHeaderTransport)(nil)
+
+func newAddHeaderTransport(transport http.RoundTripper, headers http.Header) http.RoundTripper {
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+
+	return &addHeaderTransport{transport, headers}
+}
+
+func (aht *addHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	maps.Copy(req.Header, aht.headers)
+	return aht.inner.RoundTrip(req)
 }
