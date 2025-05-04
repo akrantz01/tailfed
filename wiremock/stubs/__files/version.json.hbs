@@ -1,0 +1,9 @@
+{
+  "version": "{{arrayJoin '.' '1' (randomInt lower=0 upper=10) (randomInt lower=0 upper=10) }}",
+  "commit": "{{randomValue length=40 type='HEXADECIMAL' }}",
+  "dirty": false,
+  "date": "{{now format="yyyy-MM-dd'T'HH:mm:ss" }}",
+  "goVersion": "go1.24.1",
+  "compiler": "mock",
+  "platform": "linux/amd64"
+}
