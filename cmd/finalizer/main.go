@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/akrantz01/tailfed/internal/configloader"
@@ -23,6 +25,9 @@ func main() {
 	var config Config
 	if err := configloader.LoadInto(&config, configloader.WithEnvPrefix("TAILFED_"), configloader.WithSecrets(awsConfig)); err != nil {
 		logrus.WithError(err).Fatal("failed to load configuration")
+	}
+	if err := config.Validate(); err != nil {
+		logrus.WithError(err).Fatal("invalid configuration")
 	}
 
 	if err := logging.Initialize(config.LogLevel); err != nil {
@@ -50,12 +55,48 @@ type Config struct {
 	Storage Storage `koanf:"storage"`
 }
 
+func (c *Config) Validate() error {
+	if err := c.Signing.Validate(); err != nil {
+		return fmt.Errorf("invalid signing config: %w", err)
+	}
+
+	if err := c.Storage.Validate(); err != nil {
+		return fmt.Errorf("invalid storage config: %w", err)
+	}
+
+	return nil
+}
+
 type Signing struct {
 	Audience string        `koanf:"audience"`
 	Key      string        `koanf:"key"`
 	Validity time.Duration `koanf:"validity"`
 }
 
+func (s *Signing) Validate() error {
+	if len(s.Audience) == 0 {
+		return errors.New("missing audience identifier")
+	}
+
+	if len(s.Key) == 0 {
+		return errors.New("missing KMS signing key")
+	}
+
+	if s.Validity <= 0 {
+		return errors.New("token validity must be positive")
+	}
+
+	return nil
+}
+
 type Storage struct {
 	Table string `koanf:"table"`
+}
+
+func (s *Storage) Validate() error {
+	if len(s.Table) == 0 {
+		return errors.New("missing DynamoDB table name")
+	}
+
+	return nil
 }
