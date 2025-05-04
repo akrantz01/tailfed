@@ -45,6 +45,8 @@ data "aws_iam_policy_document" "generator" {
     effect  = "Allow"
     actions = ["s3:PutObject"]
     resources = [
+      "${module.openid_metadata.arn}/version.json",
+      "${module.openid_metadata.arn}/config.json",
       "${module.openid_metadata.arn}/openid-configuration",
       "${module.openid_metadata.arn}/jwks.json",
     ]
