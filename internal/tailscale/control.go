@@ -128,6 +128,9 @@ func (h *HostedControlPlane) NodeInfo(ctx context.Context, id string) (*NodeInfo
 		addresses = append(addresses, netip.MustParseAddr(raw))
 	}
 
+	tags := make([]string, len(node.Tags))
+	tags = append(tags, node.Tags...)
+
 	return &NodeInfo{
 		ID:         node.NodeID,
 		Addresses:  addresses,
@@ -136,7 +139,7 @@ func (h *HostedControlPlane) NodeInfo(ctx context.Context, id string) (*NodeInfo
 		Hostname:   node.Hostname,
 		Tailnet:    h.inner.Tailnet,
 		OS:         node.OS,
-		Tags:       node.Tags,
+		Tags:       tags,
 		Authorized: node.Authorized,
 		External:   node.IsExternal,
 	}, nil
