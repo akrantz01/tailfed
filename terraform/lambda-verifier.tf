@@ -26,8 +26,8 @@ module "verifier" {
   environment = {
     TAILFED_LOG_LEVEL           = var.log_level
     TAILFED_STORAGE__TABLE      = aws_dynamodb_table.storage.arn
-    TAILFED_TAILSCALE__TAILNET  = var.tailscale.tailnet
-    TAILFED_TAILSCALE__AUTH_KEY = var.tailscale.auth_key
+    TAILFED_TAILSCALE__TAILNET  = var.tailscale_tailnet
+    TAILFED_TAILSCALE__AUTH_KEY = var.tailscale_auth_key
   }
 
   policies = merge({ Lambda = data.aws_iam_policy_document.verifier.json }, var.execution_role_policies)

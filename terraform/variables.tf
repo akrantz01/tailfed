@@ -57,35 +57,113 @@ variable "release_version" {
   description = "The release version to deploy, must exist within the bucket"
 }
 
-variable "tailscale" {
-  type = object({
-    tailnet  = string
-    auth_key = string
-
-    api_key = optional(string)
-    oauth = optional(object({
-      client_id     = string
-      client_secret = string
-    }))
-  })
-  description = "The Tailscale tailent and API authentication method. Values can be provided as parameter store or secrets manager ARNs."
+variable "tailscale_backend" {
+  type        = string
+  description = "The Tailscale backend implementation to use"
+  default     = "tailscale"
 
   validation {
-    condition     = length(var.tailscale.tailnet) > 0
+    condition     = contains(["tailscale", "headscale"], var.tailscale_backend)
+    error_message = "Unknown tailscale backend (options: tailscale, headscale)"
+  }
+}
+
+variable "tailscale_base_url" {
+  type        = string
+  description = "The base URL of the Tailscale backend"
+  default     = "https://api.tailscale.com"
+
+  validation {
+    condition     = can(regex("^https?://[\\w.-]+\\.[a-zA-Z]{2,}(:[0-9]{1,5})?(/.*)?$", var.tailscale_base_url))
+    error_message = "Must be a valid HTTP or HTTPS URL with a properly formatted domain"
+  }
+}
+
+variable "tailscale_tls_mode" {
+  type        = string
+  description = "The TLS mode to use when connecting to the Tailscale control plane API"
+  default     = "full"
+
+  validation {
+    condition     = contains(["none", "insecure", "full"], var.tailscale_tls_mode)
+    error_message = "Unknown TLS mode (options: none, insecure, full)"
+  }
+}
+
+variable "tailscale_tailnet" {
+  type        = string
+  description = "The name of the tailnet to validate against"
+
+  validation {
+    condition     = length(var.tailscale_tailnet) > 0
     error_message = "A tailnet is required"
   }
+}
+
+variable "tailscale_auth_key" {
+  type        = string
+  description = "The Tailscale auth key used to connect the verifier to your tailnet"
 
   validation {
-    condition     = length(var.tailscale.auth_key) > 0
+    condition     = length(var.tailscale_auth_key) > 0
     error_message = "An auth key is required"
+  }
+}
+
+# terraform-docs-ignore
+variable "__tailscale_api_authentication" {
+  type        = string
+  description = "Dummy variable for validating the Tailscale API authentication method"
+  default     = "(dummy)"
+
+  validation {
+    condition     = var.__tailscale_api_authentication == "(dummy)"
+    error_message = "This variable should not be changed"
   }
 
   validation {
-    condition = (
-      (var.tailscale.api_key == null && var.tailscale.oauth != null) ||
-      (var.tailscale.api_key != null && var.tailscale.oauth == null)
+    condition = var.__tailscale_api_authentication == "(dummy)" && (
+      (var.tailscale_api_key != null && var.tailscale_oauth == null) ||
+      (var.tailscale_oauth != null && var.tailscale_api_key == null)
     )
-    error_message = "Exactly one authentication method must be provided"
+    error_message = "Exactly one API authentication method can be enabled"
+  }
+}
+
+variable "tailscale_api_key" {
+  type        = string
+  description = "The API key used to authenticate with the Tailscale API"
+  nullable    = true
+  default     = null
+
+  validation {
+    condition     = var.tailscale_api_key == null || var.tailscale_api_key != ""
+    error_message = "Tailscale API key is required when non-null"
+  }
+}
+
+variable "tailscale_oauth" {
+  type = object({
+    client_id     = string
+    client_secret = string
+  })
+  description = "The OAuth client credentials used to authenticate with the Tailscale API"
+  nullable    = true
+  default     = null
+
+  validation {
+    condition     = var.tailscale_oauth == null || var.tailscale_oauth.client_id != ""
+    error_message = "Tailscale OAuth client ID is required when non-null"
+  }
+
+  validation {
+    condition     = var.tailscale_oauth == null || var.tailscale_oauth.client_secret != ""
+    error_message = "Tailscale OAuth client secret is required when non-null"
+  }
+
+  validation {
+    condition     = !(var.tailscale_backend == "headscale" && var.tailscale_oauth != null)
+    error_message = "Headscale does not support OAuth-based authentication"
   }
 }
 
