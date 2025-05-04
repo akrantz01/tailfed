@@ -12,12 +12,17 @@ import (
 	"time"
 
 	"github.com/common-nighthawk/go-figure"
-	"github.com/hashicorp/go-version"
+	hashiversion "github.com/hashicorp/go-version"
 )
 
 var (
+	version string
+	commit  string
+	dirty   string
+	date    string
+
 	once sync.Once
-	info = Info{}
+	info Info
 )
 
 // Info contains details about the binary from build time
@@ -57,16 +62,28 @@ func getKey(bi *debug.BuildInfo, key string) string {
 	return ""
 }
 
+func getBuildTime(bi *debug.BuildInfo) time.Time {
+	if len(date) == 0 {
+		buildTime := getKey(bi, "vcs.time")
+		if t, err := time.Parse("2006-01-02T15:04:05Z", buildTime); err == nil {
+			return t
+		}
+	} else if epoch, err := strconv.ParseInt(date, 10, 64); err == nil {
+		return time.Unix(epoch, 0)
+	} else if t, err := time.Parse("2006-01-02:15:04:05Z", date); err == nil {
+		return t
+	}
+
+	return time.Time{}
+}
+
 // GetInfo retrieves version information about the binary
 func GetInfo() Info {
 	once.Do(func() {
 		buildInfo := getBuildInfo()
-		if buildInfo == nil {
-			return
-		}
 
-		if len(info.Version) == 0 {
-			ver, err := version.NewSemver(buildInfo.Main.Version)
+		if len(version) == 0 {
+			ver, err := hashiversion.NewSemver(buildInfo.Main.Version)
 			if err == nil {
 				info.Version = ver.Core().String()
 
@@ -75,37 +92,30 @@ func GetInfo() Info {
 					info.Version += "+" + meta
 				}
 			}
+		} else {
+			info.Version = version
 		}
 
-		if len(info.Commit) == 0 {
+		if len(commit) == 0 {
 			info.Commit = getKey(buildInfo, "vcs.revision")
+		} else {
+			info.Commit = commit
 		}
 
-		if info.Dirty == nil {
-			modified := getKey(buildInfo, "vcs.modified")
-			if dirty, err := strconv.ParseBool(modified); err == nil {
-				info.Dirty = &dirty
-			}
+		if len(dirty) == 0 {
+			dirty = getKey(buildInfo, "vcs.modified")
+		}
+		if dirty, err := strconv.ParseBool(dirty); err == nil {
+			info.Dirty = &dirty
 		}
 
-		if len(info.Date) == 0 {
-			buildTime := getKey(buildInfo, "vcs.time")
-			if t, err := time.Parse("2006-01-02T15:04:05Z", buildTime); err == nil {
-				info.Date = t.Format("2006-01-02T15:01:05")
-			}
+		if buildTime := getBuildTime(buildInfo); !buildTime.IsZero() {
+			info.Date = buildTime.Format("2006-01-02T15:04:05")
 		}
 
-		if len(info.GoVersion) == 0 {
-			info.GoVersion = runtime.Version()
-		}
-
-		if len(info.Compiler) == 0 {
-			info.Compiler = runtime.Compiler
-		}
-
-		if len(info.Platform) == 0 {
-			info.Platform = fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
-		}
+		info.GoVersion = runtime.Version()
+		info.Compiler = runtime.Compiler
+		info.Platform = fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 	})
 
 	return info

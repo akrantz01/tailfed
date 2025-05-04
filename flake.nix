@@ -16,6 +16,10 @@
       pkgs = import nixpkgs {inherit system;};
       lib = pkgs.lib;
 
+      rawRev = self.rev or self.dirtyRev or "unknown";
+      rev = lib.strings.removeSuffix "-dirty" rawRev;
+      dirty = (builtins.stringLength rawRev) != (builtins.stringLength rev);
+
       buildCmd = pname: dir:
         pkgs.buildGoModule rec {
           inherit pname;
@@ -25,6 +29,13 @@
 
           subPackages = ["cmd/${dir}"];
           env.CGO_ENABLED = 0;
+
+          ldflags = [
+            "-X github.com/akrantz01/tailfed/internal/version.version=${version}"
+            "-X github.com/akrantz01/tailfed/internal/version.commit=${rev}"
+            "-X github.com/akrantz01/tailfed/internal/version.dirty=${lib.trivial.boolToString dirty}"
+            "-X github.com/akrantz01/tailfed/internal/version.date=${builtins.toString self.lastModified}"
+          ];
 
           meta = {
             description = "Turn your Tailscale network into an AWS web identity federation-compatible OpenID Connect provider";
