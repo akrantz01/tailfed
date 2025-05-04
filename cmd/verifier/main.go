@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -27,6 +28,9 @@ func main() {
 	var config Config
 	if err := configloader.LoadInto(&config, configloader.WithEnvPrefix("TAILFED_"), configloader.WithSecrets(awsConfig)); err != nil {
 		logrus.WithError(err).Fatal("failed to load configuration")
+	}
+	if err := config.Validate(); err != nil {
+		logrus.WithError(err).Fatal("invalid configuration")
 	}
 
 	if err := logging.Initialize(config.LogLevel); err != nil {
@@ -56,13 +60,45 @@ type Config struct {
 	Tailscale Tailscale `koanf:"tailscale"`
 }
 
+func (c *Config) Validate() error {
+	if err := c.Storage.Validate(); err != nil {
+		return fmt.Errorf("invaild storage config: %w", err)
+	}
+
+	if err := c.Tailscale.Validate(); err != nil {
+		return fmt.Errorf("invalid tailscale config: %w", err)
+	}
+
+	return nil
+}
+
 type Tailscale struct {
 	AuthKey string `koanf:"auth-key"`
 	Tailnet string `koanf:"tailnet"`
 }
 
+func (t *Tailscale) Validate() error {
+	if len(t.AuthKey) == 0 {
+		return errors.New("missing node auth key")
+	}
+
+	if len(t.Tailnet) == 0 {
+		return errors.New("missing tailnet name")
+	}
+
+	return nil
+}
+
 type Storage struct {
 	Table string `koanf:"table"`
+}
+
+func (s *Storage) Validate() error {
+	if len(s.Table) == 0 {
+		return errors.New("missing DynamoDB table name")
+	}
+
+	return nil
 }
 
 func connectToTailscale(authKey string) error {
