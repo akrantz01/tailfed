@@ -233,24 +233,8 @@ func (t *tailscaleConfig) Validate() error {
 }
 
 func (t *tailscaleConfig) NewClient() (tailscale.ControlPlane, error) {
-	logger := logrus.WithFields(map[string]any{
-		"component": "tailscale",
-		"backend":   t.Backend,
-	})
-
-	auth := t.Authentication()
-	switch t.Backend {
-	case "hosted":
-		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, auth)
-	case "headscale":
-		if auth.Kind() == tailscale.AuthKindOAuth {
-			return nil, errors.New("headscale does not support oauth authentication")
-		}
-
-		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, auth, t.TLSMode)
-	default:
-		return nil, errors.New("unknown tailscale backend")
-	}
+	logger := logrus.WithField("component", "tailscale")
+	return tailscale.NewControlPlane(logger, t.Backend, t.BaseUrl, t.Tailnet, t.Authentication(), t.TLSMode)
 }
 
 func (t *tailscaleConfig) Authentication() tailscale.Authentication {

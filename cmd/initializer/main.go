@@ -95,18 +95,7 @@ func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 	}
 
 	logger := logrus.WithField("component", "tailscale")
-	switch t.Backend {
-	case "hosted":
-		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, t.auth)
-	case "headscale":
-		if t.auth.Kind() == tailscale.AuthKindOAuth {
-			return nil, errors.New("headscale does not support auth authentication")
-		}
-
-		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, t.auth, t.TLSMode)
-	default:
-		return nil, errors.New("unknown tailscale backend")
-	}
+	return tailscale.NewControlPlane(logger, t.Backend, t.BaseUrl, t.Tailnet, t.auth, t.TLSMode)
 }
 
 type Storage struct {

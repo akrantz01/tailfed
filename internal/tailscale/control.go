@@ -51,6 +51,24 @@ type NodeInfo struct {
 	External bool
 }
 
+// NewControlPlane creates a new control plane client
+func NewControlPlane(
+	logger logrus.FieldLogger,
+	backend, baseUrl, tailnet string,
+	auth Authentication, tlsMode TLSMode,
+) (ControlPlane, error) {
+	logger = logger.WithField("backend", backend)
+
+	switch backend {
+	case "hosted", "tailscale":
+		return NewHostedControlPlane(logger, baseUrl, tailnet, auth)
+	case "headscale":
+		return NewHeadscaleControlPlane(logger, baseUrl, tailnet, auth, tlsMode)
+	default:
+		return nil, errors.New("unknown control plane backend")
+	}
+}
+
 // HostedControlPlane connects to the Tailscale control plane
 type HostedControlPlane struct {
 	logger logrus.FieldLogger
