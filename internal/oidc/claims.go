@@ -1,7 +1,9 @@
 package oidc
 
 import (
+	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,7 +13,9 @@ import (
 
 // Claims contains the data that will be signed in the token
 type Claims struct {
+	AuthenticatedMethodsReference []string `json:"amr"`
 	jwt.Claims
+
 	Tailnet     string   `json:"tailnet"`
 	DNSName     string   `json:"dns_name"`
 	MachineName string   `json:"machine_name"`
@@ -27,11 +31,16 @@ func NewClaimsFromFlow(issuer, audience string, validity time.Duration, flow *st
 	now := time.Now()
 	nowNumeric := jwt.NewNumericDate(now)
 
+	amr := make([]string, len(flow.Tags)+3)
+	amr = append(amr, "os:"+flow.OS, "authorized:"+strconv.FormatBool(flow.Authorized), "external:"+strconv.FormatBool(flow.External))
+	amr = append(amr, flow.Tags...)
+
 	return Claims{
+		AuthenticatedMethodsReference: amr,
 		Claims: jwt.Claims{
 			Issuer:    issuer,
 			Audience:  jwt.Audience{audience},
-			Subject:   flow.Node,
+			Subject:   fmt.Sprintf("%s:%s:%s:%s", flow.Tailnet, flow.DNSName, flow.MachineName, flow.Node),
 			IssuedAt:  nowNumeric,
 			NotBefore: nowNumeric,
 			Expiry:    jwt.NewNumericDate(now.Add(validity)),
