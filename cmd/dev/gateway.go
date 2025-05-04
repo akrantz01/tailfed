@@ -17,6 +17,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/akrantz01/tailfed/internal/types"
+	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/sirupsen/logrus"
 )
@@ -27,6 +28,7 @@ func startGateway(tsClient tailscale.ControlPlane, launch launcher.Backend, meta
 
 	mux.Handle("GET /health", http.HandlerFunc(health))
 
+	mux.Handle("GET /version.json", metadataHandler[version.Info]("version.json", meta))
 	mux.Handle("GET /config.json", metadataHandler[types.ConfigResponse]("config.json", meta))
 	mux.Handle("POST /start", lambdaHandler(initializer.New(tsClient, launch, store)))
 	mux.Handle("POST /finalize", lambdaHandler(finalizer.New(cfg.Signing.Audience, cfg.Signing.Validity, signer, store)))
