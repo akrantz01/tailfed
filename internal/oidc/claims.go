@@ -31,7 +31,7 @@ func NewClaimsFromFlow(issuer, audience string, validity time.Duration, flow *st
 	now := time.Now()
 	nowNumeric := jwt.NewNumericDate(now)
 
-	amr := make([]string, len(flow.Tags)+3)
+	amr := make([]string, 0, len(flow.Tags)+3)
 	amr = append(amr, "os:"+flow.OS, "authorized:"+strconv.FormatBool(flow.Authorized), "external:"+strconv.FormatBool(flow.External))
 	amr = append(amr, flow.Tags...)
 
