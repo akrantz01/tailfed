@@ -17,7 +17,7 @@ module "generator" {
 
   environment = {
     TAILFED_LOG_LEVEL         = var.log_level
-    TAILFED_METADATA__BUCKET  = module.openid_metadata.id
+    TAILFED_METADATA__BUCKET  = module.metadata.id
     TAILFED_SIGNING__KEY      = aws_kms_alias.signer.arn
     TAILFED_SIGNING__VALIDITY = var.validity
   }
@@ -45,10 +45,10 @@ data "aws_iam_policy_document" "generator" {
     effect  = "Allow"
     actions = ["s3:PutObject"]
     resources = [
-      "${module.openid_metadata.arn}/version.json",
-      "${module.openid_metadata.arn}/config.json",
-      "${module.openid_metadata.arn}/openid-configuration",
-      "${module.openid_metadata.arn}/jwks.json",
+      "${module.metadata.arn}/version.json",
+      "${module.metadata.arn}/config.json",
+      "${module.metadata.arn}/openid-configuration",
+      "${module.metadata.arn}/jwks.json",
     ]
   }
 

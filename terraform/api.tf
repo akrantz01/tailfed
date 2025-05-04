@@ -16,8 +16,10 @@ resource "aws_api_gateway_rest_api" "default" {
 
 resource "aws_api_gateway_deployment" "default" {
   depends_on = [
-    module.openid_metadata_discovery_document,
-    module.openid_metadata_jwks,
+    module.metadata_version,
+    module.metadata_config,
+    module.metadata_openid_discovery_document,
+    module.metadata_jwks,
     module.initializer_apigateway,
     module.finalizer_apigateway,
   ]
@@ -33,10 +35,14 @@ resource "aws_api_gateway_deployment" "default" {
       aws_api_gateway_resource.well_known,
       aws_api_gateway_resource.openid_configuration,
       aws_api_gateway_resource.jwks,
+      aws_api_gateway_resource.version,
+      aws_api_gateway_resource.config,
       aws_api_gateway_resource.start,
       aws_api_gateway_resource.finalize,
-      module.openid_metadata_discovery_document.requires_redeployment,
-      module.openid_metadata_jwks.requires_redeployment,
+      module.metadata_version.requires_redeployment,
+      module.metadata_config.requires_redeployment,
+      module.metadata_openid_discovery_document.requires_redeployment,
+      module.metadata_jwks.requires_redeployment,
       module.initializer_apigateway.requires_redeployment,
       module.finalizer_apigateway.requires_redeployment,
     ]))
@@ -72,6 +78,18 @@ resource "aws_api_gateway_method_settings" "throttling" {
     throttling_rate_limit  = 10
     throttling_burst_limit = 3
   }
+}
+
+resource "aws_api_gateway_resource" "version" {
+  rest_api_id = aws_api_gateway_rest_api.default.id
+  parent_id   = aws_api_gateway_rest_api.default.root_resource_id
+  path_part   = "version.json"
+}
+
+resource "aws_api_gateway_resource" "config" {
+  rest_api_id = aws_api_gateway_rest_api.default.id
+  parent_id   = aws_api_gateway_rest_api.default.root_resource_id
+  path_part   = "config.json"
 }
 
 resource "aws_api_gateway_resource" "start" {
