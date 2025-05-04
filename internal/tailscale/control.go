@@ -73,7 +73,11 @@ func NewHostedControlPlane(logger logrus.FieldLogger, baseUrl, tailnet string, a
 		BaseURL: base,
 		Tailnet: tailnet,
 	}
-	auth.apply(logger, client)
+
+	if auth != nil {
+		auth.tailscale(client)
+		logger.WithField("method", auth.Kind()).Debug("applied authentication method")
+	}
 
 	logger.
 		WithFields(map[string]any{
@@ -130,7 +134,7 @@ type HeadscaleControlPlane struct {
 var _ ControlPlane = (*HeadscaleControlPlane)(nil)
 
 // NewHeadscaleControlPlane creates a new control plane client for a self-hosted Headscale instance
-func NewHeadscaleControlPlane(logger logrus.FieldLogger, baseUrl, tailnet, apiKey string, tlsMode TLSMode) (ControlPlane, error) {
+func NewHeadscaleControlPlane(logger logrus.FieldLogger, baseUrl, tailnet string, auth Authentication, tlsMode TLSMode) (ControlPlane, error) {
 	var transport credentials.TransportCredentials
 	switch tlsMode {
 	case TLSModeNone:
@@ -145,9 +149,9 @@ func NewHeadscaleControlPlane(logger logrus.FieldLogger, baseUrl, tailnet, apiKe
 
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(transport)}
 
-	if len(apiKey) > 0 {
-		logger.Debug("attaching api key for authentication")
-		opts = append(opts, grpc.WithPerRPCCredentials(&tokenAuth{apiKey}))
+	if auth != nil {
+		opts = append(opts, grpc.WithPerRPCCredentials(auth))
+		logger.WithField("method", auth.Kind()).Debug("applied authentication method")
 	}
 
 	conn, err := grpc.NewClient(baseUrl, opts...)

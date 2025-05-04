@@ -237,11 +237,17 @@ func (t *tailscaleConfig) NewClient() (tailscale.ControlPlane, error) {
 		"component": "tailscale",
 		"backend":   t.Backend,
 	})
+
+	auth := t.Authentication()
 	switch t.Backend {
 	case "hosted":
-		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, t.Authentication())
+		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, auth)
 	case "headscale":
-		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, t.ApiKey, t.TLSMode)
+		if auth.Kind() == tailscale.AuthKindOAuth {
+			return nil, errors.New("headscale does not support oauth authentication")
+		}
+
+		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, auth, t.TLSMode)
 	default:
 		return nil, errors.New("unknown tailscale backend")
 	}

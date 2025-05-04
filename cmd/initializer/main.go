@@ -69,6 +69,8 @@ type Tailscale struct {
 	OAuthClientId     string            `koanf:"oauth-client-id"`
 	OAuthClientSecret string            `koanf:"oauth-client-secret"`
 	TLSMode           tailscale.TLSMode `koanf:"tls-mode"`
+
+	auth tailscale.Authentication
 }
 
 func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
@@ -82,15 +84,10 @@ func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 		return nil, errors.New("exactly one tailscale authentication method must be configured")
 	}
 
-	var auth tailscale.Authentication
 	if apiKeyEnabled {
-		auth = tailscale.ApiKey(t.ApiKey)
+		t.auth = tailscale.ApiKey(t.ApiKey)
 	} else {
-		if t.Backend == "headscale" {
-			return nil, errors.New("oauth-based authentication unsupported for headscale control plane")
-		}
-
-		auth = tailscale.OAuth(t.OAuthClientId, t.OAuthClientSecret)
+		t.auth = tailscale.OAuth(t.OAuthClientId, t.OAuthClientSecret)
 	}
 
 	if len(t.BaseUrl) == 0 {
@@ -100,9 +97,13 @@ func (t *Tailscale) Client() (tailscale.ControlPlane, error) {
 	logger := logrus.WithField("component", "tailscale")
 	switch t.Backend {
 	case "hosted":
-		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, auth)
+		return tailscale.NewHostedControlPlane(logger, t.BaseUrl, t.Tailnet, t.auth)
 	case "headscale":
-		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, t.ApiKey, t.TLSMode)
+		if t.auth.Kind() == tailscale.AuthKindOAuth {
+			return nil, errors.New("headscale does not support auth authentication")
+		}
+
+		return tailscale.NewHeadscaleControlPlane(logger, t.BaseUrl, t.Tailnet, t.auth, t.TLSMode)
 	default:
 		return nil, errors.New("unknown tailscale backend")
 	}
