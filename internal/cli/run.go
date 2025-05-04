@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"net/http"
@@ -14,9 +15,12 @@ import (
 	"github.com/akrantz01/tailfed/internal/scheduler"
 	"github.com/akrantz01/tailfed/internal/systemd"
 	"github.com/akrantz01/tailfed/internal/tailscale"
+	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var remoteVersionCompat = version.MustConstraints(version.NewConstraint(">= 1.0, < 2.0"))
 
 type run struct {
 	Path string `koanf:"path"`
@@ -53,6 +57,10 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 
 	tsClient := tailscale.NewLocal(logrus.WithField("component", "tailscale"))
 	refresh := refresher.New(apiClient, tsClient, r.Path)
+
+	if err := r.verifyApiVersion(ctx, cmd, apiClient); err != nil {
+		return err
+	}
 
 	config, err := apiClient.GetConfig(ctx)
 	if err != nil {
@@ -94,6 +102,30 @@ signals:
 	refresh.ShutdownInFlight()
 
 	return nil
+}
+
+func (r *run) verifyApiVersion(ctx context.Context, cmd *cobra.Command, client *api.Client) error {
+	remote, err := client.GetVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get api version: %w", err)
+	}
+	logrus.
+		WithFields(map[string]any{
+			"version":  remote.Version,
+			"revision": remote.Commit,
+		}).
+		Info("got remote version info")
+
+	remoteVersion, err := version.NewSemver(remote.Version)
+	if err != nil {
+		return fmt.Errorf("failed to parse api version %q: %w", remote.Version, err)
+	}
+
+	if remoteVersionCompat.Check(remoteVersion) {
+		return nil
+	} else {
+		return fmt.Errorf("remote api version %q is incompatible with daemon version %q", remote.Version, cmd.Root().Version)
+	}
 }
 
 type addHeaderTransport struct {
