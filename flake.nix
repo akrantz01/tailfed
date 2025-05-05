@@ -23,7 +23,7 @@
       buildCmd = pname: dir:
         pkgs.buildGoModule rec {
           inherit pname;
-          version = "1.1.0";
+          version = "1.2.0";
           src = lib.sources.sourceByRegex ./. ["^cmd$" "^cmd/.*" "^internal$" "^internal/.*" "^go\.(mod|sum)$"];
           vendorHash = "sha256-pxdpHTSNVuY9HiB5M2ZNt+ymzBTikTmjpKSQ3MFXn34=";
 
