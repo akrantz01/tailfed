@@ -62,7 +62,7 @@ func (r *Refresher) complete(ctx context.Context, id string) {
 
 func (r *Refresher) writeToken(token string) error {
 	baseDir := filepath.Dir(r.path)
-	if err := os.MkdirAll(baseDir, os.ModeDir); err != nil {
+	if err := os.MkdirAll(baseDir, 0o755|os.ModeDir); err != nil {
 		return fmt.Errorf("failed to create directory %q: %w", baseDir, err)
 	}
 
