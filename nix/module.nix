@@ -25,7 +25,7 @@ in {
 
     tokenPath = lib.mkOption {
       type = lib.types.str;
-      default = "%S/tailfed/token";
+      default = "/run/tailfed/token";
       description = "Where to write the created token";
     };
 
@@ -61,6 +61,8 @@ in {
         DynamicUser = "yes";
         SyslogIdentifier = "tailfed";
         StateDirectory = "tailfed";
+        RuntimeDirectory = "tailfed";
+        RuntimeDirectoryMode = "0755";
 
         ExecStart = "${cfg.package}/bin/client";
         ExecReload = "${cfg.package}/bin/client refresh --wait";
