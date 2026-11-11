@@ -20,7 +20,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-version v1.9.0
 	github.com/jonboulle/clockwork v0.5.0
-	github.com/juanfont/headscale v0.29.7
 	github.com/knadh/koanf/parsers/dotenv v1.1.3
 	github.com/knadh/koanf/parsers/yaml v1.1.1
 	github.com/knadh/koanf/providers/env v1.1.0
@@ -68,7 +67,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hdevalence/ed25519consensus v0.2.0 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -104,8 +102,6 @@ require (
 	golang.org/x/time v0.16.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard/windows v1.0.1 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260817212433-ac3dfec99bb1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gvisor.dev/gvisor v0.0.0-20260915211658-a6f909f08a72 // indirect
 )
