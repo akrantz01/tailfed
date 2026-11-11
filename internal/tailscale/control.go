@@ -219,11 +219,6 @@ func (h *HeadscaleControlPlane) NodeInfo(ctx context.Context, id string) (*NodeI
 		addresses = append(addresses, netip.MustParseAddr(raw))
 	}
 
-	tags := make([]string, 0, len(node.ForcedTags)+len(node.ValidTags)+len(node.InvalidTags))
-	tags = append(tags, node.ForcedTags...)
-	tags = append(tags, node.ValidTags...)
-	tags = append(tags, node.InvalidTags...)
-
 	return &NodeInfo{
 		ID:         fmt.Sprintf("%d", node.Id),
 		Addresses:  addresses,
@@ -232,7 +227,7 @@ func (h *HeadscaleControlPlane) NodeInfo(ctx context.Context, id string) (*NodeI
 		Hostname:   node.Name,
 		Tailnet:    h.tailnet,
 		OS:         "unknown",
-		Tags:       tags,
+		Tags:       node.Tags,
 		Authorized: true,
 		External:   false,
 	}, nil

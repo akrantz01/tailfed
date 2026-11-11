@@ -28,10 +28,11 @@ func NewInProcess(dir string, controlUrl string, tags []string, credentials Cred
 	}
 
 	ts := &tsnet.Server{
-		Dir:      dir,
-		Hostname: hostname,
-		UserLogf: logger.Infof,
-		Logf:     logger.Tracef,
+		Dir:           dir,
+		Hostname:      hostname,
+		UserLogf:      logger.Infof,
+		Logf:          logger.Tracef,
+		AdvertiseTags: tags,
 	}
 	credentials.apply(ts)
 
@@ -68,7 +69,10 @@ type oauthProvider struct {
 
 var _ CredentialProvider = (*oauthProvider)(nil)
 
-func (p *oauthProvider) apply(ts *tsnet.Server) {}
+func (p *oauthProvider) apply(ts *tsnet.Server) {
+	ts.ClientID = p.id
+	ts.ClientSecret = p.secret
+}
 
 // OAuth generates authkey(s) via an OAuth exchange
 func OAuth(clientId, clientSecret string) CredentialProvider {
@@ -83,7 +87,11 @@ type workloadProvider struct {
 
 var _ CredentialProvider = (*workloadProvider)(nil)
 
-func (p *workloadProvider) apply(ts *tsnet.Server) {}
+func (p *workloadProvider) apply(ts *tsnet.Server) {
+	ts.ClientID = p.id
+	ts.IDToken = p.token
+	ts.Audience = p.audience
+}
 
 // WorkloadIdentityFederation generates authkey(s) using workload identity federation
 //
