@@ -38,6 +38,7 @@ func main() {
 	cmd.Flags().StringP("tailscale.connection", "", string(TailscaleConnectionLocal), "How to connect to Tailscale (options: local, in-process)")
 	cmd.Flags().StringP("tailscale.control-plane-url", "", ipn.DefaultControlURL, "The Tailscale/Headscale control plane to connect to (in-process only)")
 	cmd.Flags().StringP("tailscale.authentication", "", string(TailscaleAuthMethodAuthKey), "How to authenticate with the control plane (in-process only) (options: authkey, oauth, workload)")
+	cmd.Flags().StringSliceP("tailscale.tags", "", []string{}, "The tags to register for the node (in-process only)")
 	cmd.Flags().StringP("tailscale.auth-key", "", "", "The Tailscale authkey used to join the tailnet (in-process only)")
 	cmd.Flags().StringP("tailscale.client-id", "", "", "The Tailscale client ID to generate authkey(s) using OAuth or workload identity federation (in-process only)")
 	cmd.Flags().StringP("tailscale.client-secret", "", "", "The Tailscale OAuth client secret to generate authkey(s) (in-process only)")

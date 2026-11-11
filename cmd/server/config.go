@@ -71,6 +71,7 @@ type tailscaleConfig struct {
 	Connection TailscaleConnection `koanf:"connection"`
 
 	ControlPlaneUrl string              `koanf:"control-plane-url"`
+	Tags            []string            `koanf:"tags"`
 	Authentication  TailscaleAuthMethod `koanf:"authentication"`
 
 	AuthKey      string `koanf:"auth-key"`
@@ -121,7 +122,7 @@ func (c *tailscaleConfig) Connect() tailscale.Connection {
 	case TailscaleConnectionLocal:
 		return tailscale.NewLocal()
 	case TailscaleConnectionInProcess:
-		return tailscale.NewInProcess("", c.ControlPlaneUrl, []string{}, c.credentials())
+		return tailscale.NewInProcess("", c.ControlPlaneUrl, c.Tags, c.credentials())
 	default:
 		panic("unreachable")
 	}
