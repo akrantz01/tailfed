@@ -70,7 +70,10 @@ func preRun(cmd *cobra.Command, _ []string) error {
 }
 
 func run(*cobra.Command, []string) error {
-	ts := cfg.Tailscale.Connect()
+	ts, err := cfg.Tailscale.Connect(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to connect to tailscale: %w", err)
+	}
 	fmt.Printf("%+v\n", ts)
 
 	srv := http.New()

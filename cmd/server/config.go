@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -117,12 +118,12 @@ func (c *tailscaleConfig) Validate() error {
 	}
 }
 
-func (c *tailscaleConfig) Connect() tailscale.Connection {
+func (c *tailscaleConfig) Connect(ctx context.Context) (tailscale.Connection, error) {
 	switch c.Connection {
 	case TailscaleConnectionLocal:
-		return tailscale.NewLocal()
+		return tailscale.NewLocal(ctx)
 	case TailscaleConnectionInProcess:
-		return tailscale.NewInProcess("", c.ControlPlaneUrl, c.Tags, c.credentials())
+		return tailscale.NewInProcess(ctx, "", c.ControlPlaneUrl, c.Tags, c.credentials())
 	default:
 		panic("unreachable")
 	}

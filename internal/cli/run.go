@@ -55,7 +55,7 @@ func (r *run) Run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	tsClient := tailscale.NewLocal()
+	tsClient, _ := tailscale.NewLocal(context.Background())
 	refresh := refresher.New(apiClient, tsClient, r.Path)
 
 	if err := r.verifyApiVersion(ctx, cmd, apiClient); err != nil {

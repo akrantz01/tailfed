@@ -1,6 +1,7 @@
 package tailscale
 
 import (
+	"context"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +17,7 @@ type InProcess struct {
 var _ Connection = (*InProcess)(nil)
 
 // NewInProcess configures a new in-process connection
-func NewInProcess(dir string, controlUrl string, tags []string, credentials CredentialProvider) Connection {
+func NewInProcess(ctx context.Context, dir string, controlUrl string, tags []string, credentials CredentialProvider) (Connection, error) {
 	logger := logrus.
 		WithField("component", "tailscale").
 		WithField("tailscale.connection", "in-process")
@@ -36,10 +37,20 @@ func NewInProcess(dir string, controlUrl string, tags []string, credentials Cred
 	}
 	credentials.apply(ts)
 
+	logger.
+		WithField("tailscale.control", controlUrl).
+		WithField("tailscale.tags", tags).
+		Debug("connecting to tailscale...")
+	status, err := ts.Up(ctx)
+	if err != nil {
+		return nil, err
+	}
+	logger.WithField("tailscale.tailnet", status.CurrentTailnet.Name).Info("connected to tailscale")
+
 	return &InProcess{
 		logger: logger,
 		ts:     ts,
-	}
+	}, nil
 }
 
 // CredentialProvider provides credentials for authentication with Tailscale

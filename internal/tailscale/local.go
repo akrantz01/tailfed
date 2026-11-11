@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/netip"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
@@ -15,17 +16,34 @@ var ErrUninitialized = errors.New("current node is uninitialized")
 // Local connects to the local Tailscale instance
 type Local struct {
 	logger logrus.FieldLogger
-	inner  local.Client
+	client local.Client
 }
 
 var _ Connection = (*Local)(nil)
 
 // NewLocal connects to the local Tailscale socket
-func NewLocal() *Local {
-	return &Local{
+func NewLocal(ctx context.Context) (*Local, error) {
+	l := &Local{
 		logger: logrus.WithField("component", "tailscale").WithField("tailscale.connection", "local"),
-		inner:  local.Client{},
+		client: local.Client{},
 	}
+
+	for {
+		status, err := l.client.StatusWithoutPeers(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if status.BackendState == "Running" {
+			l.logger.WithField("tailscale.tailnet", status.CurrentTailnet.Name).Info("connected to tailscale")
+			break
+		}
+
+		l.logger.WithField("tailscale.state", status.BackendState).Warn("tailscale is not running, retrying in 15s...")
+		time.Sleep(15 * time.Second)
+	}
+
+	return l, nil
 }
 
 // Status provides information about the node
@@ -51,15 +69,15 @@ type Status struct {
 }
 
 // Status retrieves information about the current node
-func (c *Local) Status(ctx context.Context) (*Status, error) {
-	c.logger.Debug("getting local tailscale node info")
-	status, err := c.inner.StatusWithoutPeers(ctx)
+func (l *Local) Status(ctx context.Context) (*Status, error) {
+	l.logger.Debug("getting local tailscale node info")
+	status, err := l.client.StatusWithoutPeers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if status.CurrentTailnet == nil || status.Self == nil {
-		c.logger.Debug("client is uninitialized")
+		l.logger.Debug("client is uninitialized")
 		return nil, ErrUninitialized
 	}
 
