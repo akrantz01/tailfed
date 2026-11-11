@@ -152,7 +152,11 @@ func doRequest[R any](c *Client, ctx context.Context, name, method, path string,
 		logger.WithError(err).Error("failed to send request")
 		return nil, 0, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logger.WithError(err).Warn("failed to close response body")
+		}
+	}()
 	logger.WithField("status", res.StatusCode).Debug("got response")
 
 	var data R

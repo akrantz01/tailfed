@@ -48,7 +48,7 @@ func (fs *filesystem) Get(_ context.Context, id string) (*Flow, error) {
 
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	logger.WithField("path", file.Name()).Debug("deserializing flow from file")
 	f := new(Flow)
@@ -71,7 +71,7 @@ func (fs *filesystem) Put(_ context.Context, flow *Flow) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	logger.WithField("path", file.Name()).Debug("successfully created file")
 

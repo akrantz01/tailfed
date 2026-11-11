@@ -70,7 +70,7 @@ func (r *Refresher) writeToken(token string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create token file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if _, err := io.Copy(file, strings.NewReader(token)); err != nil {
 		return fmt.Errorf("failed to write token to file: %w", err)

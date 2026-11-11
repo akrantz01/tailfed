@@ -50,7 +50,11 @@ func (h *Handler) Serve(ctx context.Context, req types.VerifyRequest) (*types.Ve
 		logger.WithError(err).Error("failed to send request")
 		return &types.VerifyResponse{Success: false}, nil
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logger.WithError(err).Warn("failed to close response body")
+		}
+	}()
 
 	var challenge types.Response[types.ChallengeResponse]
 	if err := json.NewDecoder(res.Body).Decode(&challenge); err != nil {

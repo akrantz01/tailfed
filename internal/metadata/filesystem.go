@@ -42,7 +42,7 @@ func (fs *filesystem) Load(_ context.Context, key string, out any) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	logger.WithField("path", file.Name()).Debug("successfully opened file")
 	return json.NewDecoder(file).Decode(out)
@@ -56,7 +56,7 @@ func (fs *filesystem) Save(_ context.Context, key string, data any) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	logger.WithField("path", file.Name()).Debug("successfully created file")
 

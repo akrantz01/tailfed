@@ -36,7 +36,11 @@ func (s *s3) Load(ctx context.Context, key string, out any) error {
 	if err != nil {
 		return err
 	}
-	defer output.Body.Close()
+	defer func() {
+		if err := output.Body.Close(); err != nil {
+			logger.WithError(err).Warn("failed to close body")
+		}
+	}()
 
 	logger.WithField("size", output.ContentLength).Debug("successfully fetched object")
 	return json.NewDecoder(output.Body).Decode(out)

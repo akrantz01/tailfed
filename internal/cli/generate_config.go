@@ -75,7 +75,7 @@ func (gc *generateConfig) writeConfig(apiUrl *url.URL) error {
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	ctx := map[string]any{
 		"Url": apiUrl.String(),

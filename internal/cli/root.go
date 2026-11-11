@@ -128,7 +128,7 @@ func (r *root) writePidFile(cmd string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if _, err := file.WriteString(strconv.Itoa(pid)); err != nil {
 		return fmt.Errorf("failed to write pid: %w", err)

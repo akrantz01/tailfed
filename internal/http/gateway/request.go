@@ -7,6 +7,7 @@ import (
 
 	"github.com/akrantz01/tailfed/internal/http/requestid"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -22,7 +23,11 @@ func FromHttpRequest(r *http.Request) (events.APIGatewayProxyRequest, error) {
 	if err != nil {
 		return events.APIGatewayProxyRequest{}, fmt.Errorf("failed to read request body: %w", err)
 	}
-	defer r.Body.Close()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			logrus.WithError(err).Warn("failed to close request body")
+		}
+	}()
 
 	queryParams := fromMultiValueMap(r.URL.Query())
 	headers := fromMultiValueMap(r.Header)
