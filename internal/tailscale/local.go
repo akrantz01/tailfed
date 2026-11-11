@@ -3,6 +3,8 @@ package tailscale
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"net/netip"
 	"strings"
 	"time"
@@ -44,6 +46,29 @@ func NewLocal(ctx context.Context) (*Local, error) {
 	}
 
 	return l, nil
+}
+
+func (l *Local) Healthy(ctx context.Context) bool {
+	status, err := l.client.StatusWithoutPeers(ctx)
+	if err != nil {
+		l.logger.WithError(err).Error("failed to get node status")
+		return false
+	}
+
+	return len(status.Health) == 0
+}
+
+func (l *Local) Listen(ctx context.Context, address, service string) (net.Listener, error) {
+	ln, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to bind to %s: %w", address, err)
+	}
+
+	if len(service) > 0 {
+		return nil, errors.New("not yet implemented")
+	}
+
+	return ln, nil
 }
 
 // Status provides information about the node

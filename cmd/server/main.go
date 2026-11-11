@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -74,12 +73,11 @@ func run(*cobra.Command, []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to tailscale: %w", err)
 	}
-	fmt.Printf("%+v\n", ts)
 
 	srv := http.New()
-	l, err := net.Listen("tcp", cfg.Listener.Address)
+	l, err := ts.Listen(context.Background(), cfg.Listener.Address, cfg.Listener.Service)
 	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", cfg.Listener.Address, err)
+		return fmt.Errorf("failed to get listener: %w", err)
 	}
 
 	srvErrors := make(chan error, 1)

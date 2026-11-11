@@ -2,9 +2,11 @@ package tailscale
 
 import (
 	"context"
+	"net"
 	"os"
 
 	"github.com/sirupsen/logrus"
+	"tailscale.com/client/local"
 	"tailscale.com/tsnet"
 )
 
@@ -12,6 +14,7 @@ import (
 type InProcess struct {
 	logger logrus.FieldLogger
 	ts     *tsnet.Server
+	client *local.Client
 }
 
 var _ Connection = (*InProcess)(nil)
@@ -47,10 +50,37 @@ func NewInProcess(ctx context.Context, dir string, controlUrl string, tags []str
 	}
 	logger.WithField("tailscale.tailnet", status.CurrentTailnet.Name).Info("connected to tailscale")
 
+	client, err := ts.LocalClient()
+	if err != nil {
+		return nil, err
+	}
+
 	return &InProcess{
 		logger: logger,
 		ts:     ts,
+		client: client,
 	}, nil
+}
+
+func (p *InProcess) Healthy(ctx context.Context) bool {
+	status, err := p.client.StatusWithoutPeers(ctx)
+	if err != nil {
+		p.logger.WithError(err).Error("failed to get node status")
+		return false
+	}
+
+	return len(status.Health) == 0
+}
+
+func (p *InProcess) Listen(_ context.Context, address, service string) (net.Listener, error) {
+	if len(service) > 0 {
+		return p.ts.ListenService(service, tsnet.ServiceModeHTTP{
+			Port:  443,
+			HTTPS: true,
+		})
+	} else {
+		return p.ts.Listen("tcp", address)
+	}
 }
 
 // CredentialProvider provides credentials for authentication with Tailscale
