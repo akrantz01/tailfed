@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/akrantz01/tailfed/internal/tailscale"
+	"tailscale.com/tailcfg"
 )
 
 var cfg Config
@@ -30,17 +31,26 @@ func (c *Config) Validate() error {
 }
 
 type listenerConfig struct {
-	Address string `koanf:"address"`
-	Service string `koanf:"service"`
+	Address string              `koanf:"address"`
+	Service tailcfg.ServiceName `koanf:"service"`
 }
 
 func (c *listenerConfig) Validate() error {
-	if len(c.Address) > 0 {
+	hasAddress := len(c.Address) > 0
+	hasService := len(c.Service) > 0
+	if !hasAddress && !hasService {
+		return errors.New("a service or address is required")
+	}
+
+	if hasAddress {
 		if _, _, err := net.SplitHostPort(c.Address); err != nil {
 			return fmt.Errorf("invalid address: %w", err)
 		}
-	} else if len(c.Service) == 0 {
-		return errors.New("a service or address must be configured")
+	}
+	if hasService {
+		if err := c.Service.Validate(); err != nil {
+			return err
+		}
 	}
 
 	return nil
