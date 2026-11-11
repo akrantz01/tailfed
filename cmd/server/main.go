@@ -15,6 +15,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"tailscale.com/ipn"
 )
 
 func main() {
@@ -32,7 +33,16 @@ func main() {
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
-	cmd.Flags().StringP("address", "a", "127.0.0.1:8000", "The host and port to listen on")
+	cmd.Flags().StringP("listener.address", "", "127.0.0.1:8000", "The host and port to listen on")
+	cmd.Flags().StringP("listener.service", "", "", "The Tailscale service to listen on")
+	cmd.Flags().StringP("tailscale.connection", "", string(TailscaleConnectionLocal), "How to connect to Tailscale (options: local, in-process)")
+	cmd.Flags().StringP("tailscale.control-plane-url", "", ipn.DefaultControlURL, "The Tailscale/Headscale control plane to connect to (in-process only)")
+	cmd.Flags().StringP("tailscale.authentication", "", string(TailscaleAuthMethodAuthKey), "How to authenticate with the control plane (in-process only) (options: authkey, oauth, workload)")
+	cmd.Flags().StringP("tailscale.auth-key", "", "", "The Tailscale authkey used to join the tailnet (in-process only)")
+	cmd.Flags().StringP("tailscale.client-id", "", "", "The Tailscale client ID to generate authkey(s) using OAuth or workload identity federation (in-process only)")
+	cmd.Flags().StringP("tailscale.client-secret", "", "", "The Tailscale OAuth client secret to generate authkey(s) (in-process only)")
+	cmd.Flags().StringP("tailscale.id-token", "", "", "The identity provider's ID token for workload identity federation-based authkey generation (in-process only)")
+	cmd.Flags().StringP("tailscale.audience", "", "", "The audience used to automatically fetch an ID token (in-process only)")
 
 	if err := cmd.Execute(); err != nil {
 		logrus.Error(err)
@@ -53,14 +63,16 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to initialize logging: %w", err)
 	}
 
+	fmt.Printf("%+v\n", cfg)
+
 	return nil
 }
 
 func run(*cobra.Command, []string) error {
 	srv := http.New()
-	l, err := net.Listen("tcp", cfg.Address)
+	l, err := net.Listen("tcp", cfg.Listener.Address)
 	if err != nil {
-		return fmt.Errorf("failed to listen on %s: %w", cfg.Address, err)
+		return fmt.Errorf("failed to listen on %s: %w", cfg.Listener.Address, err)
 	}
 
 	srvErrors := make(chan error, 1)
