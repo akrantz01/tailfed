@@ -12,6 +12,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
+	"github.com/spf13/pflag"
 )
 
 // RawConfig contains the raw configuration keys before structuring or validation.
@@ -58,7 +59,14 @@ func Load(opts ...Option) (*RawConfig, error) {
 	}
 
 	if options.flags != nil {
-		if err := k.Load(posflag.ProviderWithValue(options.flags, ".", k, secrets.Load), nil); err != nil {
+		if err := k.Load(posflag.ProviderWithFlag(options.flags, ".", k, func(f *pflag.Flag) (string, any) {
+			// Only plain strings can reference secrets
+			if f.Value.Type() == "string" {
+				return secrets.Load(f.Name, f.Value.String())
+			}
+
+			return f.Name, posflag.FlagVal(options.flags, f)
+		}), nil); err != nil {
 			return nil, fmt.Errorf("failed to load from flags: %w", err)
 		} else if err := secrets.Err(); err != nil {
 			return nil, fmt.Errorf("failed to load secret from flags: %w", err)
