@@ -108,8 +108,8 @@ func (r *RawConfig) InContext(ctx context.Context) context.Context {
 func newEnvVarCleaner(prefix string, secrets *secretLoader) func(string, string) (string, any) {
 	keyCleaner := func(s string) string {
 		formatted := strings.ToLower(strings.TrimPrefix(s, prefix))
-		nested := strings.Replace(formatted, "__", ".", -1)
-		return strings.Replace(nested, "_", "-", -1)
+		nested := strings.ReplaceAll(formatted, "__", ".")
+		return strings.ReplaceAll(nested, "_", "-")
 	}
 
 	return func(key, value string) (string, interface{}) {
