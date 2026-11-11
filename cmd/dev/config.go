@@ -242,7 +242,7 @@ func (t *tailscaleConfig) Authentication() tailscale.Authentication {
 		return tailscale.ApiKey(t.ApiKey)
 	}
 
-	return tailscale.OAuth(t.OAuth.ClientId, t.OAuth.ClientSecret)
+	return tailscale.OAuthV1(t.OAuth.ClientId, t.OAuth.ClientSecret)
 }
 
 type tailscaleOAuthConfig struct {

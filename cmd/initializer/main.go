@@ -127,7 +127,7 @@ func (t *Tailscale) Validate() error {
 	if apiKeyEnabled {
 		t.auth = tailscale.ApiKey(t.ApiKey)
 	} else {
-		t.auth = tailscale.OAuth(t.OAuthClientId, t.OAuthClientSecret)
+		t.auth = tailscale.OAuthV1(t.OAuthClientId, t.OAuthClientSecret)
 	}
 
 	return nil

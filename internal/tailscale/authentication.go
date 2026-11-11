@@ -74,8 +74,8 @@ type oauth struct {
 
 var _ Authentication = (*oauth)(nil)
 
-// OAuth authenticates using temporary credentials derived from a client ID and secret. These are limited in scope.
-func OAuth(clientId, clientSecret string) Authentication {
+// OAuthV1 authenticates using temporary credentials derived from a client ID and secret. These are limited in scope.
+func OAuthV1(clientId, clientSecret string) Authentication {
 	return &oauth{clientId, clientSecret}
 }
 

@@ -18,10 +18,12 @@ type Local struct {
 	inner  local.Client
 }
 
+var _ Connection = (*Local)(nil)
+
 // NewLocal connects to the local Tailscale socket
-func NewLocal(logger logrus.FieldLogger) *Local {
+func NewLocal() *Local {
 	return &Local{
-		logger: logger,
+		logger: logrus.WithField("component", "tailscale").WithField("tailscale.connection", "local"),
 		inner:  local.Client{},
 	}
 }
