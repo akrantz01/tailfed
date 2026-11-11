@@ -3,25 +3,13 @@ list:
     @just --list --unsorted
 
 # Compile all the binaries
-build: build-client build-dev build-lambdas
+build: build-client build-dev
 
 # Build only the client binary
 build-client: (build-binary "client")
 
 # Build only the dev binary
 build-dev: (build-binary "dev")
-
-# Build only the Lambda binaries
-build-lambdas: (build-binary "finalizer") (build-binary "generator") (build-binary "initializer") (build-binary "verifier")
-
-# Build and package all the Lambda functions
-package-lambdas: (package-lambda "finalizer") (package-lambda "generator") (package-lambda "initializer") (package-lambda "verifier")
-
-[private]
-package-lambda binary: (build-binary binary)
-    cp out/{{ binary }} out/bootstrap
-    zip --junk-paths out/{{ binary }}.zip out/bootstrap
-    rm out/bootstrap
 
 [private]
 build-binary binary:
