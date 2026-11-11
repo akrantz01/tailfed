@@ -69,6 +69,9 @@ func preRun(cmd *cobra.Command, _ []string) error {
 }
 
 func run(*cobra.Command, []string) error {
+	ts := cfg.Tailscale.Connect()
+	fmt.Printf("%+v\n", ts)
+
 	srv := http.New()
 	l, err := net.Listen("tcp", cfg.Listener.Address)
 	if err != nil {

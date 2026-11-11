@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+
+	"github.com/akrantz01/tailfed/internal/tailscale"
 )
 
 var cfg Config
@@ -112,5 +114,28 @@ func (c *tailscaleConfig) Validate() error {
 	default:
 		return fmt.Errorf("unknown connection method '%s' (options: %s, %s)", c.Connection, TailscaleConnectionLocal, TailscaleConnectionInProcess)
 	}
+}
 
+func (c *tailscaleConfig) Connect() tailscale.Connection {
+	switch c.Connection {
+	case TailscaleConnectionLocal:
+		return tailscale.NewLocal()
+	case TailscaleConnectionInProcess:
+		return tailscale.NewInProcess("", c.ControlPlaneUrl, []string{}, c.credentials())
+	default:
+		panic("unreachable")
+	}
+}
+
+func (c *tailscaleConfig) credentials() tailscale.CredentialProvider {
+	switch c.Authentication {
+	case TailscaleAuthMethodAuthKey:
+		return tailscale.AuthKey(c.AuthKey)
+	case TailscaleAuthMethodOAuth:
+		return tailscale.OAuth(c.ClientId, c.ClientSecret)
+	case TailscaleAuthMethodWorkload:
+		return tailscale.WorkloadIdentityFederation(c.ClientId, c.IdToken, c.Audience)
+	default:
+		panic("unreachable")
+	}
 }
