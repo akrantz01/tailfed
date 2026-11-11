@@ -11,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
+	"tailscale.com/tailcfg"
 )
 
 var ErrUninitialized = errors.New("current node is uninitialized")
@@ -58,7 +59,7 @@ func (l *Local) Healthy(ctx context.Context) bool {
 	return len(status.Health) == 0
 }
 
-func (l *Local) Listen(ctx context.Context, address, service string) (net.Listener, error) {
+func (l *Local) Listen(ctx context.Context, address string, service tailcfg.ServiceName) (net.Listener, error) {
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to bind to %s: %w", address, err)

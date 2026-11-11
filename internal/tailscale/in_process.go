@@ -7,6 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
+	"tailscale.com/tailcfg"
 	"tailscale.com/tsnet"
 )
 
@@ -72,9 +73,9 @@ func (p *InProcess) Healthy(ctx context.Context) bool {
 	return len(status.Health) == 0
 }
 
-func (p *InProcess) Listen(_ context.Context, address, service string) (net.Listener, error) {
+func (p *InProcess) Listen(_ context.Context, address string, service tailcfg.ServiceName) (net.Listener, error) {
 	if len(service) > 0 {
-		return p.ts.ListenService(service, tsnet.ServiceModeHTTP{
+		return p.ts.ListenService(string(service), tsnet.ServiceModeHTTP{
 			Port:  443,
 			HTTPS: true,
 		})
