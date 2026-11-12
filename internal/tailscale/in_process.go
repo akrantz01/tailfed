@@ -2,11 +2,13 @@ package tailscale
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
+	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/tailcfg"
 	"tailscale.com/tsnet"
 )
@@ -81,6 +83,17 @@ func (p *InProcess) Listen(_ context.Context, address string, service tailcfg.Se
 		})
 	} else {
 		return p.ts.Listen("tcp", address)
+	}
+}
+
+func (p *InProcess) WhoIs(ctx context.Context, address string) (*apitype.WhoIsResponse, error) {
+	res, err := p.client.WhoIs(ctx, address)
+	if errors.Is(err, local.ErrPeerNotFound) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else {
+		return res, nil
 	}
 }
 
