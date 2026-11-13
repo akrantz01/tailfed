@@ -1,7 +1,6 @@
 package configloader
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -19,8 +18,6 @@ import (
 type RawConfig struct {
 	inner *koanf.Koanf
 }
-
-type rawConfigKey struct{}
 
 // Load retrieves configuration from at least the environment and command line arguments
 func Load(opts ...Option) (*RawConfig, error) {
@@ -90,27 +87,9 @@ func LoadInto[T any](dest *T, opts ...Option) error {
 	return nil
 }
 
-// FromContext retrieves a RawConfig instance from a context
-func FromContext(ctx context.Context) *RawConfig {
-	value := ctx.Value(rawConfigKey{})
-	if value == nil {
-		return nil
-	}
-	if r, ok := value.(*RawConfig); ok {
-		return r
-	} else {
-		panic("value at RawConfig key is not a *RawConfig")
-	}
-}
-
 // Structure populates a struct with configuration values
 func (r *RawConfig) Structure(dest any) error {
 	return r.inner.Unmarshal("", dest)
-}
-
-// InContext adds the RawConfig instance to a context
-func (r *RawConfig) InContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, rawConfigKey{}, r)
 }
 
 func newEnvVarCleaner(prefix string, secrets *secretLoader) func(string, string) (string, any) {
