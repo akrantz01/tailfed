@@ -81,6 +81,7 @@ fabric.properties
 /flows/
 /metadata/
 tailfed.yml
+tailfed-server.yml
 
 # Added by goreleaser init:
 dist/
