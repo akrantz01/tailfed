@@ -12,15 +12,19 @@ type BackendId string
 
 const (
 	BackendMemory BackendId = "memory"
-	BackendAWSKMS BackendId = "aws-ksm"
+	BackendAWSKMS BackendId = "aws-kms"
 )
 
-var BackendIds string = strings.Join([]string{string(BackendMemory), string(BackendAWSKMS)}, ", ")
+func (b BackendId) Choices() []string {
+	return []string{string(BackendMemory), string(BackendAWSKMS)}
+}
 
 // NeedsAWS returns true when the backend needs an AWS config
 func (b BackendId) NeedsAWS() bool {
 	return b == BackendAWSKMS
 }
+
+var BackendIds string = strings.Join(BackendMemory.Choices(), ", ")
 
 // Backend provides a mechanism for generating signed JWTs
 type Backend interface {
