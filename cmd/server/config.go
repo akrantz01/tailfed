@@ -112,9 +112,9 @@ func (c *signingConfig) Validate() error {
 func (c *signingConfig) NewBackend(awsConfig aws.Config) (signing.Backend, error) {
 	switch c.Backend {
 	case SigningBackendMemory:
-		return signing.NewInMemory(nil)
+		return signing.NewInMemory()
 	case SigningBackendAwsKms:
-		return signing.NewKMS(nil, awsConfig, c.AwsKms.Key)
+		return signing.NewAWSKMS(awsConfig, c.AwsKms.Key)
 	default:
 		panic("unreachable")
 	}

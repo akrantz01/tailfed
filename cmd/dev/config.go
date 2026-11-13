@@ -153,15 +153,11 @@ func (s *signingConfig) Validate() error {
 }
 
 func (s *signingConfig) NewBackend(config aws.Config) (signing.Backend, error) {
-	logger := logrus.WithFields(map[string]any{
-		"component": "signer",
-		"backend":   s.Backend,
-	})
 	switch s.Backend {
 	case "memory":
-		return signing.NewInMemory(logger)
+		return signing.NewInMemory()
 	case "kms":
-		return signing.NewKMS(logger, config, s.Key)
+		return signing.NewAWSKMS(config, s.Key)
 	default:
 		return nil, errors.New("unknown signing backend")
 	}

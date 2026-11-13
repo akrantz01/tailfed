@@ -22,7 +22,9 @@ type inMemory struct {
 var _ Backend = (*inMemory)(nil)
 
 // NewInMemory creates a new keys with in-memory ephemeral keys
-func NewInMemory(logger logrus.FieldLogger) (Backend, error) {
+func NewInMemory() (Backend, error) {
+	logger := logrus.WithField("component", "signer").WithField("signer.backend", "memory")
+
 	private, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate private key: %w", err)

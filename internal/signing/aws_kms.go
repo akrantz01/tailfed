@@ -18,8 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// kmsBackend signs tokens using a key stored in AWS KMS
-type kmsBackend struct {
+// awsKmsBackend signs tokens using a key stored in AWS KMS
+type awsKmsBackend struct {
 	logger logrus.FieldLogger
 
 	id        string
@@ -29,10 +29,12 @@ type kmsBackend struct {
 	signer    jose.Signer
 }
 
-var _ Backend = (*kmsBackend)(nil)
+var _ Backend = (*awsKmsBackend)(nil)
 
-// NewKMS creates a new AWS KMS-backed signer
-func NewKMS(logger logrus.FieldLogger, config aws.Config, alias string) (Backend, error) {
+// NewAWSKMS creates a new AWS KMS-backed signer
+func NewAWSKMS(config aws.Config, alias string) (Backend, error) {
+	logger := logrus.WithField("component", "signer").WithField("signer.backend", "aws-kms")
+
 	client := kms.NewFromConfig(config)
 
 	logger.WithField("key", alias).Debug("resolving KMS key...")
@@ -49,28 +51,29 @@ func NewKMS(logger logrus.FieldLogger, config aws.Config, alias string) (Backend
 		return nil, errors.New("key is not configured for sign/verify")
 	}
 
-	logger.WithField("arn", *metadata.Arn).Debug("resolved and validated key")
+	logger = logger.WithField("signer.key", *metadata.Arn)
+	logger.Debug("resolved and validated key")
 
 	key, algorithm, err := newKmsKey(logger, metadata, client)
 	if err != nil {
 		return nil, err
 	}
-	logger.WithField("algorithm", algorithm).Debug("determined signing algorithm for key")
+	logger.Debug("determined signing algorithm for key")
 
 	signer, err := newKey(*metadata.KeyId, key, algorithm)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.WithField("key", *metadata.Arn).Info("created new KMS signer")
-	return &kmsBackend{logger, *metadata.KeyId, metadata.Arn, algorithm, client, signer}, nil
+	logger.Info("created new KMS signer")
+	return &awsKmsBackend{logger, *metadata.KeyId, metadata.Arn, algorithm, client, signer}, nil
 }
 
-func (k *kmsBackend) Sign(claims oidc.Claims) (string, error) {
+func (k *awsKmsBackend) Sign(claims oidc.Claims) (string, error) {
 	return jwt.Signed(k.signer).Claims(claims).Serialize()
 }
 
-func (k *kmsBackend) PublicKey() (jose.JSONWebKey, error) {
+func (k *awsKmsBackend) PublicKey() (jose.JSONWebKey, error) {
 	k.logger.Debug("getting public key")
 	output, err := k.client.GetPublicKey(context.Background(), &kms.GetPublicKeyInput{KeyId: k.arn})
 	if err != nil {
