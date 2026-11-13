@@ -15,12 +15,13 @@ import (
 	"github.com/akrantz01/tailfed/internal/scheduler"
 	"github.com/akrantz01/tailfed/internal/systemd"
 	"github.com/akrantz01/tailfed/internal/tailscale"
-	"github.com/hashicorp/go-version"
+	"github.com/akrantz01/tailfed/internal/version"
+	hashiversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var remoteVersionCompat = version.MustConstraints(version.NewConstraint(">= 1.0, < 2.0"))
+var remoteVersionCompat = hashiversion.MustConstraints(hashiversion.NewConstraint(">= 1.0, < 2.0"))
 
 type run struct {
 	Path string `koanf:"path"`
@@ -38,6 +39,10 @@ func (r *run) NewRunCommand() *cobra.Command {
 }
 
 func (r *run) Run(cmd *cobra.Command, _ []string) error {
+	if version.Display(cmd) {
+		return nil
+	}
+
 	ctx := cmd.Context()
 	systemd.EnableWatchdog()
 
@@ -116,7 +121,7 @@ func (r *run) verifyApiVersion(ctx context.Context, cmd *cobra.Command, client *
 		}).
 		Info("got remote version info")
 
-	remoteVersion, err := version.NewSemver(remote.Version)
+	remoteVersion, err := hashiversion.NewSemver(remote.Version)
 	if err != nil {
 		return fmt.Errorf("failed to parse api version %q: %w", remote.Version, err)
 	}
