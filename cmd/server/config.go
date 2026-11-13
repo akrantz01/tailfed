@@ -74,8 +74,8 @@ const (
 	TailscaleAuthMethodAuthKey TailscaleAuthMethod = "auth-key"
 	// TailscaleAuthMethodOAuth uses the OAuth flow for generating authkey(s)
 	TailscaleAuthMethodOAuth TailscaleAuthMethod = "oauth"
-	// TailscaleAuthMethodWorkload uses workload identity federation for generating authkey(s)
-	TailscaleAuthMethodWorkload TailscaleAuthMethod = "workload"
+	// TailscaleAuthMethodFederation uses workload identity federation for generating authkey(s)
+	TailscaleAuthMethodFederation TailscaleAuthMethod = "federation"
 )
 
 type tailscaleConfig struct {
@@ -85,11 +85,9 @@ type tailscaleConfig struct {
 	Tags            []string            `koanf:"tags"`
 	Authentication  TailscaleAuthMethod `koanf:"authentication"`
 
-	AuthKey      string `koanf:"auth-key"`
-	ClientId     string `koanf:"client-id"`
-	ClientSecret string `koanf:"client-secret"`
-	IdToken      string `koanf:"id-token"`
-	Audience     string `koanf:"audience"`
+	AuthKey    string                    `koanf:"auth-key"`
+	OAuth      tailscaleOauthConfig      `koanf:"oauth"`
+	Federation tailscaleFederationConfig `koanf:"federation"`
 }
 
 func (c *tailscaleConfig) Validate() error {
@@ -102,26 +100,19 @@ func (c *tailscaleConfig) Validate() error {
 		case TailscaleAuthMethodAuthKey:
 			if len(c.AuthKey) == 0 {
 				return errors.New("an authkey is required")
-			}
-		case TailscaleAuthMethodOAuth:
-			if len(c.ClientId) == 0 {
-				return errors.New("a client ID is required")
-			} else if len(c.ClientSecret) == 0 {
-				return errors.New("a client secret is required")
+			} else {
+				return nil
 			}
 
-		case TailscaleAuthMethodWorkload:
-			if len(c.ClientId) == 0 {
-				return errors.New("a client ID is required")
-			} else if len(c.IdToken) == 0 && len(c.Audience) == 0 {
-				return errors.New("an ID token or audience is required")
-			}
+		case TailscaleAuthMethodOAuth:
+			return c.OAuth.Validate()
+
+		case TailscaleAuthMethodFederation:
+			return c.Federation.Validate()
 
 		default:
-			return fmt.Errorf("unknown authentication method '%s' (options: %s, %s, %s)", c.Audience, TailscaleAuthMethodAuthKey, TailscaleAuthMethodOAuth, TailscaleAuthMethodWorkload)
+			return fmt.Errorf("unknown authentication method '%s' (options: %s, %s, %s)", c.Authentication, TailscaleAuthMethodAuthKey, TailscaleAuthMethodOAuth, TailscaleAuthMethodFederation)
 		}
-
-		return nil
 
 	default:
 		return fmt.Errorf("unknown connection method '%s' (options: %s, %s)", c.Connection, TailscaleConnectionLocal, TailscaleConnectionInProcess)
@@ -144,10 +135,43 @@ func (c *tailscaleConfig) credentials() tailscale.CredentialProvider {
 	case TailscaleAuthMethodAuthKey:
 		return tailscale.AuthKey(c.AuthKey)
 	case TailscaleAuthMethodOAuth:
-		return tailscale.OAuth(c.ClientId, c.ClientSecret)
-	case TailscaleAuthMethodWorkload:
-		return tailscale.WorkloadIdentityFederation(c.ClientId, c.IdToken, c.Audience)
+		return tailscale.OAuth(c.OAuth.ClientId, c.OAuth.ClientSecret)
+	case TailscaleAuthMethodFederation:
+		return tailscale.WorkloadIdentityFederation(c.Federation.ClientId, c.Federation.IdToken, c.Federation.Audience)
 	default:
 		panic("unreachable")
+	}
+}
+
+type tailscaleOauthConfig struct {
+	ClientId     string `koanf:"client-id"`
+	ClientSecret string `koanf:"client-secret"`
+}
+
+func (c *tailscaleOauthConfig) Validate() error {
+	switch {
+	case len(c.ClientId) == 0:
+		return errors.New("a client ID is required")
+	case len(c.ClientSecret) == 0:
+		return errors.New("a client secret is required")
+	default:
+		return nil
+	}
+}
+
+type tailscaleFederationConfig struct {
+	ClientId string `koanf:"client-id"`
+	IdToken  string `koanf:"id-token"`
+	Audience string `koanf:"audience"`
+}
+
+func (c *tailscaleFederationConfig) Validate() error {
+	switch {
+	case len(c.ClientId) == 0:
+		return errors.New("a client ID is required")
+	case len(c.IdToken) == 0 && len(c.Audience) == 0:
+		return errors.New("an ID token or audience is required")
+	default:
+		return nil
 	}
 }
