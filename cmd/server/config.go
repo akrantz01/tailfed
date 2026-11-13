@@ -17,7 +17,7 @@ import (
 var cfg Config
 
 type Config struct {
-	LogLevel string `koanf:"log-level"`
+	LogLevel string `koanf:"log-level" short:"l" help:"The minimum level to log at"`
 
 	Listener  listenerConfig  `koanf:"listener"`
 	Signing   signingConfig   `koanf:"signing"`
@@ -47,8 +47,8 @@ func (c *Config) LoadAWSConfig(ctx context.Context) (aws.Config, error) {
 }
 
 type listenerConfig struct {
-	Address string              `koanf:"address"`
-	Service tailcfg.ServiceName `koanf:"service"`
+	Address string              `koanf:"address" help:"The host and port the server should bind to"`
+	Service tailcfg.ServiceName `koanf:"service" help:"The Tailscale service to advertise"`
 }
 
 func (c *listenerConfig) Validate() error {
@@ -73,8 +73,8 @@ func (c *listenerConfig) Validate() error {
 }
 
 type signingConfig struct {
-	Backend  signing.BackendId   `koanf:"backend"`
-	Validity time.Duration       `koanf:"validity"`
+	Backend  signing.BackendId   `koanf:"backend" help:"How to sign ID tokens"`
+	Validity time.Duration       `koanf:"validity" help:"How long generated tokens should be valid for"`
 	AwsKms   signingAwsKmsConfig `koanf:"aws-kms"`
 }
 
@@ -107,7 +107,7 @@ func (c *signingConfig) NewBackend(awsConfig aws.Config) (signing.Backend, error
 }
 
 type signingAwsKmsConfig struct {
-	Key string `koanf:"key"`
+	Key string `koanf:"key" help:"The AWS KMS key ARN to use"`
 }
 
 func (c *signingAwsKmsConfig) Validate() error {
@@ -118,13 +118,13 @@ func (c *signingAwsKmsConfig) Validate() error {
 }
 
 type tailscaleConfig struct {
-	Connection tailscale.ConnectionId `koanf:"connection"`
+	Connection tailscale.ConnectionId `koanf:"connection" help:"How to connect to Tailscale"`
 
-	ControlPlaneUrl string                         `koanf:"control-plane-url"`
-	Tags            []string                       `koanf:"tags"`
+	ControlPlaneUrl string                         `koanf:"control-plane-url" help:"The Tailscale/Headscale control plane to connect to (in-process only)"`
+	Tags            []string                       `koanf:"tags" help:"The tags to register for the node (in-process only)"`
 	Authentication  tailscale.AuthenticationMethod `koanf:"authentication"`
 
-	AuthKey    string                    `koanf:"auth-key"`
+	AuthKey    string                    `koanf:"auth-key" help:"The auth key used to join the tailnet (in-process only)"`
 	OAuth      tailscaleOauthConfig      `koanf:"oauth"`
 	Federation tailscaleFederationConfig `koanf:"federation"`
 }
@@ -183,8 +183,8 @@ func (c *tailscaleConfig) credentials() tailscale.CredentialProvider {
 }
 
 type tailscaleOauthConfig struct {
-	ClientId     string `koanf:"client-id"`
-	ClientSecret string `koanf:"client-secret"`
+	ClientId     string `koanf:"client-id" help:"The OAuth app client ID"`
+	ClientSecret string `koanf:"client-secret" help:"The OAuth app client secret"`
 }
 
 func (c *tailscaleOauthConfig) Validate() error {
@@ -199,9 +199,9 @@ func (c *tailscaleOauthConfig) Validate() error {
 }
 
 type tailscaleFederationConfig struct {
-	ClientId string `koanf:"client-id"`
-	IdToken  string `koanf:"id-token"`
-	Audience string `koanf:"audience"`
+	ClientId string `koanf:"client-id" help:"The OpenID connect client ID"`
+	IdToken  string `koanf:"id-token" help:"The identity provider's existing ID token"`
+	Audience string `koanf:"audience" help:"The audience used to automatically fetch an ID token"`
 }
 
 func (c *tailscaleFederationConfig) Validate() error {

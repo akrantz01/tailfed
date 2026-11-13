@@ -11,6 +11,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/http"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -31,18 +32,22 @@ func main() {
 	}
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
-	cmd.Flags().StringP("log-level", "l", "info", "The minimum level to log at (choices: panic, fatal, error, warn, info, debug, trace)")
-	cmd.Flags().StringP("listener.address", "", "127.0.0.1:8000", "The host and port to listen on")
-	cmd.Flags().StringP("listener.service", "", "", "The Tailscale service to listen on")
-	cmd.Flags().StringP("tailscale.connection", "", string(TailscaleConnectionLocal), "How to connect to Tailscale (options: local, in-process)")
-	cmd.Flags().StringP("tailscale.control-plane-url", "", ipn.DefaultControlURL, "The Tailscale/Headscale control plane to connect to (in-process only)")
-	cmd.Flags().StringP("tailscale.authentication", "", string(TailscaleAuthMethodAuthKey), "How to authenticate with the control plane (in-process only) (options: authkey, oauth, workload)")
-	cmd.Flags().StringSliceP("tailscale.tags", "", []string{}, "The tags to register for the node (in-process only)")
-	cmd.Flags().StringP("tailscale.auth-key", "", "", "The Tailscale authkey used to join the tailnet (in-process only)")
-	cmd.Flags().StringP("tailscale.client-id", "", "", "The Tailscale client ID to generate authkey(s) using OAuth or workload identity federation (in-process only)")
-	cmd.Flags().StringP("tailscale.client-secret", "", "", "The Tailscale OAuth client secret to generate authkey(s) (in-process only)")
-	cmd.Flags().StringP("tailscale.id-token", "", "", "The identity provider's ID token for workload identity federation-based authkey generation (in-process only)")
-	cmd.Flags().StringP("tailscale.audience", "", "", "The audience used to automatically fetch an ID token (in-process only)")
+	cmd.Flags().StringP("config", "c", "tailfed-server.yml", "The path to the configuration file")
+	configloader.BindFlags(cmd.Flags(), &Config{
+		LogLevel: "info",
+		Listener: listenerConfig{
+			Address: "127.0.0.1:8000",
+		},
+		Signing: signingConfig{
+			Backend:  "memory",
+			Validity: 1 * time.Hour,
+		},
+		Tailscale: tailscaleConfig{
+			Connection:      tailscale.ConnectionLocal,
+			ControlPlaneUrl: ipn.DefaultControlURL,
+			Authentication:  tailscale.AuthenticationMethodKey,
+		},
+	})
 
 	if err := cmd.Execute(); err != nil {
 		logrus.Error(err)
@@ -52,7 +57,13 @@ func main() {
 }
 
 func preRun(cmd *cobra.Command, _ []string) error {
-	if err := configloader.LoadInto(&cfg, configloader.WithFlags(cmd.Flags()), configloader.WithEnvPrefix("TAILFED_SERVER_")); err != nil {
+	flags := cmd.Flags()
+	path, _ := flags.GetString("config")
+	if err := configloader.LoadInto(&cfg,
+		configloader.WithFlags(flags),
+		configloader.WithEnvPrefix("TAILFED_SERVER_"),
+		configloader.IncludeConfigFile(path),
+	); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	if err := cfg.Validate(); err != nil {
