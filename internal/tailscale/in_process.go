@@ -26,7 +26,15 @@ const (
 	AuthenticationMethodFederation AuthenticationMethod = "federation"
 )
 
-var AuthenticationMethods string = strings.Join([]string{string(AuthenticationMethodKey), string(AuthenticationMethodOAuth), string(AuthenticationMethodFederation)}, ", ")
+func (a AuthenticationMethod) Choices() []string {
+	return []string{
+		string(AuthenticationMethodKey),
+		string(AuthenticationMethodOAuth),
+		string(AuthenticationMethodFederation),
+	}
+}
+
+var AuthenticationMethods string = strings.Join(AuthenticationMethodKey.Choices(), ", ")
 
 // InProcess uses tsnet to connect to Tailscale for the current process only
 type InProcess struct {

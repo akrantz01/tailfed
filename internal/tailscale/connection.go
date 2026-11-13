@@ -19,7 +19,11 @@ const (
 	ConnectionInProcess ConnectionId = "in-process"
 )
 
-var ConnectionIds string = strings.Join([]string{string(ConnectionLocal), string(ConnectionInProcess)}, ", ")
+func (c ConnectionId) Choices() []string {
+	return []string{string(ConnectionLocal), string(ConnectionInProcess)}
+}
+
+var ConnectionIds string = strings.Join(ConnectionLocal.Choices(), ", ")
 
 // Connection represents an active connection to Tailscale
 type Connection interface {
