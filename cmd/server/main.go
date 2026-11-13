@@ -33,6 +33,7 @@ func main() {
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.Flags().StringP("config", "c", "tailfed-server.yml", "The path to the configuration file")
+	cmd.Flags().Bool("json", false, "Format all output as JSON")
 	configloader.BindFlags(cmd.Flags(), &Config{
 		LogLevel: "info",
 		Listener: listenerConfig{
@@ -70,7 +71,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	if err := logging.Initialize(cfg.LogLevel); err != nil {
+	json, _ := flags.GetBool("json")
+	if err := logging.Initialize(cfg.LogLevel, json); err != nil {
 		return fmt.Errorf("failed to initialize logging: %w", err)
 	}
 

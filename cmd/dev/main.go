@@ -79,7 +79,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if err := logging.Initialize(cfg.LogLevel); err != nil {
+	if err := logging.Initialize(cfg.LogLevel, false); err != nil {
 		return err
 	}
 

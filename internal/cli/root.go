@@ -83,7 +83,7 @@ func (r *root) PersistentPreRun(cmd *cobra.Command, _ []string) error {
 	ctx := config.InContext(cmd.Context())
 	cmd.SetContext(ctx)
 
-	if err := logging.Initialize(r.LogLevel); err != nil {
+	if err := logging.Initialize(r.LogLevel, false); err != nil {
 		return err
 	}
 
