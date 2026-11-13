@@ -39,7 +39,7 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) LoadAWSConfig(ctx context.Context) (aws.Config, error) {
-	if c.Signing.Backend.NeedsAws() {
+	if c.Signing.Backend.NeedsAWS() {
 		return awsconfig.LoadDefaultConfig(ctx)
 	}
 
@@ -72,22 +72,8 @@ func (c *listenerConfig) Validate() error {
 	return nil
 }
 
-// SigningBackend determines how tailfed should sign ID tokens
-type SigningBackend string
-
-const (
-	// SigningBackendMemory uses ephemeral in-memory keys
-	SigningBackendMemory SigningBackend = "memory"
-	// SigningBackendAwsKms uses an AWS KMS-based key
-	SigningBackendAwsKms SigningBackend = "aws-kms"
-)
-
-func (s SigningBackend) NeedsAws() bool {
-	return s == SigningBackendAwsKms
-}
-
 type signingConfig struct {
-	Backend  SigningBackend      `koanf:"backend"`
+	Backend  signing.BackendId   `koanf:"backend"`
 	Validity time.Duration       `koanf:"validity"`
 	AwsKms   signingAwsKmsConfig `koanf:"aws-kms"`
 }
@@ -98,22 +84,22 @@ func (c *signingConfig) Validate() error {
 	}
 
 	switch c.Backend {
-	case SigningBackendMemory:
+	case signing.BackendMemory:
 		return nil
 
-	case SigningBackendAwsKms:
+	case signing.BackendAWSKMS:
 		return c.AwsKms.Validate()
 
 	default:
-		return fmt.Errorf("unknown signing backend %q (options: %s, %s)", c.Backend, SigningBackendAwsKms, SigningBackendMemory)
+		return fmt.Errorf("unknown signing backend %q (options: %s)", c.Backend, signing.BackendIds)
 	}
 }
 
 func (c *signingConfig) NewBackend(awsConfig aws.Config) (signing.Backend, error) {
 	switch c.Backend {
-	case SigningBackendMemory:
+	case signing.BackendMemory:
 		return signing.NewInMemory()
-	case SigningBackendAwsKms:
+	case signing.BackendAWSKMS:
 		return signing.NewAWSKMS(awsConfig, c.AwsKms.Key)
 	default:
 		panic("unreachable")
