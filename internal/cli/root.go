@@ -55,7 +55,7 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 	cmd.Flags().StringP("url", "u", "", "The URL of the Tailfed API")
 	version.AddFlag(cmd.Flags())
 
-	cmd.AddCommand(root.NewRunCommand(), newGenerateConfig(), newRefresh())
+	cmd.AddCommand(root.NewRunCommand(), newRefresh())
 
 	root.cmd = cmd
 	return root
