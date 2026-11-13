@@ -19,11 +19,8 @@ import (
 )
 
 func main() {
-	info := version.GetInfo()
-
 	cmd := &cobra.Command{
 		Use:           "tailfed-server",
-		Version:       info.Version,
 		Short:         "The tailfed OpenID Connect server",
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -34,6 +31,7 @@ func main() {
 
 	cmd.Flags().StringP("config", "c", "tailfed-server.yml", "The path to the configuration file")
 	cmd.Flags().Bool("json", false, "Format all output as JSON")
+	version.AddFlag(cmd.Flags())
 	configloader.BindFlags(cmd.Flags(), &Config{
 		LogLevel: "info",
 		Listener: listenerConfig{
@@ -81,7 +79,11 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func run(*cobra.Command, []string) error {
+func run(cmd *cobra.Command, _ []string) error {
+	if version.Display(cmd) {
+		return nil
+	}
+
 	awsConfig, err := cfg.LoadAWSConfig(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to load AWS config: %w", err)
