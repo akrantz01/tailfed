@@ -69,12 +69,22 @@ func preRun(cmd *cobra.Command, _ []string) error {
 }
 
 func run(*cobra.Command, []string) error {
+	awsConfig, err := cfg.LoadAWSConfig(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	signer, err := cfg.Signing.NewBackend(awsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create signing backend: %w", err)
+	}
+
 	ts, err := cfg.Tailscale.Connect(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to connect to tailscale: %w", err)
 	}
 
-	srv := http.New(nil, ts)
+	srv := http.New(signer, ts)
 	l, err := ts.Listen(context.Background(), cfg.Listener.Address, cfg.Listener.Service)
 	if err != nil {
 		return fmt.Errorf("failed to get listener: %w", err)

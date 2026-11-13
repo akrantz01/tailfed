@@ -5,8 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
+	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"tailscale.com/tailcfg"
 )
 
@@ -16,6 +20,7 @@ type Config struct {
 	LogLevel string `koanf:"log-level"`
 
 	Listener  listenerConfig  `koanf:"listener"`
+	Signing   signingConfig   `koanf:"signing"`
 	Tailscale tailscaleConfig `koanf:"tailscale"`
 }
 
@@ -23,11 +28,22 @@ func (c *Config) Validate() error {
 	if err := c.Listener.Validate(); err != nil {
 		return fmt.Errorf("invalid listener configuration: %w", err)
 	}
+	if err := c.Signing.Validate(); err != nil {
+		return fmt.Errorf("invalid signing configuration: %w", err)
+	}
 	if err := c.Tailscale.Validate(); err != nil {
 		return fmt.Errorf("invalid tailscale configuration: %w", err)
 	}
 
 	return nil
+}
+
+func (c *Config) LoadAWSConfig(ctx context.Context) (aws.Config, error) {
+	if c.Signing.Backend.NeedsAws() {
+		return awsconfig.LoadDefaultConfig(ctx)
+	}
+
+	return aws.Config{}, nil
 }
 
 type listenerConfig struct {
@@ -53,6 +69,65 @@ func (c *listenerConfig) Validate() error {
 		}
 	}
 
+	return nil
+}
+
+// SigningBackend determines how tailfed should sign ID tokens
+type SigningBackend string
+
+const (
+	// SigningBackendMemory uses ephemeral in-memory keys
+	SigningBackendMemory SigningBackend = "memory"
+	// SigningBackendAwsKms uses an AWS KMS-based key
+	SigningBackendAwsKms SigningBackend = "aws-kms"
+)
+
+func (s SigningBackend) NeedsAws() bool {
+	return s == SigningBackendAwsKms
+}
+
+type signingConfig struct {
+	Backend  SigningBackend      `koanf:"backend"`
+	Validity time.Duration       `koanf:"validity"`
+	AwsKms   signingAwsKmsConfig `koanf:"aws-kms"`
+}
+
+func (c *signingConfig) Validate() error {
+	if c.Validity <= 0 {
+		return errors.New("token validity must be positive")
+	}
+
+	switch c.Backend {
+	case SigningBackendMemory:
+		return nil
+
+	case SigningBackendAwsKms:
+		return c.AwsKms.Validate()
+
+	default:
+		return fmt.Errorf("unknown signing backend %q (options: %s, %s)", c.Backend, SigningBackendAwsKms, SigningBackendMemory)
+	}
+}
+
+func (c *signingConfig) NewBackend(awsConfig aws.Config) (signing.Backend, error) {
+	switch c.Backend {
+	case SigningBackendMemory:
+		return signing.NewInMemory(nil)
+	case SigningBackendAwsKms:
+		return signing.NewKMS(nil, awsConfig, c.AwsKms.Key)
+	default:
+		panic("unreachable")
+	}
+}
+
+type signingAwsKmsConfig struct {
+	Key string `koanf:"key"`
+}
+
+func (c *signingAwsKmsConfig) Validate() error {
+	if len(c.Key) == 0 {
+		return errors.New("a KMS key ARN is required")
+	}
 	return nil
 }
 
@@ -111,11 +186,11 @@ func (c *tailscaleConfig) Validate() error {
 			return c.Federation.Validate()
 
 		default:
-			return fmt.Errorf("unknown authentication method '%s' (options: %s, %s, %s)", c.Authentication, TailscaleAuthMethodAuthKey, TailscaleAuthMethodOAuth, TailscaleAuthMethodFederation)
+			return fmt.Errorf("unknown authentication method %q (options: %s, %s, %s)", c.Authentication, TailscaleAuthMethodAuthKey, TailscaleAuthMethodOAuth, TailscaleAuthMethodFederation)
 		}
 
 	default:
-		return fmt.Errorf("unknown connection method '%s' (options: %s, %s)", c.Connection, TailscaleConnectionLocal, TailscaleConnectionInProcess)
+		return fmt.Errorf("unknown connection method %q (options: %s, %s)", c.Connection, TailscaleConnectionLocal, TailscaleConnectionInProcess)
 	}
 }
 
