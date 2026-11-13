@@ -74,7 +74,7 @@ func run(*cobra.Command, []string) error {
 		return fmt.Errorf("failed to connect to tailscale: %w", err)
 	}
 
-	srv := http.New(ts)
+	srv := http.New(nil, ts)
 	l, err := ts.Listen(context.Background(), cfg.Listener.Address, cfg.Listener.Service)
 	if err != nil {
 		return fmt.Errorf("failed to get listener: %w", err)

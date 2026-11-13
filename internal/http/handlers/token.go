@@ -3,19 +3,22 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/sirupsen/logrus"
 )
 
 type TokenHandler struct {
+	signer signing.Backend
 	ts     tailscale.Connection
 	logger logrus.FieldLogger
 }
 
 var _ http.Handler = (*TokenHandler)(nil)
 
-func NewTokenHandler(ts tailscale.Connection) *TokenHandler {
+func NewTokenHandler(signer signing.Backend, ts tailscale.Connection) *TokenHandler {
 	return &TokenHandler{
+		signer: signer,
 		ts:     ts,
 		logger: logrus.WithField("component", "http").WithField("http.handler", "token"),
 	}

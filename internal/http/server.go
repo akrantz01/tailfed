@@ -6,16 +6,17 @@ import (
 	"github.com/akrantz01/tailfed/internal/http/handlers"
 	"github.com/akrantz01/tailfed/internal/http/requestid"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 )
 
 // Create a new HTTP server
-func New(ts tailscale.Connection) *http.Server {
+func New(signer signing.Backend, ts tailscale.Connection) *http.Server {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", health)
 
-	mux.Handle("GET /token", handlers.NewTokenHandler(ts))
+	mux.Handle("GET /token", handlers.NewTokenHandler(signer, ts))
 
 	return &http.Server{
 		Handler: withMiddleware(mux, requestid.Middleware, logging.Middleware),
