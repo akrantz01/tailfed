@@ -117,34 +117,12 @@ func (c *signingAwsKmsConfig) Validate() error {
 	return nil
 }
 
-// TailscaleConnection determines how tailfed should connect to Tailscale
-type TailscaleConnection string
-
-const (
-	// TailscaleConnectionLocal uses an existing Tailscale daemon running on the host
-	TailscaleConnectionLocal TailscaleConnection = "local"
-	// TailscaleConnectionInProcess connects to Tailscale for the current process only
-	TailscaleConnectionInProcess TailscaleConnection = "in-process"
-)
-
-// TailscaleAuthMethod determines how tailfed should authenticate with Tailscale for in-process connections
-type TailscaleAuthMethod string
-
-const (
-	// TailscaleAuthMethodAuthKey uses a static authkey
-	TailscaleAuthMethodAuthKey TailscaleAuthMethod = "auth-key"
-	// TailscaleAuthMethodOAuth uses the OAuth flow for generating authkey(s)
-	TailscaleAuthMethodOAuth TailscaleAuthMethod = "oauth"
-	// TailscaleAuthMethodFederation uses workload identity federation for generating authkey(s)
-	TailscaleAuthMethodFederation TailscaleAuthMethod = "federation"
-)
-
 type tailscaleConfig struct {
-	Connection TailscaleConnection `koanf:"connection"`
+	Connection tailscale.ConnectionId `koanf:"connection"`
 
-	ControlPlaneUrl string              `koanf:"control-plane-url"`
-	Tags            []string            `koanf:"tags"`
-	Authentication  TailscaleAuthMethod `koanf:"authentication"`
+	ControlPlaneUrl string                         `koanf:"control-plane-url"`
+	Tags            []string                       `koanf:"tags"`
+	Authentication  tailscale.AuthenticationMethod `koanf:"authentication"`
 
 	AuthKey    string                    `koanf:"auth-key"`
 	OAuth      tailscaleOauthConfig      `koanf:"oauth"`
@@ -153,38 +131,38 @@ type tailscaleConfig struct {
 
 func (c *tailscaleConfig) Validate() error {
 	switch c.Connection {
-	case TailscaleConnectionLocal:
+	case tailscale.ConnectionLocal:
 		return nil
 
-	case TailscaleConnectionInProcess:
+	case tailscale.ConnectionInProcess:
 		switch c.Authentication {
-		case TailscaleAuthMethodAuthKey:
+		case tailscale.AuthenticationMethodKey:
 			if len(c.AuthKey) == 0 {
 				return errors.New("an authkey is required")
 			} else {
 				return nil
 			}
 
-		case TailscaleAuthMethodOAuth:
+		case tailscale.AuthenticationMethodOAuth:
 			return c.OAuth.Validate()
 
-		case TailscaleAuthMethodFederation:
+		case tailscale.AuthenticationMethodFederation:
 			return c.Federation.Validate()
 
 		default:
-			return fmt.Errorf("unknown authentication method %q (options: %s, %s, %s)", c.Authentication, TailscaleAuthMethodAuthKey, TailscaleAuthMethodOAuth, TailscaleAuthMethodFederation)
+			return fmt.Errorf("unknown authentication method %q (options: %s)", c.Authentication, tailscale.AuthenticationMethods)
 		}
 
 	default:
-		return fmt.Errorf("unknown connection method %q (options: %s, %s)", c.Connection, TailscaleConnectionLocal, TailscaleConnectionInProcess)
+		return fmt.Errorf("unknown connection method %q (options: %s)", c.Connection, tailscale.ConnectionIds)
 	}
 }
 
 func (c *tailscaleConfig) Connect(ctx context.Context) (tailscale.Connection, error) {
 	switch c.Connection {
-	case TailscaleConnectionLocal:
+	case tailscale.ConnectionLocal:
 		return tailscale.NewLocal(ctx)
-	case TailscaleConnectionInProcess:
+	case tailscale.ConnectionInProcess:
 		return tailscale.NewInProcess(ctx, "", c.ControlPlaneUrl, c.Tags, c.credentials())
 	default:
 		panic("unreachable")
@@ -193,11 +171,11 @@ func (c *tailscaleConfig) Connect(ctx context.Context) (tailscale.Connection, er
 
 func (c *tailscaleConfig) credentials() tailscale.CredentialProvider {
 	switch c.Authentication {
-	case TailscaleAuthMethodAuthKey:
+	case tailscale.AuthenticationMethodKey:
 		return tailscale.AuthKey(c.AuthKey)
-	case TailscaleAuthMethodOAuth:
+	case tailscale.AuthenticationMethodOAuth:
 		return tailscale.OAuth(c.OAuth.ClientId, c.OAuth.ClientSecret)
-	case TailscaleAuthMethodFederation:
+	case tailscale.AuthenticationMethodFederation:
 		return tailscale.WorkloadIdentityFederation(c.Federation.ClientId, c.Federation.IdToken, c.Federation.Audience)
 	default:
 		panic("unreachable")

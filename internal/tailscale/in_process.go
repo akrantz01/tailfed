@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
@@ -12,6 +13,20 @@ import (
 	"tailscale.com/tailcfg"
 	"tailscale.com/tsnet"
 )
+
+// AuthenticationMethod determines how tailfed should authenticate for in-process connections
+type AuthenticationMethod string
+
+const (
+	// AuthenticationMethodKey uses a static authkey
+	AuthenticationMethodKey AuthenticationMethod = "auth-key"
+	// AuthenticationMethodOAuth uses the OAuth flow for generating authkey(s)
+	AuthenticationMethodOAuth AuthenticationMethod = "oauth"
+	// AuthenticationMethodFederation uses workload identity federation for generating authkey(s)
+	AuthenticationMethodFederation AuthenticationMethod = "federation"
+)
+
+var AuthenticationMethods string = strings.Join([]string{string(AuthenticationMethodKey), string(AuthenticationMethodOAuth), string(AuthenticationMethodFederation)}, ", ")
 
 // InProcess uses tsnet to connect to Tailscale for the current process only
 type InProcess struct {

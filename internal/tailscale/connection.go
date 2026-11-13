@@ -3,10 +3,23 @@ package tailscale
 import (
 	"context"
 	"net"
+	"strings"
 
 	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/tailcfg"
 )
+
+// ConnectionId identifies a connection in the configuration
+type ConnectionId string
+
+const (
+	// ConnectionLocal uses an existing Tailscale daemon running on the host
+	ConnectionLocal ConnectionId = "local"
+	// ConnectionInProcess connects to Tailscale for the current process only
+	ConnectionInProcess ConnectionId = "in-process"
+)
+
+var ConnectionIds string = strings.Join([]string{string(ConnectionLocal), string(ConnectionInProcess)}, ", ")
 
 // Connection represents an active connection to Tailscale
 type Connection interface {
