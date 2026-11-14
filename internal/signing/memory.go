@@ -32,7 +32,7 @@ func NewInMemory() (Backend, error) {
 	id := uuid.Must(uuid.NewV7()).String()
 	logger.WithField("id", id).Debug("generated new RS256 private key")
 
-	signer, err := newKey(id, private, jose.RS256)
+	signer, err := newKey(id, private, RS256)
 	if err != nil {
 		return nil, err
 	}

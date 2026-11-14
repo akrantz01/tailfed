@@ -23,7 +23,7 @@ type awsKmsBackend struct {
 
 	id        string
 	arn       *string
-	algorithm jose.SignatureAlgorithm
+	algorithm Algorithm
 	client    *kms.Client
 	signer    jose.Signer
 }
@@ -110,20 +110,20 @@ type kmsKey struct {
 
 var _ jose.OpaqueSigner = (*kmsKey)(nil)
 
-func newKmsKey(logger logrus.FieldLogger, metadata *types.KeyMetadata, client *kms.Client) (*kmsKey, jose.SignatureAlgorithm, error) {
+func newKmsKey(logger logrus.FieldLogger, metadata *types.KeyMetadata, client *kms.Client) (*kmsKey, Algorithm, error) {
 	switch metadata.KeySpec {
 	case types.KeySpecRsa2048:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256, nil}, jose.RS256, nil
+		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256, nil}, RS256, nil
 	case types.KeySpecRsa3072:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha384, nil}, jose.RS384, nil
+		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha384, nil}, RS384, nil
 	case types.KeySpecRsa4096:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha512, nil}, jose.RS512, nil
+		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha512, nil}, RS512, nil
 	case types.KeySpecEccNistP256:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha256, transformEcdsaSignature(32)}, jose.ES256, nil
+		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha256, transformEcdsaSignature(32)}, ES256, nil
 	case types.KeySpecEccNistP384:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha384, transformEcdsaSignature(48)}, jose.ES384, nil
+		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha384, transformEcdsaSignature(48)}, ES384, nil
 	case types.KeySpecEccNistP521:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha512, transformEcdsaSignature(66)}, jose.ES512, nil
+		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha512, transformEcdsaSignature(66)}, ES512, nil
 	default:
 		return nil, "", fmt.Errorf("unsupported key type %q", metadata.KeySpec)
 	}
