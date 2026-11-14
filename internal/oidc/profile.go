@@ -11,31 +11,27 @@ import (
 
 // Profiles contains all the registered profiles
 type Profiles struct {
-	defaultId string
-	profiles  map[string]Profile
+	defaultProfile Profile
+	allProfiles    map[string]Profile
 }
 
 // NewProfiles creates a new profile directory
 func NewProfiles(defaultId string, profiles map[string]Profile) Profiles {
 	return Profiles{
-		defaultId: defaultId,
-		profiles:  profiles,
+		defaultProfile: profiles[defaultId],
+		allProfiles:    profiles,
 	}
 }
 
-// Get a profile by ID
-func (p *Profiles) Get(id string) *Profile {
-	if profile, ok := p.profiles[id]; ok {
+// GetOrDefault gets a profile by ID. If no ID is provided, the default is returned
+func (p *Profiles) GetOrDefault(id string) *Profile {
+	if len(id) == 0 {
+		return &p.defaultProfile
+	} else if profile, ok := p.allProfiles[id]; ok {
 		return &profile
 	} else {
 		return nil
 	}
-}
-
-// GetDefault returns the default profile
-func (p *Profiles) GetDefault() *Profile {
-	d := p.profiles[p.defaultId]
-	return &d
 }
 
 // Profile is a client-selectable configuration for a token

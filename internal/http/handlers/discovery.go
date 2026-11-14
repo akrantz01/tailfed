@@ -24,7 +24,7 @@ func NewDiscoveryHandler(profiles oidc.Profiles) *DiscoveryHandler {
 }
 
 func (d *DiscoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	profile := d.profileFor(r.PathValue("profile"))
+	profile := d.profiles.GetOrDefault(r.PathValue("profile"))
 	if profile == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -36,14 +36,6 @@ func (d *DiscoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	body, _ := json.Marshal(doc)
 	_, _ = w.Write(body)
-}
-
-func (d *DiscoveryHandler) profileFor(id string) *oidc.Profile {
-	if len(id) == 0 {
-		return d.profiles.GetDefault()
-	} else {
-		return d.profiles.Get(id)
-	}
 }
 
 func scheme(r *http.Request) string {
