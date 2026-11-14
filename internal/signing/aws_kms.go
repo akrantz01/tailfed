@@ -20,123 +20,167 @@ import (
 // awsKmsBackend signs tokens using a key stored in AWS KMS
 type awsKmsBackend struct {
 	logger logrus.FieldLogger
-
-	id        string
-	arn       *string
-	algorithm Algorithm
-	client    *kms.Client
-	signer    jose.Signer
+	keys   []kmsKeyMetadata
 }
 
 var _ Backend = (*awsKmsBackend)(nil)
 
 // NewAWSKMS creates a new AWS KMS-backed signer
-func NewAWSKMS(config aws.Config, alias string) (Backend, error) {
+func NewAWSKMS(config aws.Config, references []string) (Backend, error) {
 	logger := logrus.WithField("component", "signer").WithField("signer.backend", "aws-kms")
 
 	client := kms.NewFromConfig(config)
 
-	logger.WithField("key", alias).Debug("resolving KMS key...")
+	keys := []kmsKeyMetadata{}
+	for _, ref := range references {
+		key, err := resolveKmsKey(logger, client, ref)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve key %q: %w", ref, err)
+		}
+
+		keys = append(keys, key)
+	}
+
+	logger.WithField("signer.keys", len(keys)).Info("created new KMS signer")
+	return &awsKmsBackend{logger, keys}, nil
+}
+
+func (k *awsKmsBackend) Sign(claims any) (string, error) {
+	return jwt.Signed(k.keys[0].signer).Claims(claims).Serialize()
+}
+
+func (k *awsKmsBackend) PublicKey() (jose.JSONWebKey, error) {
+	return k.keys[0].public, nil
+}
+
+func resolveKmsKey(logger logrus.FieldLogger, client *kms.Client, alias string) (kmsKeyMetadata, error) {
+	logger = logger.WithField("signer.key", alias)
+
+	logger.Debug("resolving KMS key...")
 	details, err := client.DescribeKey(context.Background(), &kms.DescribeKeyInput{KeyId: aws.String(alias)})
 	if err != nil {
-		return nil, fmt.Errorf("failed to describe key: %w", err)
+		return kmsKeyMetadata{}, fmt.Errorf("failed to describe key: %w", err)
 	}
 	metadata := details.KeyMetadata
 
 	if !metadata.Enabled {
-		return nil, errors.New("key is not enabled")
+		return kmsKeyMetadata{}, errors.New("key is not enabled")
 	}
 	if metadata.KeyUsage != types.KeyUsageTypeSignVerify {
-		return nil, errors.New("key is not configured for sign/verify")
+		return kmsKeyMetadata{}, errors.New("key is not configured for sign/verify")
 	}
 
 	logger = logger.WithField("signer.key", *metadata.Arn)
 	logger.Debug("resolved and validated key")
 
-	key, algorithm, err := newKmsKey(logger, metadata, client)
+	public, err := getKmsPublicKey(logger, client, metadata.Arn)
 	if err != nil {
-		return nil, err
+		return kmsKeyMetadata{}, err
 	}
-	logger.Debug("determined signing algorithm for key")
+
+	key, algorithm, err := newKmsKey(logger, client, metadata)
+	if err != nil {
+		return kmsKeyMetadata{}, err
+	}
+	logger.WithField("signer.algorithm", algorithm).Debug("determined signing algorithm for key")
 
 	signer, err := newKey(*metadata.KeyId, key, algorithm)
 	if err != nil {
+		return kmsKeyMetadata{}, err
+	}
+
+	return kmsKeyMetadata{
+		signer: signer,
+		public: jose.JSONWebKey{
+			Use:       "sig",
+			KeyID:     *metadata.KeyId,
+			Key:       public,
+			Algorithm: string(toJose[algorithm]),
+		},
+	}, nil
+}
+
+func getKmsPublicKey(logger logrus.FieldLogger, client *kms.Client, arn *string) (crypto.PublicKey, error) {
+	logger.Debug("getting public key")
+	output, err := client.GetPublicKey(context.Background(), &kms.GetPublicKeyInput{KeyId: arn})
+	if err != nil {
 		return nil, err
 	}
 
-	logger.Info("created new KMS signer")
-	return &awsKmsBackend{logger, *metadata.KeyId, metadata.Arn, algorithm, client, signer}, nil
-}
-
-func (k *awsKmsBackend) Sign(claims any) (string, error) {
-	return jwt.Signed(k.signer).Claims(claims).Serialize()
-}
-
-func (k *awsKmsBackend) PublicKey() (jose.JSONWebKey, error) {
-	k.logger.Debug("getting public key")
-	output, err := k.client.GetPublicKey(context.Background(), &kms.GetPublicKeyInput{KeyId: k.arn})
-	if err != nil {
-		return jose.JSONWebKey{}, err
-	}
-
-	k.logger.Debug("parsing encoded public key")
+	logger.Debug("parsing encoded public key")
 	parsed, err := x509.ParsePKIXPublicKey(output.PublicKey)
 	if err != nil {
-		return jose.JSONWebKey{}, fmt.Errorf("failed to parse DER encoded public key: %w", err)
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %w", err)
 	}
 
 	public, ok := parsed.(crypto.PublicKey)
 	if !ok {
 		// this should never happen, but just in case
-		return jose.JSONWebKey{}, errors.New("unknown public key type")
+		return nil, errors.New("unknown public key type")
 	}
 
-	return jose.JSONWebKey{
-		Use:       "sig",
-		KeyID:     k.id,
-		Key:       public,
-		Algorithm: string(k.algorithm),
-	}, nil
+	return public, nil
+}
+
+type kmsKeyMetadata struct {
+	signer jose.Signer
+	public jose.JSONWebKey
 }
 
 type kmsKey struct {
 	logger logrus.FieldLogger
 	client *kms.Client
 
-	arn         *string
-	algorithm   types.SigningAlgorithmSpec
-	transformer func([]byte) ([]byte, error)
+	arn              *string
+	signingAlgorithm types.SigningAlgorithmSpec
+	joseAlgorithm    jose.SignatureAlgorithm
+	transformer      func([]byte) ([]byte, error)
 }
 
 var _ jose.OpaqueSigner = (*kmsKey)(nil)
 
-func newKmsKey(logger logrus.FieldLogger, metadata *types.KeyMetadata, client *kms.Client) (*kmsKey, Algorithm, error) {
-	switch metadata.KeySpec {
+func newKmsKey(logger logrus.FieldLogger, client *kms.Client, metadata *types.KeyMetadata) (*kmsKey, Algorithm, error) {
+	jwtAlgorithm, awsAlgorithm, transformer, err := kmsKeyAlgorithm(metadata.KeySpec)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return &kmsKey{
+		logger:           logger,
+		client:           client,
+		arn:              metadata.Arn,
+		signingAlgorithm: awsAlgorithm,
+		transformer:      transformer,
+		joseAlgorithm:    toJose[jwtAlgorithm],
+	}, jwtAlgorithm, nil
+
+}
+
+func kmsKeyAlgorithm(spec types.KeySpec) (Algorithm, types.SigningAlgorithmSpec, func([]byte) ([]byte, error), error) {
+	switch spec {
 	case types.KeySpecRsa2048:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256, nil}, RS256, nil
+		return RS256, types.SigningAlgorithmSpecRsassaPkcs1V15Sha256, nil, nil
 	case types.KeySpecRsa3072:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha384, nil}, RS384, nil
+		return RS384, types.SigningAlgorithmSpecRsassaPkcs1V15Sha384, nil, nil
 	case types.KeySpecRsa4096:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecRsassaPkcs1V15Sha512, nil}, RS512, nil
+		return RS512, types.SigningAlgorithmSpecRsassaPkcs1V15Sha512, nil, nil
 	case types.KeySpecEccNistP256:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha256, transformEcdsaSignature(32)}, ES256, nil
+		return ES256, types.SigningAlgorithmSpecEcdsaSha256, transformEcdsaSignature(32), nil
 	case types.KeySpecEccNistP384:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha384, transformEcdsaSignature(48)}, ES384, nil
+		return ES384, types.SigningAlgorithmSpecEcdsaSha384, transformEcdsaSignature(48), nil
 	case types.KeySpecEccNistP521:
-		return &kmsKey{logger, client, metadata.Arn, types.SigningAlgorithmSpecEcdsaSha512, transformEcdsaSignature(66)}, ES512, nil
+		return ES512, types.SigningAlgorithmSpecEcdsaSha512, transformEcdsaSignature(66), nil
 	default:
-		return nil, "", fmt.Errorf("unsupported key type %q", metadata.KeySpec)
+		return "", "", nil, fmt.Errorf("unsupported key type %q", spec)
 	}
 }
 
 func (k *kmsKey) Public() *jose.JSONWebKey {
-	// Intentionally left unimplemented
-	k.logger.Warn("unexpected call to kmsKey.Public, method is unimplemented")
 	return nil
 }
 
 func (k *kmsKey) Algs() []jose.SignatureAlgorithm {
-	return []jose.SignatureAlgorithm{jose.RS256, jose.RS384, jose.RS512, jose.ES256, jose.ES384, jose.ES512}
+	return []jose.SignatureAlgorithm{k.joseAlgorithm}
 }
 
 func (k *kmsKey) SignPayload(payload []byte, _ jose.SignatureAlgorithm) ([]byte, error) {
@@ -146,7 +190,7 @@ func (k *kmsKey) SignPayload(payload []byte, _ jose.SignatureAlgorithm) ([]byte,
 		KeyId:            k.arn,
 		Message:          payload,
 		MessageType:      types.MessageTypeRaw,
-		SigningAlgorithm: k.algorithm,
+		SigningAlgorithm: k.signingAlgorithm,
 	})
 	if err != nil {
 		return nil, err

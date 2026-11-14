@@ -40,9 +40,17 @@ signing:
   backend: memory
 
   aws-kms:
-    # The key ARN to use
-    # Default: ""
-    key: arn:aws:...
+    # The key references to use
+    #
+    # Can be either a
+    # - key ID: {uuid}
+    # - key ARN: arn:aws:kms:{region}:{account}:key/{uuid}
+    # - alias: alias/{name}
+    # - alias ARN: arn:aws:kms:{region}:{account}:alias/{name}
+    #
+    # Default: []
+    keys:
+      - arn:aws:...
 
   memory:
     # Generate a RSA 2048-bit key

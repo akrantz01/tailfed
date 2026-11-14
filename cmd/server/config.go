@@ -100,19 +100,19 @@ func (c *signingConfig) NewBackend(awsConfig aws.Config) (signing.Backend, error
 	case signing.BackendMemory:
 		return signing.NewInMemory(c.Memory.Algorithms())
 	case signing.BackendAWSKMS:
-		return signing.NewAWSKMS(awsConfig, c.AwsKms.Key)
+		return signing.NewAWSKMS(awsConfig, c.AwsKms.Keys)
 	default:
 		panic("unreachable")
 	}
 }
 
 type signingAwsKmsConfig struct {
-	Key string `koanf:"key" help:"The AWS KMS key ARN to use"`
+	Keys []string `koanf:"keys" help:"The AWS KMS key ARN to use"`
 }
 
 func (c *signingAwsKmsConfig) Validate() error {
-	if len(c.Key) == 0 {
-		return errors.New("a KMS key ARN is required")
+	if len(c.Keys) == 0 {
+		return errors.New("at least one KMS key ARN/alias is required")
 	}
 	return nil
 }
