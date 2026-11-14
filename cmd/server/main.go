@@ -30,7 +30,6 @@ func main() {
 		PreRunE:       preRun,
 		RunE:          run,
 	}
-	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.Flags().StringP("config", "c", "tailfed-server.yml", "The path to the configuration file")
 	cmd.Flags().Bool("json", false, "Format all output as JSON")
@@ -68,8 +67,6 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	if err := logging.Initialize(cfg.LogLevel, json); err != nil {
 		return fmt.Errorf("failed to initialize logging: %w", err)
 	}
-
-	fmt.Printf("%+v\n", cfg)
 
 	return nil
 }
