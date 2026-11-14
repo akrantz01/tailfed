@@ -11,6 +11,7 @@ import (
 
 // Profiles contains all the registered profiles
 type Profiles struct {
+	defaultId      string
 	defaultProfile Profile
 	allProfiles    map[string]Profile
 }
@@ -18,19 +19,20 @@ type Profiles struct {
 // NewProfiles creates a new profile directory
 func NewProfiles(defaultId string, profiles map[string]Profile) Profiles {
 	return Profiles{
+		defaultId:      defaultId,
 		defaultProfile: profiles[defaultId],
 		allProfiles:    profiles,
 	}
 }
 
 // GetOrDefault gets a profile by ID. If no ID is provided, the default is returned
-func (p *Profiles) GetOrDefault(id string) *Profile {
+func (p *Profiles) GetOrDefault(id string) (string, *Profile) {
 	if len(id) == 0 {
-		return &p.defaultProfile
+		return p.defaultId, &p.defaultProfile
 	} else if profile, ok := p.allProfiles[id]; ok {
-		return &profile
+		return id, &profile
 	} else {
-		return nil
+		return "", nil
 	}
 }
 

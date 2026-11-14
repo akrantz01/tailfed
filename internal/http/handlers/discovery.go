@@ -24,11 +24,12 @@ func NewDiscoveryHandler(profiles oidc.Profiles) *DiscoveryHandler {
 }
 
 func (d *DiscoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	profile := d.profiles.GetOrDefault(r.PathValue("profile"))
+	profileId, profile := d.profiles.GetOrDefault(r.PathValue("profile"))
 	if profile == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	d.logger.WithField("profile.id", profileId).Debug("selected profile")
 
 	issuer := fmt.Sprintf("%s://%s", scheme(r), r.Host)
 	doc := oidc.NewDiscoveryDocument(issuer, profile.AcceptedAlgorithms)
