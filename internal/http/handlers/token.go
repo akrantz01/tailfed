@@ -52,8 +52,11 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	claims, err := profile.GenerateClaims(issuerFor(r), node)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(err.Error()))
+		w.WriteHeader(http.StatusInternalServerError)
+		t.logger.
+			WithError(err).
+			WithField("profile.id", profileId).
+			Error("failed to generate claims")
 		return
 	}
 
