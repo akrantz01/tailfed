@@ -18,14 +18,16 @@ type Choicer interface {
 
 // BindFlags create command line flags for each configuration option
 //
-// Uses the `short` and `help` struct tags
-func BindFlags(fs *pflag.FlagSet, cfg any) {
-	v := reflect.ValueOf(cfg)
-	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
-		panic("configloader.Bind: cfg must be a pointer to a struct")
+// Uses the `short` and `help` struct tags. Flag defaults are sourced from the types' Defaulter
+// implementations.
+func BindFlags[T any](fs *pflag.FlagSet) {
+	v := reflect.ValueOf(new(T)).Elem()
+	if v.Kind() != reflect.Struct {
+		panic("configloader.BindFlags: T must be a struct")
 	}
 
-	bindStruct(fs, "", v.Elem())
+	applyDefaults(v)
+	bindStruct(fs, "", v)
 }
 
 func bindStruct(fs *pflag.FlagSet, prefix string, v reflect.Value) {

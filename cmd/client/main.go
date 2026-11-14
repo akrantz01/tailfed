@@ -43,11 +43,7 @@ Tailscale network to prove a host's identity, allowing it to retrieve temporary 
 	cmd.Flags().StringP("config", "c", "tailfed.yml", "The path to the configuration file")
 	cmd.Flags().Bool("json", false, "Format all output as JSON")
 	version.AddFlag(cmd.Flags())
-	configloader.BindFlags(cmd.Flags(), &Config{
-		LogLevel: "info",
-		PidFile:  "/run/tailfed/pid",
-		Path:     "/run/tailfed/token",
-	})
+	configloader.BindFlags[Config](cmd.Flags())
 
 	if err := cmd.Execute(); err != nil {
 		logrus.Error(err)

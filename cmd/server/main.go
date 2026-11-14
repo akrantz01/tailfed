@@ -11,11 +11,9 @@ import (
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/http"
 	"github.com/akrantz01/tailfed/internal/logging"
-	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"tailscale.com/ipn"
 )
 
 func main() {
@@ -32,27 +30,7 @@ func main() {
 	cmd.Flags().StringP("config", "c", "tailfed-server.yml", "The path to the configuration file")
 	cmd.Flags().Bool("json", false, "Format all output as JSON")
 	version.AddFlag(cmd.Flags())
-	configloader.BindFlags(cmd.Flags(), &Config{
-		LogLevel: "info",
-		Listener: listenerConfig{
-			Address: "127.0.0.1:8000",
-		},
-		Signing: signingConfig{
-			Backend: "memory",
-			Memory: signingMemoryConfig{
-				RS256: true,
-				ES256: true,
-			},
-		},
-		Tailscale: tailscaleConfig{
-			Connection:      tailscale.ConnectionLocal,
-			ControlPlaneUrl: ipn.DefaultControlURL,
-			Authentication:  tailscale.AuthenticationMethodKey,
-		},
-		Token: tokenConfig{
-			Validity: 1 * time.Hour,
-		},
-	})
+	configloader.BindFlags[Config](cmd.Flags())
 
 	if err := cmd.Execute(); err != nil {
 		logrus.Error(err)

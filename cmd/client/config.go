@@ -8,3 +8,9 @@ type Config struct {
 	Path     string `koanf:"path" short:"p" help:"The path to write the generated ID token to"`
 	Url      string `koanf:"url" short:"u" help:"The URL of the Tailfed API"`
 }
+
+func (c *Config) SetDefaults() {
+	c.LogLevel = "info"
+	c.PidFile = "/run/tailfed/pid"
+	c.Path = "/run/tailfed/token"
+}

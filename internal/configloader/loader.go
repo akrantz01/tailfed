@@ -3,8 +3,12 @@ package configloader
 import (
 	"fmt"
 	"os"
+	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/parsers/dotenv"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
@@ -57,6 +61,10 @@ func Load(opts ...Option) (*RawConfig, error) {
 
 	if options.flags != nil {
 		if err := k.Load(posflag.ProviderWithFlag(options.flags, ".", k, func(f *pflag.Flag) (string, any) {
+			if !f.Changed {
+				return "", nil
+			}
+
 			// Only plain strings can reference secrets
 			if f.Value.Type() == "string" {
 				return secrets.Load(f.Name, f.Value.String())
@@ -89,7 +97,26 @@ func LoadInto[T any](dest *T, opts ...Option) error {
 
 // Structure populates a struct with configuration values
 func (r *RawConfig) Structure(dest any) error {
-	return r.inner.Unmarshal("", dest)
+	v := reflect.ValueOf(dest)
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("destination must be a pointer to a struct, got %T", dest)
+	}
+
+	v.Elem().SetZero()
+	applyDefaults(v.Elem())
+
+	return r.inner.UnmarshalWithConf("", dest, koanf.UnmarshalConf{
+		DecoderConfig: &mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				defaultsHook,
+				splitStringHook,
+				durationDaysHook,
+				mapstructure.StringToTimeDurationHookFunc(),
+				mapstructure.TextUnmarshallerHookFunc(),
+			),
+			WeaklyTypedInput: true,
+		},
+	})
 }
 
 func newEnvVarCleaner(prefix string, secrets *secretLoader) func(string, string) (string, any) {
@@ -103,4 +130,33 @@ func newEnvVarCleaner(prefix string, secrets *secretLoader) func(string, string)
 		key = keyCleaner(key)
 		return secrets.Load(key, value)
 	}
+}
+
+// splitStringHook splits comma-separated strings into slices of any string kind
+func splitStringHook(from, to reflect.Type, data any) (any, error) {
+	if from.Kind() != reflect.String || to.Kind() != reflect.Slice || to.Elem().Kind() != reflect.String {
+		return data, nil
+	}
+
+	raw := reflect.ValueOf(data).String()
+	if raw == "" {
+		return []string{}, nil
+	}
+
+	return strings.Split(raw, ","), nil
+}
+
+var daysPattern = regexp.MustCompile(`(\d+(?:\.\d+)?)d`)
+
+// durationDaysHook allows durations to be specified in days (e.g. "7d")
+func durationDaysHook(from, to reflect.Type, data any) (any, error) {
+	if from.Kind() != reflect.String || to != durationType {
+		return data, nil
+	}
+
+	raw := reflect.ValueOf(data).String()
+	return daysPattern.ReplaceAllStringFunc(raw, func(match string) string {
+		days, _ := strconv.ParseFloat(strings.TrimSuffix(match, "d"), 64)
+		return strconv.FormatFloat(days*24, 'f', -1, 64) + "h"
+	}), nil
 }

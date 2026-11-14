@@ -11,6 +11,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"tailscale.com/ipn"
 	"tailscale.com/tailcfg"
 )
 
@@ -23,6 +24,10 @@ type Config struct {
 	Signing   signingConfig   `koanf:"signing"`
 	Tailscale tailscaleConfig `koanf:"tailscale"`
 	Token     tokenConfig     `koanf:"token"`
+}
+
+func (c *Config) SetDefaults() {
+	c.LogLevel = "info"
 }
 
 func (c *Config) Validate() error {
@@ -55,6 +60,10 @@ type listenerConfig struct {
 	Service tailcfg.ServiceName `koanf:"service" help:"The Tailscale service to advertise"`
 }
 
+func (c *listenerConfig) SetDefaults() {
+	c.Address = "127.0.0.1:8000"
+}
+
 func (c *listenerConfig) Validate() error {
 	hasAddress := len(c.Address) > 0
 	hasService := len(c.Service) > 0
@@ -80,6 +89,12 @@ type signingConfig struct {
 	Backend signing.BackendId   `koanf:"backend" help:"How to sign ID tokens"`
 	AwsKms  signingAwsKmsConfig `koanf:"aws-kms"`
 	Memory  signingMemoryConfig `koanf:"memory"`
+}
+
+func (c *signingConfig) SetDefaults() {
+	c.Backend = "memory"
+	c.Memory.RS256 = true
+	c.Memory.ES256 = true
 }
 
 func (c *signingConfig) Validate() error {
@@ -155,6 +170,12 @@ type tailscaleConfig struct {
 	AuthKey    string                    `koanf:"auth-key" help:"The auth key used to join the tailnet (in-process only)"`
 	OAuth      tailscaleOauthConfig      `koanf:"oauth"`
 	Federation tailscaleFederationConfig `koanf:"federation"`
+}
+
+func (c *tailscaleConfig) SetDefaults() {
+	c.Connection = tailscale.ConnectionLocal
+	c.ControlPlaneUrl = ipn.DefaultControlURL
+	c.Authentication = tailscale.AuthenticationMethodKey
 }
 
 func (c *tailscaleConfig) Validate() error {
