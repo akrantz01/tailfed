@@ -58,6 +58,7 @@ func NewInProcess(ctx context.Context, dir string, controlUrl string, tags []str
 	ts := &tsnet.Server{
 		Dir:           dir,
 		Hostname:      hostname,
+		ControlURL:    controlUrl,
 		UserLogf:      logger.Infof,
 		Logf:          logger.Tracef,
 		AdvertiseTags: tags,
