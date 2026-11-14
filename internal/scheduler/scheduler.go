@@ -10,12 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// MinInterval is the shortest delay allowed between successful runs
-	MinInterval = 30 * time.Second
-	// InitialMaxBackoff caps the delay between retries before the job has succeeded for the first time
-	InitialMaxBackoff = 5 * time.Minute
-)
+// InitialMaxBackoff caps the delay between retries before the job has succeeded for the first time
+const InitialMaxBackoff = 5 * time.Minute
 
 // Schedule describes when a job should next run following a success
 type Schedule struct {
@@ -119,7 +115,7 @@ func (s *Scheduler) run() {
 }
 
 func (s *Scheduler) success(schedule Schedule) time.Duration {
-	delay := max(schedule.Next.Sub(s.clock.Now()), MinInterval)
+	delay := schedule.Next.Sub(s.clock.Now())
 	s.deadline = schedule.Max
 
 	s.backoff.MaxInterval = delay / 2
