@@ -45,12 +45,27 @@ func NewAWSKMS(config aws.Config, references []string) (Backend, error) {
 	return &awsKmsBackend{logger, keys}, nil
 }
 
-func (k *awsKmsBackend) Sign(claims any) (string, error) {
-	return jwt.Signed(k.keys[0].signer).Claims(claims).Serialize()
+func (k *awsKmsBackend) Sign(algorithm Algorithm, claims any) (string, error) {
+	for _, key := range k.keys {
+		if key.algorithm == algorithm {
+			return jwt.Signed(key.signer).Claims(claims).Serialize()
+		}
+	}
+	return "", fmt.Errorf("unsupported signing algorithm %q", algorithm)
 }
 
-func (k *awsKmsBackend) PublicKey() (jose.JSONWebKey, error) {
-	return k.keys[0].public, nil
+func (k *awsKmsBackend) PublicKeys() []jose.JSONWebKey {
+	publicKeys := make([]jose.JSONWebKey, 0, len(k.keys))
+	for _, key := range k.keys {
+		publicKeys = append(publicKeys, key.public)
+	}
+	return publicKeys
+}
+
+type kmsKeyMetadata struct {
+	algorithm Algorithm
+	signer    jose.Signer
+	public    jose.JSONWebKey
 }
 
 func resolveKmsKey(logger logrus.FieldLogger, client *kms.Client, alias string) (kmsKeyMetadata, error) {
@@ -90,7 +105,8 @@ func resolveKmsKey(logger logrus.FieldLogger, client *kms.Client, alias string) 
 	}
 
 	return kmsKeyMetadata{
-		signer: signer,
+		algorithm: algorithm,
+		signer:    signer,
 		public: jose.JSONWebKey{
 			Use:       "sig",
 			KeyID:     *metadata.KeyId,
@@ -120,11 +136,6 @@ func getKmsPublicKey(logger logrus.FieldLogger, client *kms.Client, arn *string)
 	}
 
 	return public, nil
-}
-
-type kmsKeyMetadata struct {
-	signer jose.Signer
-	public jose.JSONWebKey
 }
 
 type kmsKey struct {

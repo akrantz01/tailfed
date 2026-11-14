@@ -59,10 +59,10 @@ func (a Algorithm) Choices() []string {
 
 // Backend provides a mechanism for generating signed JWTs
 type Backend interface {
-	// PublicKey returns details about the public key
-	PublicKey() (jose.JSONWebKey, error)
+	// PublicKeys returns details about the available public keys
+	PublicKeys() []jose.JSONWebKey
 	// Sign generates a signed JWT with the provided claims
-	Sign(claims any) (string, error)
+	Sign(algorithm Algorithm, claims any) (string, error)
 }
 
 // newKey creates a new [jose.Signer] for generating new JWTs with an embedded key ID in the header

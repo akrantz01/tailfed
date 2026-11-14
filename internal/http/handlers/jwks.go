@@ -24,16 +24,9 @@ func NewJwksHandler(signer signing.Backend) *JwksHandler {
 }
 
 func (j *JwksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	key, err := j.signer.PublicKey()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		j.logger.WithError(err).Error("failed to get public key")
-		return
-	}
-
 	w.WriteHeader(http.StatusOK)
 	body, _ := json.Marshal(jose.JSONWebKeySet{
-		Keys: []jose.JSONWebKey{key},
+		Keys: j.signer.PublicKeys(),
 	})
 	_, _ = w.Write(body)
 }

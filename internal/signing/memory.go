@@ -43,17 +43,27 @@ func NewInMemory(algorithms map[Algorithm]bool) (Backend, error) {
 	return &inMemory{keys}, nil
 }
 
-func (m *inMemory) Sign(claims any) (string, error) {
-	return jwt.Signed(m.keys[0].signer).Claims(claims).Serialize()
+func (m *inMemory) Sign(algorithm Algorithm, claims any) (string, error) {
+	for _, key := range m.keys {
+		if key.algorithm == algorithm {
+			return jwt.Signed(key.signer).Claims(claims).Serialize()
+		}
+	}
+	return "", fmt.Errorf("unsupported signing algorithm %q", algorithm)
 }
 
-func (m *inMemory) PublicKey() (jose.JSONWebKey, error) {
-	return m.keys[0].public, nil
+func (m *inMemory) PublicKeys() []jose.JSONWebKey {
+	publicKeys := make([]jose.JSONWebKey, 0, len(m.keys))
+	for _, key := range m.keys {
+		publicKeys = append(publicKeys, key.public)
+	}
+	return publicKeys
 }
 
 type memoryKey struct {
-	public jose.JSONWebKey
-	signer jose.Signer
+	algorithm Algorithm
+	public    jose.JSONWebKey
+	signer    jose.Signer
 }
 
 func generateKey(algorithm Algorithm) (memoryKey, error) {
@@ -93,13 +103,14 @@ func toMemoryKey[Priv, Pub any](algorithm Algorithm, private Priv, err error, ge
 	}
 
 	return memoryKey{
+		algorithm: algorithm,
+		signer:    signer,
 		public: jose.JSONWebKey{
 			Use:       "sig",
 			KeyID:     id,
 			Key:       getPublicKey(private),
 			Algorithm: string(toJose[algorithm]),
 		},
-		signer: signer,
 	}, nil
 }
 
