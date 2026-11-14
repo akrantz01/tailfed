@@ -17,7 +17,7 @@ func New(profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection
 
 	mux.HandleFunc("GET /health", health)
 
-	mux.Handle("GET /token", handlers.NewTokenHandler(signer, ts))
+	mux.Handle("GET /token", handlers.NewTokenHandler(profiles, signer, ts))
 
 	discovery := handlers.NewDiscoveryHandler(profiles)
 	mux.Handle("GET /.well-known/jwks.json", handlers.NewJwksHandler(signer))

@@ -3,24 +3,27 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/sirupsen/logrus"
 )
 
 type TokenHandler struct {
-	signer signing.Backend
-	ts     tailscale.Connection
-	logger logrus.FieldLogger
+	profiles oidc.Profiles
+	signer   signing.Backend
+	ts       tailscale.Connection
+	logger   logrus.FieldLogger
 }
 
 var _ http.Handler = (*TokenHandler)(nil)
 
-func NewTokenHandler(signer signing.Backend, ts tailscale.Connection) *TokenHandler {
+func NewTokenHandler(profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *TokenHandler {
 	return &TokenHandler{
-		signer: signer,
-		ts:     ts,
-		logger: logrus.WithField("component", "http").WithField("http.handler", "token"),
+		profiles: profiles,
+		signer:   signer,
+		ts:       ts,
+		logger:   logrus.WithField("component", "http").WithField("http.handler", "token"),
 	}
 }
 
@@ -38,9 +41,13 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t.logger.
-		WithField("node", node).
-		Infof("found node for %s", r.RemoteAddr)
+	profileId, profile := t.profiles.GetOrDefault(r.URL.Query().Get("profile"))
+	if profile == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("unknown profile"))
+		return
+	}
+	t.logger.WithField("profile.id", profileId).Debug("selected profile")
 
 	w.WriteHeader(http.StatusOK)
 }
