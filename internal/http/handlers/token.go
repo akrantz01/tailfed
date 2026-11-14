@@ -3,12 +3,10 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
-	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,13 +50,11 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	t.logger.WithField("profile.id", profileId).Debug("selected profile")
 
-	now := time.Now()
-	claims := jwt.Claims{
-		Issuer:   issuerFor(r),
-		Subject:  "",
-		Audience: []string{profile.Audience},
-		IssuedAt: jwt.NewNumericDate(now),
-		Expiry:   jwt.NewNumericDate(now.Add(profile.Validity)),
+	claims, err := profile.GenerateClaims(issuerFor(r), node)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(err.Error()))
+		return
 	}
 
 	token, err := t.signer.Sign(profile.AcceptedAlgorithms, claims)
