@@ -79,6 +79,7 @@ func (c *listenerConfig) Validate() error {
 type signingConfig struct {
 	Backend signing.BackendId   `koanf:"backend" help:"How to sign ID tokens"`
 	AwsKms  signingAwsKmsConfig `koanf:"aws-kms"`
+	Memory  signingMemoryConfig `koanf:"memory"`
 }
 
 func (c *signingConfig) Validate() error {
@@ -114,6 +115,26 @@ func (c *signingAwsKmsConfig) Validate() error {
 		return errors.New("a KMS key ARN is required")
 	}
 	return nil
+}
+
+type signingMemoryConfig struct {
+	RS256 bool `koanf:"rs256" help:"Generate a RSA 2048-bit key"`
+	RS384 bool `koanf:"rs384" help:"Generate a RSA 3072-bit key"`
+	RS512 bool `koanf:"rs512" help:"Generate a RSA 4096-bit key"`
+	ES256 bool `koanf:"es256" help:"Generate an ECDSA curve P-256 key"`
+	ES384 bool `koanf:"es384" help:"Generate an ECDSA curve P-384 key"`
+	ES512 bool `koanf:"es512" help:"Generate an ECDSA curve P-521 key"`
+}
+
+func (c *signingMemoryConfig) Algorithms() map[signing.Algorithm]bool {
+	return map[signing.Algorithm]bool{
+		signing.RS256: c.RS256,
+		signing.RS384: c.RS384,
+		signing.RS512: c.RS512,
+		signing.ES256: c.ES256,
+		signing.ES384: c.ES384,
+		signing.ES512: c.ES512,
+	}
 }
 
 type tailscaleConfig struct {

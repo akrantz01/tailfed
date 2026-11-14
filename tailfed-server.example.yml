@@ -44,6 +44,26 @@ signing:
     # Default: ""
     key: arn:aws:...
 
+  memory:
+    # Generate a RSA 2048-bit key
+    # Default: true
+    rs256: true
+    # Generate a RSA 3072-bit key
+    # Default: false
+    rs384: false
+    # Generate a RSA 4096-bit key
+    # Default: false
+    rs512: false
+    # Generate an ECDSA curve P-256 key
+    # Default: true
+    es256: true
+    # Generate an ECDSA curve P-384 key
+    # Default: false
+    es384: false
+    # Generate an ECDSA curve P-521 key
+    # Default: false
+    es512: false
+
 # Tailscale connection details
 tailscale:
   # How to connect to Tailscale

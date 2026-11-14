@@ -39,6 +39,10 @@ func main() {
 		},
 		Signing: signingConfig{
 			Backend: "memory",
+			Memory: signingMemoryConfig{
+				RS256: true,
+				ES256: true,
+			},
 		},
 		Tailscale: tailscaleConfig{
 			Connection:      tailscale.ConnectionLocal,
