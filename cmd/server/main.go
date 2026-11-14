@@ -13,9 +13,13 @@ import (
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/version"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var awsConfig aws.Config
 
 func main() {
 	cmd := &cobra.Command{
@@ -41,12 +45,18 @@ func main() {
 }
 
 func preRun(cmd *cobra.Command, _ []string) error {
+	awsConfig, err := awsconfig.LoadDefaultConfig(cmd.Context())
+	if err != nil {
+		logrus.WithError(err).Error("failed to load aws config")
+	}
+
 	flags := cmd.Flags()
 	path, _ := flags.GetString("config")
 	if err := configloader.LoadInto(&cfg,
 		configloader.WithFlags(flags),
 		configloader.WithEnvPrefix("TAILFED_SERVER_"),
 		configloader.IncludeConfigFile(path),
+		configloader.WithSecrets(awsConfig),
 	); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -67,11 +77,6 @@ func preRun(cmd *cobra.Command, _ []string) error {
 func run(cmd *cobra.Command, _ []string) error {
 	if version.Display(cmd) {
 		return nil
-	}
-
-	awsConfig, err := cfg.LoadAWSConfig(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
 	signer, err := cfg.Signing.NewBackend(awsConfig)

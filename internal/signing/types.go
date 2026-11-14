@@ -22,11 +22,6 @@ func (b BackendId) Choices() []string {
 	return []string{string(BackendMemory), string(BackendAWSKMS)}
 }
 
-// NeedsAWS returns true when the backend needs an AWS config
-func (b BackendId) NeedsAWS() bool {
-	return b == BackendAWSKMS
-}
-
 var BackendIds string = strings.Join(BackendMemory.Choices(), ", ")
 
 // Algorithm is an algorithm that can be used for signing tokens

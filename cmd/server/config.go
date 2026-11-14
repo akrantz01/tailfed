@@ -11,7 +11,6 @@ import (
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"tailscale.com/ipn"
 	"tailscale.com/tailcfg"
 )
@@ -46,14 +45,6 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
-}
-
-func (c *Config) LoadAWSConfig(ctx context.Context) (aws.Config, error) {
-	if c.Signing.Backend.NeedsAWS() {
-		return awsconfig.LoadDefaultConfig(ctx)
-	}
-
-	return aws.Config{}, nil
 }
 
 type listenerConfig struct {
