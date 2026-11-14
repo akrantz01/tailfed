@@ -18,6 +18,7 @@ func New(signer signing.Backend, ts tailscale.Connection) *http.Server {
 
 	mux.Handle("GET /token", handlers.NewTokenHandler(signer, ts))
 
+	mux.Handle("GET /.well-known/jwks.json", handlers.NewJwksHandler(signer))
 	mux.Handle("GET /.well-known/openid-configuration", handlers.NewDiscoveryHandler())
 
 	return &http.Server{
