@@ -38,13 +38,15 @@ func main() {
 			Address: "127.0.0.1:8000",
 		},
 		Signing: signingConfig{
-			Backend:  "memory",
-			Validity: 1 * time.Hour,
+			Backend: "memory",
 		},
 		Tailscale: tailscaleConfig{
 			Connection:      tailscale.ConnectionLocal,
 			ControlPlaneUrl: ipn.DefaultControlURL,
 			Authentication:  tailscale.AuthenticationMethodKey,
+		},
+		Token: tokenConfig{
+			Validity: 1 * time.Hour,
 		},
 	})
 

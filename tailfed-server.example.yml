@@ -24,13 +24,13 @@ listener:
   service: svc:tailfed
 
 # TODO: template based on audience
-
-# How to sign ID tokens
-signing:
+token:
   # How long generated token should be valid for
   # Default: "1h"
   validity: 1h
 
+# How to sign ID tokens
+signing:
   # Which signing backend to use
   #
   # Choices:

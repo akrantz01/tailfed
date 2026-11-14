@@ -22,6 +22,7 @@ type Config struct {
 	Listener  listenerConfig  `koanf:"listener"`
 	Signing   signingConfig   `koanf:"signing"`
 	Tailscale tailscaleConfig `koanf:"tailscale"`
+	Token     tokenConfig     `koanf:"token"`
 }
 
 func (c *Config) Validate() error {
@@ -33,6 +34,9 @@ func (c *Config) Validate() error {
 	}
 	if err := c.Tailscale.Validate(); err != nil {
 		return fmt.Errorf("invalid tailscale configuration: %w", err)
+	}
+	if err := c.Token.Validate(); err != nil {
+		return fmt.Errorf("invalid token configuration: %w", err)
 	}
 
 	return nil
@@ -73,16 +77,11 @@ func (c *listenerConfig) Validate() error {
 }
 
 type signingConfig struct {
-	Backend  signing.BackendId   `koanf:"backend" help:"How to sign ID tokens"`
-	Validity time.Duration       `koanf:"validity" help:"How long generated tokens should be valid for"`
-	AwsKms   signingAwsKmsConfig `koanf:"aws-kms"`
+	Backend signing.BackendId   `koanf:"backend" help:"How to sign ID tokens"`
+	AwsKms  signingAwsKmsConfig `koanf:"aws-kms"`
 }
 
 func (c *signingConfig) Validate() error {
-	if c.Validity <= 0 {
-		return errors.New("token validity must be positive")
-	}
-
 	switch c.Backend {
 	case signing.BackendMemory:
 		return nil
@@ -213,4 +212,16 @@ func (c *tailscaleFederationConfig) Validate() error {
 	default:
 		return nil
 	}
+}
+
+type tokenConfig struct {
+	Validity time.Duration `koanf:"validity" help:"How long generated tokens should be valid for"`
+}
+
+func (c *tokenConfig) Validate() error {
+	if c.Validity <= 0 {
+		return errors.New("token validity must be positive")
+	}
+
+	return nil
 }
