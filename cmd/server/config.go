@@ -98,7 +98,7 @@ func (c *signingConfig) Validate() error {
 func (c *signingConfig) NewBackend(awsConfig aws.Config) (signing.Backend, error) {
 	switch c.Backend {
 	case signing.BackendMemory:
-		return signing.NewInMemory()
+		return signing.NewInMemory(c.Memory.Algorithms())
 	case signing.BackendAWSKMS:
 		return signing.NewAWSKMS(awsConfig, c.AwsKms.Key)
 	default:
