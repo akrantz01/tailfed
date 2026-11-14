@@ -1,23 +1,21 @@
 package scheduler
 
-import "time"
-
-type retryError struct {
-	after time.Duration
-	err   error
+type persistentError struct {
+	err error
 }
 
-var _ error = (*retryError)(nil)
+var _ error = (*persistentError)(nil)
 
-// Retry a job sooner than the schedule frequency
-func Retry(after time.Duration, err error) error {
-	return &retryError{after, err}
+// Persistent marks an error as unlikely to resolve itself quickly. Instead of backing off exponentially, the job will
+// be retried at the maximum backoff interval.
+func Persistent(err error) error {
+	return &persistentError{err}
 }
 
-func (r *retryError) Error() string {
-	return r.err.Error()
+func (p *persistentError) Error() string {
+	return p.err.Error()
 }
 
-func (r *retryError) Unwrap() error {
-	return r.err
+func (p *persistentError) Unwrap() error {
+	return p.err
 }

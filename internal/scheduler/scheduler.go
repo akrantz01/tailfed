@@ -5,48 +5,66 @@ import (
 	"errors"
 	"time"
 
+	"github.com/cenkalti/backoff/v5"
 	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
 )
 
-type JobFn func(ctx context.Context) error
+const (
+	// MinInterval is the shortest delay allowed between successful runs
+	MinInterval = 30 * time.Second
+	// InitialMaxBackoff caps the delay between retries before the job has succeeded for the first time
+	InitialMaxBackoff = 5 * time.Minute
+)
+
+// Schedule describes when a job should next run following a success
+type Schedule struct {
+	Next time.Time
+	Max  time.Time
+}
+
+type JobFn func(ctx context.Context) (Schedule, error)
 
 type Scheduler struct {
 	logger *logrus.Entry
 
-	clock clockwork.Clock
-	loop  clockwork.Ticker
-	retry clockwork.Timer
+	clock   clockwork.Clock
+	timer   clockwork.Timer
+	backoff *backoff.ExponentialBackOff
+
+	deadline time.Time
 
 	immediate chan struct{}
 
-	shutdownCtx      context.Context
-	shutdownFn       context.CancelFunc
-	shutdownComplete chan struct{}
+	ctx    context.Context
+	cancel context.CancelFunc
+	done   chan struct{}
 
-	jobCtx context.Context
-	job    JobFn
+	job JobFn
 }
 
-func NewScheduler(ctx context.Context, frequency time.Duration, job JobFn) *Scheduler {
+// NewScheduler creates a scheduler which runs the job immediately once started
+func NewScheduler(ctx context.Context, job JobFn) *Scheduler {
 	clock := clockwork.FromContext(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 
-	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
+	b := backoff.NewExponentialBackOff()
+	b.MaxInterval = InitialMaxBackoff
+	b.Reset()
 
 	return &Scheduler{
-		logger: logrus.WithField("logger", "scheduler"),
-		clock:  clock,
-		loop:   clock.NewTicker(frequency),
-		retry:  clock.NewTimer(0 * time.Second),
+		logger:  logrus.WithField("component", "scheduler"),
+		clock:   clock,
+		timer:   clock.NewTimer(0),
+		backoff: b,
 
-		immediate: make(chan struct{}),
+		immediate: make(chan struct{}, 1),
 
-		shutdownCtx:      shutdownCtx,
-		shutdownFn:       shutdownFn,
-		shutdownComplete: make(chan struct{}, 1),
+		ctx:    ctx,
+		cancel: cancel,
+		done:   make(chan struct{}),
 
-		jobCtx: ctx,
-		job:    job,
+		job: job,
 	}
 }
 
@@ -56,21 +74,18 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) scheduler() {
+	defer close(s.done)
 	s.logger.Debug("scheduler started")
 
-	loopC := s.loop.Chan()
-	retryC := s.retry.Chan()
 	for {
 		select {
 		case <-s.immediate:
 			s.run()
-		case <-retryC:
+		case <-s.timer.Chan():
 			s.run()
-		case <-loopC:
-			s.run()
-		case <-s.shutdownCtx.Done():
+		case <-s.ctx.Done():
+			s.timer.Stop()
 			s.logger.Debug("scheduler shutdown")
-			s.shutdownComplete <- struct{}{}
 			return
 		}
 	}
@@ -78,29 +93,56 @@ func (s *Scheduler) scheduler() {
 
 // RunNow enqueues a run immediately
 func (s *Scheduler) RunNow() {
-	s.immediate <- struct{}{}
+	select {
+	case s.immediate <- struct{}{}:
+	default:
+	}
 }
 
 func (s *Scheduler) run() {
 	s.logger.Debug("starting job execution")
-	if err := s.job(s.jobCtx); err != nil {
-		logger := s.logger.WithError(err)
-
-		var retryErr *retryError
-		if errors.As(err, &retryErr) {
-			s.retry.Reset(retryErr.after)
-			logger = logger.WithField("retry", retryErr.after)
-		}
-
-		logger.WithError(err).Error("job execution failed")
-	} else {
-		s.logger.Debug("job execution complete")
+	schedule, err := s.job(s.ctx)
+	if s.ctx.Err() != nil {
+		return
 	}
+
+	var delay time.Duration
+	if err != nil {
+		delay = s.failure(err)
+		s.logger.WithError(err).WithField("retry", delay).Error("job execution failed")
+	} else {
+		delay = s.success(schedule)
+		s.logger.WithField("next", delay).Debug("job execution complete")
+	}
+
+	s.timer.Reset(delay)
 }
 
-// Stop finishes any jobs in progress and halt the scheduler
+func (s *Scheduler) success(schedule Schedule) time.Duration {
+	delay := max(schedule.Next.Sub(s.clock.Now()), MinInterval)
+	s.deadline = schedule.Max
+
+	s.backoff.MaxInterval = delay / 2
+	s.backoff.Reset()
+
+	return delay
+}
+
+func (s *Scheduler) failure(err error) time.Duration {
+	delay := s.backoff.MaxInterval
+	if _, ok := errors.AsType[*persistentError](err); !ok {
+		delay = min(s.backoff.NextBackOff(), delay)
+	}
+
+	if remaining := s.deadline.Sub(s.clock.Now()); remaining > 0 {
+		delay = min(delay, remaining)
+	}
+
+	return delay
+}
+
+// Stop cancels any job in progress and halts the scheduler
 func (s *Scheduler) Stop() {
-	s.loop.Stop()
-	s.shutdownFn()
-	<-s.shutdownComplete
+	s.cancel()
+	<-s.done
 }

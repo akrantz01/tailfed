@@ -2,23 +2,66 @@ package refresher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/akrantz01/tailfed/internal/api"
+	"github.com/akrantz01/tailfed/internal/scheduler"
+	"github.com/jonboulle/clockwork"
 )
 
 // Job performs a single run of the refresh flow
-func (r *Refresher) Job(ctx context.Context) error {
+func (r *Refresher) Job(ctx context.Context) (scheduler.Schedule, error) {
+	clock := clockwork.FromContext(ctx)
+	issued := clock.Now()
+
 	r.logger.WithField("profile", r.profile).Info("fetching token...")
 	res, err := r.api.GetToken(ctx, r.profile)
 	if err != nil {
-		return fmt.Errorf("failed to issue token: %w", err)
+		err = fmt.Errorf("failed to issue token: %w", err)
+		if isPersistent(err) {
+			return scheduler.Schedule{}, scheduler.Persistent(err)
+		}
+		return scheduler.Schedule{}, err
 	}
 
-	r.logger.WithField("token.lifetime", res.ExpiresIn).WithField("token.expiry", res.ExpiresAt).Info("token issued")
-	return r.writeToken(res.AccessToken)
+	lifetime := time.Duration(res.ExpiresIn * float64(time.Second))
+	schedule := scheduler.Schedule{
+		Next: issued.Add(lifetime / 2),
+		Max:  issued.Add(lifetime),
+	}
+
+	r.logger.
+		WithField("token.lifetime", lifetime).
+		WithField("token.expiry", res.ExpiresAt.Time).
+		WithField("refresh", schedule.Next).
+		Info("token issued")
+
+	if err := r.writeToken(res.AccessToken); err != nil {
+		return scheduler.Schedule{}, err
+	}
+
+	return schedule, nil
+}
+
+func isPersistent(err error) bool {
+	apiErr, ok := errors.AsType[*api.ApiError](err)
+	if !ok {
+		return false
+	}
+
+	switch apiErr.Status {
+	case http.StatusRequestTimeout, http.StatusTooManyRequests:
+		return false
+	default:
+		return apiErr.Status >= 400 && apiErr.Status < 500
+	}
 }
 
 func (r *Refresher) writeToken(token string) error {

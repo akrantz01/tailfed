@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/akrantz01/tailfed/internal/api"
 	"github.com/akrantz01/tailfed/internal/configloader"
@@ -91,7 +90,7 @@ func daemon(ctx context.Context) error {
 
 	refresh := refresher.New(client, cfg.Path, cfg.Profile)
 
-	sched := scheduler.NewScheduler(ctx, 1*time.Hour, refresh.Job)
+	sched := scheduler.NewScheduler(ctx, refresh.Job)
 	sched.Start()
 
 	logrus.Info("daemon started")
