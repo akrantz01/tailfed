@@ -85,7 +85,7 @@ type signingConfig struct {
 func (c *signingConfig) Validate() error {
 	switch c.Backend {
 	case signing.BackendMemory:
-		return nil
+		return c.Memory.Validate()
 
 	case signing.BackendAWSKMS:
 		return c.AwsKms.Validate()
@@ -124,6 +124,14 @@ type signingMemoryConfig struct {
 	ES256 bool `koanf:"es256" help:"Generate an ECDSA curve P-256 key"`
 	ES384 bool `koanf:"es384" help:"Generate an ECDSA curve P-384 key"`
 	ES512 bool `koanf:"es512" help:"Generate an ECDSA curve P-521 key"`
+}
+
+func (c *signingMemoryConfig) Validate() error {
+	if c.RS256 || c.RS384 || c.RS512 || c.ES256 || c.ES384 || c.ES512 {
+		return nil
+	} else {
+		return errors.New("at least one signing algorithm type must be enabled")
+	}
 }
 
 func (c *signingMemoryConfig) Algorithms() map[signing.Algorithm]bool {
