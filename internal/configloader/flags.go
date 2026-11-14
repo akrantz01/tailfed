@@ -64,8 +64,10 @@ func bindLeaf(fs *pflag.FlagSet, key, usage, short string, v reflect.Value) {
 		fs.BoolP(key, short, v.Bool(), usage)
 	case v.Kind() == reflect.Int:
 		fs.IntP(key, short, int(v.Int()), usage)
-	case v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.String:
-		fs.StringSliceP(key, short, stringSlice(v), usage)
+	case v.Kind() == reflect.Slice:
+		if v.Type().Elem().Kind() == reflect.String {
+			fs.StringSliceP(key, short, stringSlice(v), usage)
+		}
 	default:
 		panic(fmt.Sprintf("configloader.Bind: unsupported type %s for %q", v.Type(), key))
 	}
