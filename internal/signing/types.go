@@ -1,9 +1,11 @@
 package signing
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 // BackendId identifies a backend in the configuration
@@ -63,6 +65,35 @@ type Backend interface {
 	PublicKeys() []jose.JSONWebKey
 	// Sign generates a signed JWT with the provided claims
 	Sign(algorithm Algorithm, claims any) (string, error)
+}
+
+// genericKey is an arbitrary signing key and public key combo
+type genericKey struct {
+	algorithm Algorithm
+	signer    jose.Signer
+	publicKey jose.JSONWebKey
+}
+
+// generic uses `genericKey`s to sign tokens
+type generic []genericKey
+
+var _ Backend = (*generic)(nil)
+
+func (g generic) Sign(algorithm Algorithm, claims any) (string, error) {
+	for _, key := range g {
+		if key.algorithm == algorithm {
+			return jwt.Signed(key.signer).Claims(claims).Serialize()
+		}
+	}
+	return "", fmt.Errorf("unsupported signing algorithm %q", algorithm)
+}
+
+func (g generic) PublicKeys() []jose.JSONWebKey {
+	publicKeys := make([]jose.JSONWebKey, 0, len(g))
+	for _, key := range g {
+		publicKeys = append(publicKeys, key.publicKey)
+	}
+	return publicKeys
 }
 
 // newKey creates a new [jose.Signer] for generating new JWTs with an embedded key ID in the header

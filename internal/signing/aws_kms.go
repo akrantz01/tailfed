@@ -13,17 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/sirupsen/logrus"
 )
-
-// awsKmsBackend signs tokens using a key stored in AWS KMS
-type awsKmsBackend struct {
-	logger logrus.FieldLogger
-	keys   []kmsKeyMetadata
-}
-
-var _ Backend = (*awsKmsBackend)(nil)
 
 // NewAWSKMS creates a new AWS KMS-backed signer
 func NewAWSKMS(config aws.Config, references []string) (Backend, error) {
@@ -31,7 +22,7 @@ func NewAWSKMS(config aws.Config, references []string) (Backend, error) {
 
 	client := kms.NewFromConfig(config)
 
-	keys := []kmsKeyMetadata{}
+	keys := []genericKey{}
 	for _, ref := range references {
 		key, err := resolveKmsKey(logger, client, ref)
 		if err != nil {
@@ -42,47 +33,24 @@ func NewAWSKMS(config aws.Config, references []string) (Backend, error) {
 	}
 
 	logger.WithField("signer.keys", len(keys)).Info("created new KMS signer")
-	return &awsKmsBackend{logger, keys}, nil
+	return generic(keys), nil
 }
 
-func (k *awsKmsBackend) Sign(algorithm Algorithm, claims any) (string, error) {
-	for _, key := range k.keys {
-		if key.algorithm == algorithm {
-			return jwt.Signed(key.signer).Claims(claims).Serialize()
-		}
-	}
-	return "", fmt.Errorf("unsupported signing algorithm %q", algorithm)
-}
-
-func (k *awsKmsBackend) PublicKeys() []jose.JSONWebKey {
-	publicKeys := make([]jose.JSONWebKey, 0, len(k.keys))
-	for _, key := range k.keys {
-		publicKeys = append(publicKeys, key.public)
-	}
-	return publicKeys
-}
-
-type kmsKeyMetadata struct {
-	algorithm Algorithm
-	signer    jose.Signer
-	public    jose.JSONWebKey
-}
-
-func resolveKmsKey(logger logrus.FieldLogger, client *kms.Client, alias string) (kmsKeyMetadata, error) {
+func resolveKmsKey(logger logrus.FieldLogger, client *kms.Client, alias string) (genericKey, error) {
 	logger = logger.WithField("signer.key", alias)
 
 	logger.Debug("resolving KMS key...")
 	details, err := client.DescribeKey(context.Background(), &kms.DescribeKeyInput{KeyId: aws.String(alias)})
 	if err != nil {
-		return kmsKeyMetadata{}, fmt.Errorf("failed to describe key: %w", err)
+		return genericKey{}, fmt.Errorf("failed to describe key: %w", err)
 	}
 	metadata := details.KeyMetadata
 
 	if !metadata.Enabled {
-		return kmsKeyMetadata{}, errors.New("key is not enabled")
+		return genericKey{}, errors.New("key is not enabled")
 	}
 	if metadata.KeyUsage != types.KeyUsageTypeSignVerify {
-		return kmsKeyMetadata{}, errors.New("key is not configured for sign/verify")
+		return genericKey{}, errors.New("key is not configured for sign/verify")
 	}
 
 	logger = logger.WithField("signer.key", *metadata.Arn)
@@ -90,24 +58,24 @@ func resolveKmsKey(logger logrus.FieldLogger, client *kms.Client, alias string) 
 
 	public, err := getKmsPublicKey(logger, client, metadata.Arn)
 	if err != nil {
-		return kmsKeyMetadata{}, err
+		return genericKey{}, err
 	}
 
 	key, algorithm, err := newKmsKey(logger, client, metadata)
 	if err != nil {
-		return kmsKeyMetadata{}, err
+		return genericKey{}, err
 	}
 	logger.WithField("signer.algorithm", algorithm).Debug("determined signing algorithm for key")
 
 	signer, err := newKey(*metadata.KeyId, key, algorithm)
 	if err != nil {
-		return kmsKeyMetadata{}, err
+		return genericKey{}, err
 	}
 
-	return kmsKeyMetadata{
+	return genericKey{
 		algorithm: algorithm,
 		signer:    signer,
-		public: jose.JSONWebKey{
+		publicKey: jose.JSONWebKey{
 			Use:       "sig",
 			KeyID:     *metadata.KeyId,
 			Key:       public,

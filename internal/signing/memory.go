@@ -8,23 +8,15 @@ import (
 	"fmt"
 
 	"github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
-
-// inMemory generates ephemeral private and public keys for signing
-type inMemory struct {
-	keys []memoryKey
-}
-
-var _ Backend = (*inMemory)(nil)
 
 // NewInMemory creates a new keys with in-memory ephemeral keys
 func NewInMemory(algorithms map[Algorithm]bool) (Backend, error) {
 	logger := logrus.WithField("component", "signer").WithField("signer.backend", "memory")
 
-	keys := []memoryKey{}
+	keys := []genericKey{}
 	for algorithm, enabled := range algorithms {
 		if !enabled {
 			continue
@@ -35,38 +27,15 @@ func NewInMemory(algorithms map[Algorithm]bool) (Backend, error) {
 			return nil, fmt.Errorf("failed to generate private key for %q: %w", algorithm, err)
 		}
 
-		logger.WithField("key.algorithm", algorithm).WithField("key.id", key.public.KeyID).Debug("generated new private key")
+		logger.WithField("key.algorithm", algorithm).WithField("key.id", key.publicKey.KeyID).Debug("generated new private key")
 		keys = append(keys, key)
 	}
 
 	logger.WithField("memory.keys", len(keys)).Info("created new in-memory signer(s)")
-	return &inMemory{keys}, nil
+	return generic(keys), nil
 }
 
-func (m *inMemory) Sign(algorithm Algorithm, claims any) (string, error) {
-	for _, key := range m.keys {
-		if key.algorithm == algorithm {
-			return jwt.Signed(key.signer).Claims(claims).Serialize()
-		}
-	}
-	return "", fmt.Errorf("unsupported signing algorithm %q", algorithm)
-}
-
-func (m *inMemory) PublicKeys() []jose.JSONWebKey {
-	publicKeys := make([]jose.JSONWebKey, 0, len(m.keys))
-	for _, key := range m.keys {
-		publicKeys = append(publicKeys, key.public)
-	}
-	return publicKeys
-}
-
-type memoryKey struct {
-	algorithm Algorithm
-	public    jose.JSONWebKey
-	signer    jose.Signer
-}
-
-func generateKey(algorithm Algorithm) (memoryKey, error) {
+func generateKey(algorithm Algorithm) (genericKey, error) {
 	switch algorithm {
 	case RS256:
 		private, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -87,25 +56,25 @@ func generateKey(algorithm Algorithm) (memoryKey, error) {
 		private, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 		return toMemoryKey(algorithm, private, err, ecdsaPublicKey)
 	default:
-		return memoryKey{}, fmt.Errorf("unsupported algorithm %q", algorithm)
+		return genericKey{}, fmt.Errorf("unsupported algorithm %q", algorithm)
 	}
 }
 
-func toMemoryKey[Priv, Pub any](algorithm Algorithm, private Priv, err error, getPublicKey func(k Priv) Pub) (memoryKey, error) {
+func toMemoryKey[Priv, Pub any](algorithm Algorithm, private Priv, err error, getPublicKey func(k Priv) Pub) (genericKey, error) {
 	if err != nil {
-		return memoryKey{}, err
+		return genericKey{}, err
 	}
 
 	id := uuid.Must(uuid.NewV7()).String()
 	signer, err := newKey(id, private, algorithm)
 	if err != nil {
-		return memoryKey{}, err
+		return genericKey{}, err
 	}
 
-	return memoryKey{
+	return genericKey{
 		algorithm: algorithm,
 		signer:    signer,
-		public: jose.JSONWebKey{
+		publicKey: jose.JSONWebKey{
 			Use:       "sig",
 			KeyID:     id,
 			Key:       getPublicKey(private),
