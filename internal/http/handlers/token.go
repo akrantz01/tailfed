@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,5 +52,25 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	t.logger.WithField("profile.id", profileId).Debug("selected profile")
 
+	now := time.Now()
+	claims := jwt.Claims{
+		Issuer:   issuerFor(r),
+		Subject:  "",
+		Audience: []string{profile.Audience},
+		IssuedAt: jwt.NewNumericDate(now),
+		Expiry:   jwt.NewNumericDate(now.Add(profile.Validity)),
+	}
+
+	token, err := t.signer.Sign(profile.AcceptedAlgorithms, claims)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		t.logger.
+			WithError(err).
+			WithField("profile.accepted-algorithms", profile.AcceptedAlgorithms).
+			Error("failed to sign jwt")
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintf(w, `{"token":"%s"}`, token)
 }

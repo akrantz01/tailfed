@@ -31,18 +31,20 @@ func (d *DiscoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	d.logger.WithField("profile.id", profileId).Debug("selected profile")
 
-	issuer := fmt.Sprintf("%s://%s", scheme(r), r.Host)
-	doc := oidc.NewDiscoveryDocument(issuer, profile.AcceptedAlgorithms)
+	doc := oidc.NewDiscoveryDocument(issuerFor(r), profile.AcceptedAlgorithms)
 
 	w.WriteHeader(http.StatusOK)
 	body, _ := json.Marshal(doc)
 	_, _ = w.Write(body)
 }
 
-func scheme(r *http.Request) string {
+func issuerFor(r *http.Request) string {
+	var scheme string
 	if r.TLS == nil {
-		return "http"
+		scheme = "http"
 	} else {
-		return "https"
+		scheme = "https"
 	}
+
+	return fmt.Sprintf("%s://%s", scheme, r.Host)
 }
