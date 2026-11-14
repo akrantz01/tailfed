@@ -11,6 +11,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/configloader"
 	"github.com/akrantz01/tailfed/internal/http"
 	"github.com/akrantz01/tailfed/internal/logging"
+	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -83,7 +84,9 @@ func run(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to connect to tailscale: %w", err)
 	}
 
-	srv := http.New(signer, ts)
+	profiles := oidc.NewProfiles(cfg.Token.DefaultProfile, cfg.Token.Profiles)
+
+	srv := http.New(profiles, signer, ts)
 	l, err := ts.Listen(context.Background(), cfg.Listener.Address, cfg.Listener.Service)
 	if err != nil {
 		return fmt.Errorf("failed to get listener: %w", err)

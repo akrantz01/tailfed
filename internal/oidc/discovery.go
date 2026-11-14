@@ -9,13 +9,9 @@ import (
 )
 
 var (
-	claims            = structKeys(reflect.TypeFor[jwt.Claims]())
-	responseTypes     = []string{"id_token"}
-	subjectTypes      = []string{"public"}
-	signingAlgorithms = []signing.Algorithm{
-		signing.RS256, signing.RS384, signing.RS512,
-		signing.ES256, signing.ES384, signing.ES256,
-	}
+	claims        = structKeys(reflect.TypeFor[jwt.Claims]())
+	responseTypes = []string{"id_token"}
+	subjectTypes  = []string{"public"}
 )
 
 // DiscoveryDocument is an OpenID Connect discovery document for an AWS IAM identity to read
@@ -29,13 +25,13 @@ type DiscoveryDocument struct {
 }
 
 // NewDiscoveryDocument creates a new OpenID Connect discovery document from an issuer URL
-func NewDiscoveryDocument(issuer string) DiscoveryDocument {
+func NewDiscoveryDocument(issuer string, algorithms []signing.Algorithm) DiscoveryDocument {
 	return DiscoveryDocument{
 		Issuer:            issuer,
 		JwksUri:           issuer + "/.well-known/jwks.json",
 		Claims:            claims,
 		ResponseTypes:     responseTypes,
-		SigningAlgorithms: signingAlgorithms,
+		SigningAlgorithms: algorithms,
 		SubjectTypes:      subjectTypes,
 	}
 }

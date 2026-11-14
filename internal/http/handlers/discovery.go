@@ -10,24 +10,40 @@ import (
 )
 
 type DiscoveryHandler struct {
-	logger logrus.FieldLogger
+	profiles oidc.Profiles
+	logger   logrus.FieldLogger
 }
 
 var _ http.Handler = (*DiscoveryHandler)(nil)
 
-func NewDiscoveryHandler() *DiscoveryHandler {
+func NewDiscoveryHandler(profiles oidc.Profiles) *DiscoveryHandler {
 	return &DiscoveryHandler{
-		logger: logrus.WithField("component", "http").WithField("http.handler", "discovery"),
+		profiles: profiles,
+		logger:   logrus.WithField("component", "http").WithField("http.handler", "discovery"),
 	}
 }
 
 func (d *DiscoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	profile := d.profileFor(r.PathValue("profile"))
+	if profile == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	issuer := fmt.Sprintf("%s://%s", scheme(r), r.Host)
-	doc := oidc.NewDiscoveryDocument(issuer)
+	doc := oidc.NewDiscoveryDocument(issuer, profile.AcceptedAlgorithms)
 
 	w.WriteHeader(http.StatusOK)
 	body, _ := json.Marshal(doc)
 	_, _ = w.Write(body)
+}
+
+func (d *DiscoveryHandler) profileFor(id string) *oidc.Profile {
+	if len(id) == 0 {
+		return d.profiles.GetDefault()
+	} else {
+		return d.profiles.Get(id)
+	}
 }
 
 func scheme(r *http.Request) string {
