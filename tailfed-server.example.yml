@@ -23,11 +23,64 @@ listener:
   # Default: ""
   service: svc:tailfed
 
-# TODO: template based on audience
+# Customizations for the token contents
 token:
-  # How long generated token should be valid for
-  # Default: "1h"
-  validity: 1h
+  # The default profile to use when none is requested
+  # Default: "default"
+  default-profile: default
+
+  # The ways token claims can be generated
+  profiles:
+    # The ID this configuration is used for
+    # Must only contain lowercase, alphanumeric characters
+    default:
+      # The audience the token is for
+      # Default: "tailfed"
+      audience: sts.amazonaws.com
+
+      # The algorithms which tokens can be signed with
+      # Default: [RS256, RS384, RS512, ES256, ES384, ES512]
+      accepted-algorithms:
+        - ES256
+        - RS256
+
+      # The maximum length of the subject claim. Once reached, token generation will fail
+      # Default: 0 (unlimited)
+      max-subject-length: 0
+
+      # The format of the subject claim. Changes based on whether the device is tag- or user-owned.
+      #
+      # The common fields are:
+      # - hostname: the device's host name
+      # - id: the device's unique, stable identifier
+      # - tailnet.id: the tailnet's unique, stable identifier
+      # - tailnet.name: the tailnet's legacy ID (only present for tailnets created before October 2025)
+      # - tailnet.dns: the tailnet's magic DNS suffix (if enabled)
+      #
+      # The tag-owned device fields are:
+      # - tags: the list of tags assigned to the device
+      #
+      # The user-owned device fields are:
+      # - user.id: the user's unique, stable identifier
+      # - user.login: the user's login name (typically an email)
+      # - user.groups: the groups the user is part of (either ACL or from the IDP)
+      subject:
+        # The format of the subject claim for tag-owned devices
+        # Default: [tailnet.dns, hostname, tags]
+        tag:
+          - tailnet.dns
+          - hostname
+          - tags
+        # The format of the subject claim for user-owned devices
+        # Default: [tailnet.dns, hostname, user.login]
+        user:
+          - tailnet.dns
+          - hostname
+          - user.login
+
+      # How long generated token should be valid for
+      # Default: "1h"
+      validity: 1h
 
 # How to sign ID tokens
 signing:
