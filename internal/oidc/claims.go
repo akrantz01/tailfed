@@ -1,12 +1,9 @@
 package oidc
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
-	"github.com/akrantz01/tailfed/internal/storage"
 	"github.com/go-jose/go-jose/v4/jwt"
 )
 
@@ -23,42 +20,6 @@ type Claims struct {
 	Tags        []string `json:"tags"`
 	Authorized  bool     `json:"authorized"`
 	External    bool     `json:"external"`
-}
-
-// NewClaimsFromFlow creates a new claim set from an in-progress flow
-func NewClaimsFromFlow(issuer, audience string, validity time.Duration, flow *storage.Flow) Claims {
-	now := time.Now()
-	nowNumeric := jwt.NewNumericDate(now)
-
-	amr := make([]string, 0, len(flow.Tags))
-	amr = append(amr, flow.Tags...)
-
-	if !flow.Authorized {
-		amr = append(amr, "unauthorized")
-	}
-	if flow.External {
-		amr = append(amr, "external")
-	}
-
-	return Claims{
-		AuthenticatedMethodsReference: amr,
-		Claims: jwt.Claims{
-			Issuer:    issuer,
-			Audience:  jwt.Audience{audience},
-			Subject:   fmt.Sprintf("tailnet:%s:dns:%s:host:%s:id:%s", flow.Tailnet, flow.DNSName, flow.MachineName, flow.Node),
-			IssuedAt:  nowNumeric,
-			NotBefore: nowNumeric,
-			Expiry:    jwt.NewNumericDate(now.Add(validity)),
-		},
-		Tailnet:     flow.Tailnet,
-		DNSName:     flow.DNSName,
-		MachineName: flow.MachineName,
-		HostName:    flow.Hostname,
-		OS:          flow.OS,
-		Tags:        flow.Tags,
-		Authorized:  flow.Authorized,
-		External:    flow.External,
-	}
 }
 
 func claimsKeys() []string {
