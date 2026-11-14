@@ -71,7 +71,7 @@
         packages = with pkgs; [alejandra];
       };
 
-      checks = import ./nix/tests.nix {
+      checks = import ./nix/tests {
         inherit pkgs;
         module = self.nixosModules.${system}.default;
       };
