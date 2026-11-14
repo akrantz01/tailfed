@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"slices"
 	"strings"
 
 	"tailscale.com/client/local"
@@ -81,6 +82,7 @@ func nodeFromWhoIsResponse(status *ipnstate.Status, res *apitype.WhoIsResponse, 
 	} else {
 		var user *User
 		if !res.Node.IsTagged() {
+			slices.Sort(res.UserProfile.Groups)
 			user = &User{
 				ID:     int64(res.UserProfile.ID),
 				Login:  res.UserProfile.LoginName,
@@ -93,6 +95,7 @@ func nodeFromWhoIsResponse(status *ipnstate.Status, res *apitype.WhoIsResponse, 
 			dns = ""
 		}
 
+		slices.Sort(res.Node.Tags)
 		return &Node{
 			Tailnet: Tailnet{
 				ID:   string(status.CurrentTailnet.StableID),
