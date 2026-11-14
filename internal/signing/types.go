@@ -1,12 +1,14 @@
 package signing
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 )
+
+var ErrUnsupportedAlgorithms = errors.New("no keys support any of the requested algorithms")
 
 // BackendId identifies a backend in the configuration
 type BackendId string
@@ -63,8 +65,8 @@ func (a Algorithm) Choices() []string {
 type Backend interface {
 	// PublicKeys returns details about the available public keys
 	PublicKeys() []jose.JSONWebKey
-	// Sign generates a signed JWT with the provided claims
-	Sign(algorithm Algorithm, claims any) (string, error)
+	// Sign generates a signed JWT with the provided claims using the first supported algorithm
+	Sign(requested []Algorithm, claims any) (string, error)
 }
 
 // genericKey is an arbitrary signing key and public key combo
@@ -79,13 +81,15 @@ type generic []genericKey
 
 var _ Backend = (*generic)(nil)
 
-func (g generic) Sign(algorithm Algorithm, claims any) (string, error) {
-	for _, key := range g {
-		if key.algorithm == algorithm {
-			return jwt.Signed(key.signer).Claims(claims).Serialize()
+func (g generic) Sign(requested []Algorithm, claims any) (string, error) {
+	for _, algorithm := range requested {
+		for _, key := range g {
+			if key.algorithm == algorithm {
+				return jwt.Signed(key.signer).Claims(claims).Serialize()
+			}
 		}
 	}
-	return "", fmt.Errorf("unsupported signing algorithm %q", algorithm)
+	return "", ErrUnsupportedAlgorithms
 }
 
 func (g generic) PublicKeys() []jose.JSONWebKey {
