@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"fmt"
 
-	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
@@ -42,7 +41,7 @@ func NewInMemory() (Backend, error) {
 	return &inMemory{id, private, signer}, nil
 }
 
-func (m *inMemory) Sign(claims oidc.Claims) (string, error) {
+func (m *inMemory) Sign(claims any) (string, error) {
 	return jwt.Signed(m.signer).Claims(claims).Serialize()
 }
 

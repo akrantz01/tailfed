@@ -3,7 +3,6 @@ package signing
 import (
 	"strings"
 
-	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/go-jose/go-jose/v4"
 )
 
@@ -31,7 +30,7 @@ type Backend interface {
 	// PublicKey returns details about the public key
 	PublicKey() (jose.JSONWebKey, error)
 	// Sign generates a signed JWT with the provided claims
-	Sign(claims oidc.Claims) (string, error)
+	Sign(claims any) (string, error)
 }
 
 // newKey creates a new [jose.Signer] for generating new JWTs with an embedded key ID in the header

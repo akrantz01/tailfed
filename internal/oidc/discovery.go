@@ -1,8 +1,15 @@
 package oidc
 
-import "github.com/go-jose/go-jose/v4"
+import (
+	"reflect"
+	"strings"
+
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+)
 
 var (
+	claims            = structKeys(reflect.TypeFor[jwt.Claims]())
 	responseTypes     = []string{"id_token"}
 	subjectTypes      = []string{"public"}
 	signingAlgorithms = []jose.SignatureAlgorithm{
@@ -26,9 +33,24 @@ func NewDiscoveryDocument(issuer string) DiscoveryDocument {
 	return DiscoveryDocument{
 		Issuer:            issuer,
 		JwksUri:           issuer + "/.well-known/jwks.json",
-		Claims:            claimsKeys(),
+		Claims:            claims,
 		ResponseTypes:     responseTypes,
 		SigningAlgorithms: signingAlgorithms,
 		SubjectTypes:      subjectTypes,
 	}
+}
+
+func structKeys(t reflect.Type) []string {
+	var keys []string
+	for i := range t.NumField() {
+		f := t.Field(i)
+		if f.Anonymous {
+			keys = append(keys, structKeys(f.Type)...)
+		} else if value, ok := f.Tag.Lookup("json"); ok {
+			parts := strings.Split(value, ",")
+			keys = append(keys, parts[0])
+		}
+	}
+
+	return keys
 }

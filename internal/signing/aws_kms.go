@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/kms/types"
@@ -69,7 +68,7 @@ func NewAWSKMS(config aws.Config, alias string) (Backend, error) {
 	return &awsKmsBackend{logger, *metadata.KeyId, metadata.Arn, algorithm, client, signer}, nil
 }
 
-func (k *awsKmsBackend) Sign(claims oidc.Claims) (string, error) {
+func (k *awsKmsBackend) Sign(claims any) (string, error) {
 	return jwt.Signed(k.signer).Claims(claims).Serialize()
 }
 
