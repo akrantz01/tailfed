@@ -39,7 +39,7 @@ func (r *Refresher) Job(ctx context.Context) (scheduler.Schedule, error) {
 
 	r.logger.
 		WithField("token.lifetime", lifetime).
-		WithField("token.expiry", res.ExpiresAt.Time).
+		WithField("token.expiry", res.ExpiresAt.Time()).
 		WithField("refresh", schedule.Next).
 		Info("token issued")
 
