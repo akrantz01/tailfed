@@ -2,14 +2,12 @@ package tailscale
 
 import (
 	"context"
-	"errors"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
-	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/tailcfg"
 	"tailscale.com/tsnet"
 )
@@ -109,15 +107,14 @@ func (p *InProcess) Listen(_ context.Context, address string, service tailcfg.Se
 	}
 }
 
-func (p *InProcess) WhoIs(ctx context.Context, address string) (*apitype.WhoIsResponse, error) {
-	res, err := p.client.WhoIs(ctx, address)
-	if errors.Is(err, local.ErrPeerNotFound) {
-		return nil, nil
-	} else if err != nil {
+func (p *InProcess) WhoIs(ctx context.Context, address string) (*Node, error) {
+	status, err := p.client.StatusWithoutPeers(ctx)
+	if err != nil {
 		return nil, err
-	} else {
-		return res, nil
 	}
+
+	res, err := p.client.WhoIs(ctx, address)
+	return nodeFromWhoIsResponse(status, res, err)
 }
 
 // CredentialProvider provides credentials for authentication with Tailscale

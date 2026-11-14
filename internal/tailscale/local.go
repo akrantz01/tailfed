@@ -13,7 +13,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
-	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/ipn"
 	"tailscale.com/tailcfg"
 )
@@ -87,15 +86,14 @@ func (l *Local) Listen(ctx context.Context, address string, service tailcfg.Serv
 	return sl, nil
 }
 
-func (l *Local) WhoIs(ctx context.Context, address string) (*apitype.WhoIsResponse, error) {
-	res, err := l.client.WhoIs(ctx, address)
-	if errors.Is(err, local.ErrPeerNotFound) {
-		return nil, nil
-	} else if err != nil {
+func (l *Local) WhoIs(ctx context.Context, address string) (*Node, error) {
+	status, err := l.client.StatusWithoutPeers(ctx)
+	if err != nil {
 		return nil, err
-	} else {
-		return res, nil
 	}
+
+	res, err := l.client.WhoIs(ctx, address)
+	return nodeFromWhoIsResponse(status, res, err)
 }
 
 // bindService serves and advertises the service, proxying to the listener

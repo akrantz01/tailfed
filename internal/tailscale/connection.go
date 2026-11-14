@@ -2,10 +2,13 @@ package tailscale
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strings"
 
+	"tailscale.com/client/local"
 	"tailscale.com/client/tailscale/apitype"
+	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/tailcfg"
 )
 
@@ -34,5 +37,72 @@ type Connection interface {
 	// WhoIs looks up the owner of the given address
 	//
 	// Returns (nil, nil) when peer could not be found
-	WhoIs(ctx context.Context, address string) (*apitype.WhoIsResponse, error)
+	WhoIs(ctx context.Context, address string) (*Node, error)
+}
+
+// Node is a device on the tailnet
+type Node struct {
+	Hostname string
+	ID       string
+
+	Tailnet Tailnet
+
+	// Only one of Tags or User will be set
+	Tags []string
+	User *User
+}
+
+// TagOwned returns true when the node is owned by tags instead of a user
+func (p *Node) TagOwned() bool {
+	return len(p.Tags) > 0
+}
+
+// Tailnet contains details about a particular tailnet
+type Tailnet struct {
+	// ID is the stable ID for the tailnet. May not be present depending on client version
+	ID string
+	// Name of the tailnet
+	Name string
+	// DNS is the Magic DNS suffix (e.g. something-cool.ts.net), if it is enabled
+	DNS string
+}
+
+type User struct {
+	ID     int64
+	Login  string
+	Groups []string
+}
+
+func nodeFromWhoIsResponse(status *ipnstate.Status, res *apitype.WhoIsResponse, err error) (*Node, error) {
+	if errors.Is(err, local.ErrPeerNotFound) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else {
+		var user *User
+		if !res.Node.IsTagged() {
+			user = &User{
+				ID:     int64(res.UserProfile.ID),
+				Login:  res.UserProfile.LoginName,
+				Groups: res.UserProfile.Groups,
+			}
+		}
+
+		dns := status.CurrentTailnet.MagicDNSSuffix
+		if !status.CurrentTailnet.MagicDNSEnabled {
+			dns = ""
+		}
+
+		return &Node{
+			Tailnet: Tailnet{
+				ID:   string(status.CurrentTailnet.StableID),
+				Name: status.CurrentTailnet.Name,
+				DNS:  dns,
+			},
+			Hostname: res.Node.ComputedName,
+			ID:       string(res.Node.StableID),
+			Tags:     res.Node.Tags,
+			User:     user,
+		}, nil
+	}
 }

@@ -25,7 +25,7 @@ func NewTokenHandler(signer signing.Backend, ts tailscale.Connection) *TokenHand
 }
 
 func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	whois, err := t.ts.WhoIs(r.Context(), r.RemoteAddr)
+	node, err := t.ts.WhoIs(r.Context(), r.RemoteAddr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		t.logger.
@@ -33,21 +33,13 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			WithField("address", r.RemoteAddr).
 			Error("failed to query tailscale for remote address")
 		return
-	} else if whois == nil {
+	} else if node == nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	t.logger.
-		WithFields(map[string]any{
-			"node.stable-id":     whois.Node.StableID,
-			"node.name":          whois.Node.Name,
-			"node.name.computed": whois.Node.ComputedName,
-			"node.tags":          whois.Node.Tags,
-			"node.addresses":     whois.Node.Addresses,
-			"user.id":            whois.UserProfile.ID,
-			"user.login":         whois.UserProfile.LoginName,
-		}).
+		WithField("node", node).
 		Infof("found node for %s", r.RemoteAddr)
 
 	w.WriteHeader(http.StatusOK)
