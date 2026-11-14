@@ -80,7 +80,7 @@ func (f SubjectField) resolveFor(node *tailscale.Node) string {
 	case SubjectFieldTags:
 		return strings.Join(node.Tags, ",")
 	case SubjectFieldUserId:
-		return strconv.Itoa(int(node.User.ID))
+		return strconv.FormatInt(node.User.ID, 10)
 	case SubjectFieldUserLogin:
 		return node.User.Login
 	case SubjectFieldUserGroups:
