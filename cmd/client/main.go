@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"maps"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -17,14 +15,10 @@ import (
 	"github.com/akrantz01/tailfed/internal/refresher"
 	"github.com/akrantz01/tailfed/internal/scheduler"
 	"github.com/akrantz01/tailfed/internal/systemd"
-	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/akrantz01/tailfed/internal/version"
-	hashiversion "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-var remoteVersionCompat = hashiversion.MustConstraints(hashiversion.NewConstraint(">= 1.0, < 2.0"))
 
 func main() {
 	cmd := &cobra.Command{
@@ -90,36 +84,14 @@ func daemon(ctx context.Context) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	client := &http.Client{
-		Transport: newAddHeaderTransport(nil, http.Header{
-			"User-Agent": []string{fmt.Sprintf("tailfed-client/%s", version.GetInfo().Version)},
-		}),
-	}
-
-	apiClient, err := api.NewClient(client, cfg.Url)
+	client, err := api.NewClient(nil, cfg.Url)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create client: %w", err)
 	}
 
-	tsClient, _ := tailscale.NewLocal(context.Background())
-	refresh := refresher.New(apiClient, tsClient, cfg.Path)
+	refresh := refresher.New(client, cfg.Path, cfg.Profile)
 
-	if err := verifyApiVersion(ctx, apiClient); err != nil {
-		return err
-	}
-
-	config, err := apiClient.GetConfig(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get daemon config from api: %w", err)
-	}
-	logrus.
-		WithFields(map[string]any{
-			"frequency": config.Frequency.String(),
-		}).
-		Info("got daemon config")
-
-	sched := scheduler.NewScheduler(ctx, time.Duration(config.Frequency), refresh.Job)
-
+	sched := scheduler.NewScheduler(ctx, 1*time.Hour, refresh.Job)
 	sched.Start()
 
 	logrus.Info("daemon started")
@@ -145,7 +117,6 @@ signals:
 	systemd.Stopping()
 
 	sched.Stop()
-	refresh.ShutdownInFlight()
 
 	return nil
 }
@@ -170,48 +141,4 @@ func removePidFile(path string) {
 	if err := os.Remove(path); err != nil {
 		logrus.WithField("path", path).WithError(err).Error("failed to remove pid file")
 	}
-}
-
-func verifyApiVersion(ctx context.Context, client *api.Client) error {
-	remote, err := client.GetVersion(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get api version: %w", err)
-	}
-	logrus.
-		WithFields(map[string]any{
-			"version":  remote.Version,
-			"revision": remote.Commit,
-		}).
-		Info("got remote version info")
-
-	remoteVersion, err := hashiversion.NewSemver(remote.Version)
-	if err != nil {
-		return fmt.Errorf("failed to parse api version %q: %w", remote.Version, err)
-	}
-
-	if remoteVersionCompat.Check(remoteVersion) {
-		return nil
-	} else {
-		return fmt.Errorf("remote api version %q is incompatible with daemon version %q", remote.Version, version.GetInfo().Version)
-	}
-}
-
-type addHeaderTransport struct {
-	inner   http.RoundTripper
-	headers http.Header
-}
-
-var _ http.RoundTripper = (*addHeaderTransport)(nil)
-
-func newAddHeaderTransport(transport http.RoundTripper, headers http.Header) http.RoundTripper {
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
-
-	return &addHeaderTransport{transport, headers}
-}
-
-func (aht *addHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	maps.Copy(req.Header, aht.headers)
-	return aht.inner.RoundTrip(req)
 }
