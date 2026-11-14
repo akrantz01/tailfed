@@ -1,17 +1,15 @@
 GO_ARGS :=
 
-STANDARD_BINARIES := client dev
-
 # Directory for build artifacts
 OUT_DIR := out
 
-.PHONY: all build build-client build-dev clean coverage help test
+.PHONY: all build build-client build-server clean coverage help test
 
 help:
 	$(info help         - display this message)
 	$(info build        - compile all the applications)
 	$(info build-client - build only the client application)
-	$(info build-dev    - build only the dev application)
+	$(info build-server - build only the server application)
 	$(info test         - run unit tests)
 	$(info coverage     - run unit tests with coverage)
 	$(info clean        - remove build artifacts)
@@ -19,11 +17,10 @@ help:
 
 all: build
 
-build: build-client build-dev
+build: build-client build-server
 
-build-client: $(addprefix $(OUT_DIR)/,$(STANDARD_BINARIES))
-
-build-dev: $(OUT_DIR)/dev
+build-client: $(OUT_DIR)/client
+build-server: $(OUT_DIR)/server
 
 test:
 	go test $(GO_ARGS) ./...

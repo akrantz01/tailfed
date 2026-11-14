@@ -1,115 +1,129 @@
 {
   module,
   pkgs,
-  dev,
 }: let
   lib = pkgs.lib;
   nixOSVersion = "23.11";
 
-  mock-api = pkgs.callPackage ./mock-api.nix {};
+  # VLAN addresses are assigned alphabetically by node name, and tailnet addresses in the order the
+  # test script connects the nodes
+  controlAddress = "192.168.1.2";
+  serverTailscaleAddress = "100.64.0.2";
+  clientTailscaleAddress = "100.64.0.3";
+
+  tailscaleNode = loginServer: {
+    services.tailscale = {
+      enable = true;
+      authKeyFile = "/tmp/shared/auth-key";
+      extraUpFlags = ["--login-server=${loginServer}"];
+    };
+    systemd.services = {
+      tailscaled.environment.TS_DEBUG_USE_DERP_HTTP = "true";
+      tailscaled-autoconnect.wantedBy = lib.mkForce [];
+    };
+
+    networking.firewall.enable = false;
+    system.stateVersion = nixOSVersion;
+  };
 
   moduleTest = {
     name,
-    preScript ? "",
-    assertions ? "",
-    api ? {},
     client ? {},
+    assertions ? "",
   }:
     pkgs.testers.runNixOSTest {
       inherit name;
 
       nodes = {
-        control = {
-          services.headscale = {
-            enable = true;
-            address = "0.0.0.0";
-            port = 80;
+        control = lib.mkMerge [
+          (tailscaleNode "http://localhost")
+          {
+            services.headscale = {
+              enable = true;
+              address = "0.0.0.0";
+              port = 80;
 
-            settings = {
-              server_url = "http://192.168.1.3";
-              grpc_allow_insecure = true;
+              settings = {
+                server_url = "http://${controlAddress}";
+                grpc_allow_insecure = true;
 
-              log.level = "trace";
+                log.level = "trace";
 
-              prefixes = {
-                v4 = "100.64.0.0/10";
-                v6 = "fd7a:115c:a1e0::/48";
+                prefixes = {
+                  v4 = "100.64.0.0/10";
+                  v6 = "fd7a:115c:a1e0::/48";
+                  allocation = "sequential";
+                };
+
+                derp.server = {
+                  enabled = true;
+                  region_id = 1;
+                  region_code = "headscale";
+                  region_name = "Headscale Embedded DERP";
+
+                  stun_listen_addr = "0.0.0.0:3478";
+
+                  ipv4 = controlAddress;
+                  ipv6 = "2001:db8:1::2";
+                };
+                derp.urls = [];
+
+                dns = {
+                  magic_dns = false;
+                  override_local_dns = false;
+                };
               };
-
-              derp.server = {
-                enabled = true;
-                region_id = 1;
-                region_code = "headscale";
-                region_name = "Headscale Embedded DERP";
-
-                stun_listen_addr = "0.0.0.0:3478";
-
-                # IP addresses are allocated alphabetically based on hostname
-                ipv4 = "192.168.1.3";
-                ipv6 = "2001:db8:1::3";
-              };
-              derp.urls = [];
-
-              dns.magic_dns = false;
             };
-          };
-          services.tailscale = {
-            enable = true;
-            authKeyFile = "/tmp/shared/auth-key";
-            extraUpFlags = ["--login-server=http://localhost"];
-          };
-          systemd.services = {
-            tailscaled = {
+            systemd.services.tailscaled = {
               requires = ["headscale.service"];
               after = ["headscale.service"];
               wantedBy = lib.mkForce [];
-              environment.TS_DEBUG_USE_DERP_HTTP = "true";
             };
-            tailscaled-autoconnect.wantedBy = lib.mkForce [];
-          };
-
-          networking.firewall.enable = false;
-          system.stateVersion = nixOSVersion;
-        };
-
-        api =
-          lib.attrsets.recursiveUpdate {
-            services.tailscale = {
-              enable = true;
-              authKeyFile = "/tmp/shared/auth-key";
-              extraUpFlags = ["--login-server=http://192.168.1.3"];
-            };
-            systemd.services.tailscaled.environment.TS_DEBUG_USE_DERP_HTTP = "true";
-
-            networking.firewall.enable = false;
-            system.stateVersion = nixOSVersion;
           }
-          api;
+        ];
 
-        client =
-          lib.attrsets.recursiveUpdate {
+        server = lib.mkMerge [
+          (tailscaleNode "http://${controlAddress}")
+          {
             imports = [module];
 
-            services.tailscale = {
+            services.tailfed.server = {
               enable = true;
-              authKeyFile = "/tmp/shared/auth-key";
-              extraUpFlags = ["--login-server=http://192.168.1.3"];
+              settings = {
+                log-level = "debug";
+                listener.address = "0.0.0.0:8000";
+                token.profiles = {
+                  default.audience = "sts.amazonaws.com";
+                  other = {
+                    audience = "other.example.com";
+                    accepted-algorithms = ["ES256"];
+                    subject.user = ["hostname" "user.id"];
+                    validity = "15m";
+                  };
+                };
+              };
             };
-            systemd.services.tailscaled.environment.TS_DEBUG_USE_DERP_HTTP = "true";
-
-            services.tailfed = {
-              enable = true;
-              logLevel = "debug";
-              url = "http://192.168.1.1:8080";
-            };
-
-            networking.firewall.enable = false;
-            system.stateVersion = nixOSVersion;
           }
-          client;
+        ];
+
+        client = lib.mkMerge [
+          (tailscaleNode "http://${controlAddress}")
+          {
+            imports = [module];
+
+            services.tailfed.client = {
+              enable = true;
+              settings = {
+                log-level = "debug";
+                url = "http://${serverTailscaleAddress}:8000";
+              };
+            };
+          }
+          client
+        ];
       };
 
-      extraPythonPackages = p: [p.pyjwt];
+      extraPythonPackages = p: [p.pyjwt p.cryptography];
       testScript = ''
         import json
         import jwt
@@ -119,19 +133,17 @@
         control.wait_for_open_unix_socket("/run/headscale/headscale.sock")
         control.succeed('headscale users create test --display-name "NixOS Tests" --email "test@nixos.org"')
 
-        created_authkey = json.loads(control.succeed("headscale preauthkeys create --user test --reusable --output json"))
+        users = json.loads(control.succeed("headscale users list --output json"))
+        user_id = next(u["id"] for u in users if u["name"] == "test")
+
+        created_authkey = json.loads(control.succeed(f"headscale preauthkeys create --user {user_id} --reusable --output json"))
         for m in machines:
           with (m.shared_dir / "auth-key").open("w") as f:
             f.write(created_authkey["key"])
 
-        apikey = json.loads(control.succeed("headscale apikeys create --output json"))
-        with (api.shared_dir / "api-key").open("w") as f:
-          f.write(apikey)
-
         control.start_job("tailscaled.service")
-        control.start_job("tailscaled-autoconnect.service")
 
-        def wait_for_tailscale(m, wait_connection = True):
+        def connect_tailscale(m, expected_ip = None, wait_connection = True):
           def tailscale_running(_last_try):
             exit_code, output = m.execute("tailscale status --json --peers=false", timeout=10)
             if exit_code != 0:
@@ -145,97 +157,72 @@
             return exit_code == 0
 
           m.wait_for_unit("tailscaled.service")
+          m.succeed("systemctl start tailscaled-autoconnect.service")
 
           with m.nested("waiting for tailscale to be running"):
-            retry(tailscale_running, timeout=30)
+            retry(tailscale_running, timeout_seconds=30)
+
+          if expected_ip is not None:
+            ip = m.succeed("tailscale ip -4").strip()
+            assert ip == expected_ip, f"expected tailscale address {expected_ip}, got {ip}"
 
           if wait_connection:
             with m.nested("waiting for tailscale connection"):
-              retry(tailscale_connected, timeout=30)
+              retry(tailscale_connected, timeout_seconds=30)
 
-        wait_for_tailscale(control, wait_connection=False)
+        connect_tailscale(control, wait_connection=False)
+        connect_tailscale(server, expected_ip="${serverTailscaleAddress}")
+        connect_tailscale(client, expected_ip="${clientTailscaleAddress}")
 
-        for m in api, client:
-          wait_for_tailscale(m)
+        server.wait_for_unit("tailfed-server.service")
+        server.wait_for_open_port(8000)
+        server.succeed("curl -fsS http://127.0.0.1:8000/health", timeout=10)
 
-        ${preScript}
+        with subtest("token is not issued outside the tailnet"):
+          status = control.succeed("curl -s -o /dev/null -w '%{http_code}' -H 'Sec-Tailfed: 1' http://server:8000/token", timeout=10)
+          assert status == "401", f"expected 401, got {status}"
 
-        client.wait_for_unit("tailfed.service")
-        client.wait_for_file("/var/lib/tailfed/token", timeout=10)
-        client.copy_from_vm("/var/lib/tailfed/token")
+        with subtest("client fetches a token"):
+          client.wait_for_unit("tailfed-client.service")
+          client.succeed("systemctl reload tailfed-client.service")
+          client.wait_for_file("/run/tailfed/token", timeout=30)
+          raw_token = client.succeed("cat /run/tailfed/token").strip()
+          header = jwt.get_unverified_header(raw_token)
+          claims = jwt.decode(raw_token, options={"verify_signature": False})
+          print(header, claims)
 
-        with (client.out_dir / "token").open("r") as f:
-          token = f.read()
-        claims = jwt.decode(token, options={"verify_signature": False})
-        ${assertions}
+        with subtest("token signature matches the published keys"):
+          discovery = json.loads(client.succeed("curl -fsS http://${serverTailscaleAddress}:8000/.well-known/openid-configuration"))
+          assert discovery.get("issuer") == claims.get("iss")
+
+          jwks = client.succeed(f"curl -fsS {discovery['jwks_uri']}")
+          keys = jwt.PyJWKSet.from_json(jwks)
+          key = next(k for k in keys.keys if k.key_id == header.get("kid"))
+          jwt.decode(raw_token, key=key, algorithms=[header["alg"]], audience=claims.get("aud"))
+
+        with subtest("token claims"):
+          assert claims.get("iss") == "http://${serverTailscaleAddress}:8000"
+          ${assertions}
       '';
     };
 in {
-  module-mock = moduleTest {
-    name = "module-mock";
-    api.systemd.services.mock-api = {
-      wants = ["network-online.target"];
-      wantedBy = ["multi-user.target"];
-
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = "${mock-api}/bin/mock-api";
-        Restart = "on-failure";
-      };
-    };
-
-    preScript = ''
-      api.wait_for_unit("mock-api.service")
-      api.wait_for_open_port(8080)
-      api.succeed("curl -qv http://[::1]:8080/__admin/health", timeout=10)
-    '';
+  module-default-profile = moduleTest {
+    name = "module-default-profile";
     assertions = ''
-      assert claims.get("iss") == "wiremock"
-      assert claims.get("aud") == "wiremock.io"
-      assert claims.get("sub") == "user-123"
+      assert claims.get("aud") == "sts.amazonaws.com"
+      assert claims.get("sub") == "tailnet.dns::hostname:client:user.login:test@nixos.org"
+      assert claims["exp"] - claims["iat"] == 60 * 60
     '';
   };
 
-  module-dev = moduleTest {
-    name = "module-dev";
-    api.systemd.services.dev-api = {
-      wants = ["network-online.target"];
-      wantedBy = ["multi-user.target"];
-
-      environment = {
-        DEV_GATEWAY_LOG_LEVEL = "debug";
-        DEV_GATEWAY_ADDRESS = "0.0.0.0:8080";
-        DEV_GATEWAY_TAILSCALE__BACKEND = "headscale";
-        DEV_GATEWAY_TAILSCALE__BASE_URL = "192.168.1.3:50443";
-        DEV_GATEWAY_TAILSCALE__TAILNET = "192.168.1.3";
-        DEV_GATEWAY_TAILSCALE__API_KEY = "file:///tmp/shared/api-key";
-        DEV_GATEWAY_TAILSCALE__TLS_MODE = "none";
-      };
-
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = "${dev}/bin/dev";
-        Restart = "on-failure";
-      };
-    };
-
-    preScript = ''
-      api.wait_for_unit("dev-api.service")
-      api.wait_for_open_port(8080)
-      api.succeed("curl -qv http://[::1]:8080/health", timeout=10)
-    '';
+  module-custom-profile = moduleTest {
+    name = "module-custom-profile";
+    client.services.tailfed.client.settings.profile = "other";
     assertions = ''
-      assert claims.get("iss") == "https://mock-api.execute-api.us-east-1.amazonaws.com"
-      assert claims.get("aud") == "sts.amazonaws.com"
-      assert claims.get("sub") == "3"
-      assert claims.get("tailnet") == "192.168.1.3"
-      assert claims.get("authorized") is True
-      assert claims.get("external") is False
-      assert claims.get("os") == "unknown"
-      assert claims.get("dns_name") == "client"
-      assert claims.get("host_name") == "client"
-      assert claims.get("machine_name") == "client"
-      assert claims.get("tags") == []
+      assert header.get("alg") == "ES256"
+      assert claims.get("aud") == "other.example.com"
+      assert claims.get("sub") == "hostname:client:user.id:1"
+      assert claims["exp"] - claims["iat"] == 15 * 60
     '';
   };
 }
