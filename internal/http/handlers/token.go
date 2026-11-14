@@ -29,6 +29,12 @@ func NewTokenHandler(profiles oidc.Profiles, signer signing.Backend, ts tailscal
 }
 
 func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Sec-Tailfed") != "1" {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("header 'Sec-Tailfed' must be set to '1'"))
+		return
+	}
+
 	node, err := t.ts.WhoIs(r.Context(), r.RemoteAddr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
