@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/akrantz01/tailfed/internal/http/requestid"
+	"github.com/akrantz01/tailfed/internal/http/middleware"
 	"github.com/sirupsen/logrus"
 )
 
@@ -14,7 +14,7 @@ func Middleware(next http.Handler) http.Handler {
 		recorder := &statusRecorder{w, http.StatusOK}
 
 		logger := logrus.WithFields(map[string]any{
-			"id":     requestid.Get(r),
+			"id":     middleware.GetRequestID(r),
 			"method": r.Method,
 			"path":   r.URL.Path,
 		})

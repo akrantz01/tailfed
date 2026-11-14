@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/akrantz01/tailfed/internal/http/handlers"
-	"github.com/akrantz01/tailfed/internal/http/requestid"
+	"github.com/akrantz01/tailfed/internal/http/middleware"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
@@ -19,7 +19,7 @@ func New(signer signing.Backend, ts tailscale.Connection) *http.Server {
 	mux.Handle("GET /token", handlers.NewTokenHandler(signer, ts))
 
 	return &http.Server{
-		Handler: withMiddleware(mux, requestid.Middleware, logging.Middleware),
+		Handler: withMiddleware(mux, middleware.RequestID, logging.Middleware),
 	}
 }
 
