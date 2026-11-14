@@ -68,6 +68,7 @@ func bindLeaf(fs *pflag.FlagSet, key, usage, short string, v reflect.Value) {
 		if v.Type().Elem().Kind() == reflect.String {
 			fs.StringSliceP(key, short, stringSlice(v), usage)
 		}
+	case v.Kind() == reflect.Map:
 	default:
 		panic(fmt.Sprintf("configloader.Bind: unsupported type %s for %q", v.Type(), key))
 	}
