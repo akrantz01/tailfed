@@ -9,6 +9,35 @@ import (
 	"github.com/akrantz01/tailfed/internal/signing"
 )
 
+// Profiles contains all the registered profiles
+type Profiles struct {
+	defaultId string
+	profiles  map[string]Profile
+}
+
+// NewProfiles creates a new profile directory
+func NewProfiles(defaultId string, profiles map[string]Profile) Profiles {
+	return Profiles{
+		defaultId: defaultId,
+		profiles:  profiles,
+	}
+}
+
+// Get a profile by ID
+func (p *Profiles) Get(id string) *Profile {
+	if profile, ok := p.profiles[id]; ok {
+		return &profile
+	} else {
+		return nil
+	}
+}
+
+// GetDefault returns the default profile
+func (p *Profiles) GetDefault() *Profile {
+	d := p.profiles[p.defaultId]
+	return &d
+}
+
 // Profile is a client-selectable configuration for a token
 type Profile struct {
 	Audience           string              `koanf:"audience"`
