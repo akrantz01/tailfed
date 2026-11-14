@@ -1,12 +1,13 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 
 	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/sirupsen/logrus"
 )
 
@@ -77,5 +78,17 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_, _ = fmt.Fprintf(w, `{"token":"%s"}`, token)
+	_ = json.NewEncoder(w).Encode(tokenResponse{
+		TokenType:   "Bearer",
+		AccessToken: token,
+		ExpiresIn:   profile.Validity.Seconds(),
+		ExpiresAt:   claims.Expiry,
+	})
+}
+
+type tokenResponse struct {
+	TokenType   string           `json:"token_type"`
+	AccessToken string           `json:"access_token"`
+	ExpiresIn   float64          `json:"expires_in"`
+	ExpiresAt   *jwt.NumericDate `json:"expires_at"`
 }
