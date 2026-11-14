@@ -44,7 +44,8 @@ func main() {
 }
 
 func preRun(cmd *cobra.Command, _ []string) error {
-	awsConfig, err := awsconfig.LoadDefaultConfig(cmd.Context())
+	var err error
+	awsConfig, err = awsconfig.LoadDefaultConfig(cmd.Context())
 	if err != nil {
 		logrus.WithError(err).Error("failed to load aws config")
 	}
