@@ -9,9 +9,11 @@
 log-level: info
 
 # Where the server should listen
+#
+# At least one of the HTTP or HTTPS listener must be configured
 listener:
   # The port (and optional host) the server should bind to for HTTP traffic
-  # Default: "127.0.0.1:8000"
+  # Default: ""
   http: 127.0.0.1:8000
 
   # The port (and optional host) the server should bind to for HTTPS traffic
@@ -20,7 +22,7 @@ listener:
   # operator access for the device.
   # Documentation: https://tailscale.com/docs/how-to/set-up-https-certificates
   #
-  # Default: "" (disabled)
+  # Default: ""
   https: 127.0.0.1:8443
 
   # Expose the token verification routes publicly via Tailscale Funnel on port 443
