@@ -5,7 +5,6 @@ import (
 
 	"github.com/akrantz01/tailfed/internal/http/handlers"
 	"github.com/akrantz01/tailfed/internal/http/middleware"
-	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
@@ -25,7 +24,7 @@ func New(profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection
 	mux.Handle("GET /{profile}/.well-known/openid-configuration", discovery)
 
 	return &http.Server{
-		Handler: withMiddleware(mux, middleware.RequestID, logging.Middleware),
+		Handler: withMiddleware(mux, middleware.RequestID, middleware.Logging),
 	}
 }
 
