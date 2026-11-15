@@ -65,7 +65,7 @@ variable "settings" {
 
   validation {
     condition     = !can(var.settings.listener) && !can(var.settings.tailscale)
-    error_message = "The listener and tailscale settings are managed by the module; use the listener_port and tailscale_* variables instead."
+    error_message = "The listener and tailscale settings are managed by the module; use the tailscale_* variables instead."
   }
 }
 
