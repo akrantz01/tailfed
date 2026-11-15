@@ -93,7 +93,7 @@ in {
         default = {};
         example = lib.literalExpression ''
           {
-            listener.address = "0.0.0.0:8000";
+            listener.http = "0.0.0.0:8000";
             token.profiles.default.audience = "sts.amazonaws.com";
           }
         '';
