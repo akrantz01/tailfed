@@ -13,8 +13,11 @@
     ...
   }:
     flake-utils.lib.eachDefaultSystem (system: let
-      pkgs = import nixpkgs {inherit system;};
-      lib = pkgs.lib;
+      lib = nixpkgs.lib;
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfreePredicate = pkg: lib.getName pkg == "goreleaser-pro";
+      };
 
       rawRev = self.rev or self.dirtyRev or "unknown";
       rev = lib.strings.removeSuffix "-dirty" rawRev;
@@ -67,8 +70,17 @@
       };
 
       devShells.default = pkgs.mkShell {
-        buildInputs = with pkgs; [go gopls gotools go-tools];
-        packages = with pkgs; [alejandra];
+        packages = with pkgs; [
+          # Go development
+          go
+          gopls
+          gotools
+          go-tools
+          # Other tools
+          alejandra
+          opentofu
+          (callPackage ./nix/goreleaser-pro.nix {})
+        ];
       };
 
       checks = import ./nix/tests {
