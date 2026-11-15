@@ -85,6 +85,7 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WithField("token.expires", claims.Expiry.Time()).
 		Info("issued new token")
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(types.TokenResponse{
 		TokenType:   "Bearer",

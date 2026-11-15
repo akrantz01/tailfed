@@ -21,9 +21,10 @@ func NewJwksHandler(signer signing.Backend) *JwksHandler {
 }
 
 func (j *JwksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	body, _ := json.Marshal(jose.JSONWebKeySet{
+	_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{
 		Keys: j.signer.PublicKeys(),
 	})
-	_, _ = w.Write(body)
 }
