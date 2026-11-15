@@ -12,6 +12,8 @@ import (
 
 type Server = http.Server
 
+var ErrServerClosed = http.ErrServerClosed
+
 // NewPrivate creates an HTTP server handling every route
 func NewPrivate(issuer string, profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *http.Server {
 	return newServer(issuer, profiles, signer, ts)

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +19,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 var awsConfig aws.Config
@@ -96,58 +99,75 @@ func run(cmd *cobra.Command, _ []string) error {
 	issuer := cfg.Listener.Issuer(name)
 	logrus.WithField("oidc.issuer", issuer).Info("selected issuer from magic dns")
 
+	var listeners []listener
+
 	privateSrv := http.NewPrivate(issuer, profiles, signer, ts)
+
 	privateLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.Address)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.Address, err)
 	}
+	listeners = append(listeners, listener{"private", privateSrv, privateLn})
 
-	privateSrvErr := make(chan error, 1)
-	go func() {
-		logrus.WithField("address", privateLn.Addr().String()).Info("private server is ready")
-		privateSrvErr <- privateSrv.Serve(privateLn)
-	}()
-
-	var publicSrv *http.Server
-	publicSrvErr := make(chan error, 1)
 	if cfg.Listener.Funnel {
-		publicSrv = http.NewPublic(issuer, profiles, signer)
+		publicSrv := http.NewPublic(issuer, profiles, signer)
+
 		publicLn, err := ts.ListenFunnel(context.Background())
 		if err != nil {
 			return fmt.Errorf("failed to listen on funnel: %w", err)
 		}
 
-		go func() {
-			logrus.WithField("issuer", issuer).Info("public server is ready")
-			publicSrvErr <- publicSrv.Serve(publicLn)
-		}()
+		listeners = append(listeners, listener{"public", publicSrv, publicLn})
 	}
 
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	serveCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	select {
-	case err := <-privateSrvErr:
-		return fmt.Errorf("private http server error: %w", err)
-	case err := <-publicSrvErr:
-		return fmt.Errorf("public http server error: %w", err)
-	case sig := <-shutdown:
-		logrus.WithField("signal", sig.String()).Info("signal received, shutting down...")
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := privateSrv.Shutdown(ctx); err != nil {
-			return fmt.Errorf("failed to shutdown private server: %w", err)
-		}
-		if publicSrv != nil {
-			if err := publicSrv.Shutdown(ctx); err != nil {
-				return fmt.Errorf("failed to shutdown public server: %w", err)
-			}
-		}
+	if err := serve(serveCtx, listeners); err != nil {
+		return err
 	}
 
 	logrus.Info("successfully shutdown")
 	logrus.Info("goodbye!")
 	return nil
+}
+
+type listener struct {
+	name string
+	srv  *http.Server
+	ln   net.Listener
+}
+
+func serve(ctx context.Context, listeners []listener) error {
+	errGrp, ctx := errgroup.WithContext(ctx)
+
+	for _, l := range listeners {
+		errGrp.Go(func() error {
+			logrus.WithField("listener.name", l.name).WithField("listener.address", l.ln.Addr().String()).Info("listener is ready")
+			if err := l.srv.Serve(l.ln); !errors.Is(err, http.ErrServerClosed) {
+				return fmt.Errorf("%s listener error: %w", l.name, err)
+			}
+			return nil
+		})
+	}
+
+	errGrp.Go(func() error {
+		<-ctx.Done()
+
+		logrus.Info("signal received, shutting down...")
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var errs []error
+		for _, l := range listeners {
+			if err := l.srv.Shutdown(shutdownCtx); err != nil {
+				errs = append(errs, fmt.Errorf("failed to shutdown %s listener: %w", l.name, err))
+			}
+		}
+
+		return errors.Join(errs...)
+	})
+
+	return errGrp.Wait()
 }
