@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/oidc"
-	"github.com/sirupsen/logrus"
 )
 
 type DiscoveryHandler struct {
 	profiles oidc.Profiles
-	logger   logrus.FieldLogger
 }
 
 var _ http.Handler = (*DiscoveryHandler)(nil)
@@ -19,17 +18,21 @@ var _ http.Handler = (*DiscoveryHandler)(nil)
 func NewDiscoveryHandler(profiles oidc.Profiles) *DiscoveryHandler {
 	return &DiscoveryHandler{
 		profiles: profiles,
-		logger:   logrus.WithField("component", "http").WithField("http.handler", "discovery"),
 	}
 }
 
 func (d *DiscoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log := logging.FromContext(r.Context()).WithField("http.handler", "discovery")
+
 	profileId, profile := d.profiles.GetOrDefault(r.PathValue("profile"))
+	log = log.WithField("profile.id", profileId)
+
 	if profile == nil {
+		log.Debug("profile not found")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	d.logger.WithField("profile.id", profileId).Debug("selected profile")
+	log.Debug("selected profile")
 
 	doc := oidc.NewDiscoveryDocument(issuerFor(r), profile.AcceptedAlgorithms)
 

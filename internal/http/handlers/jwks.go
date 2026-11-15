@@ -6,12 +6,10 @@ import (
 
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/go-jose/go-jose/v4"
-	"github.com/sirupsen/logrus"
 )
 
 type JwksHandler struct {
 	signer signing.Backend
-	logger logrus.FieldLogger
 }
 
 var _ http.Handler = (*JwksHandler)(nil)
@@ -19,7 +17,6 @@ var _ http.Handler = (*JwksHandler)(nil)
 func NewJwksHandler(signer signing.Backend) *JwksHandler {
 	return &JwksHandler{
 		signer: signer,
-		logger: logrus.WithField("component", "http").WithField("http.handler", "jwks"),
 	}
 }
 
