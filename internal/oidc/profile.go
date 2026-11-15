@@ -153,6 +153,7 @@ func (p *Profile) SetDefaults() {
 		signing.ES384,
 		signing.ES512,
 	}
+	p.Subject.SetDefaults()
 	p.Validity = 1 * time.Hour
 }
 
