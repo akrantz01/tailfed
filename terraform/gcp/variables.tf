@@ -49,22 +49,6 @@ variable "tailscale_funnel" {
   EOT
 }
 
-variable "listener_port" {
-  type        = number
-  default     = 80
-  description = "The port the server accepts token requests on from within the tailnet"
-
-  validation {
-    condition     = var.listener_port >= 1 && var.listener_port <= 65535
-    error_message = "The listener port must be between 1 and 65535."
-  }
-
-  validation {
-    condition     = !(var.tailscale_funnel && var.listener_port == 443)
-    error_message = "The listener port cannot be 443 when Funnel is enabled."
-  }
-}
-
 variable "tailscale_control_plane_url" {
   type        = string
   default     = null
