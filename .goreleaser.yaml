@@ -46,6 +46,17 @@ builds:
       - goos: windows
         goarch: arm64
 
+  - id: server
+    main: ./cmd/server
+    binary: tailfed-server
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+
 archives:
   - id: client
     ids: [client]
@@ -57,6 +68,11 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+  - id: server
+    ids: [server]
+    formats: [binary]
+    name_template: server_{{ .Os }}_{{ .Arch }}
+
 signs:
   - cmd: cosign
     args:
@@ -64,12 +80,11 @@ signs:
       - --yes
       - --bundle=${signature}
       - ${artifact}
-    artifacts: archive
+    artifacts: binary
 
 sboms:
-  - id: client
-    artifacts: binary
-    ids: [client]
+  - artifacts: binary
+    ids: [client, server]
 
 changelog:
   sort: asc
@@ -84,3 +99,10 @@ release:
     ---
 
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+blobs:
+  - provider: s3
+    region: "{{ .Env.AWS_REGION }}"
+    bucket: tailfed-artifacts
+    directory: "{{ .Version }}"
+    ids: [client, server]
