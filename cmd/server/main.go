@@ -109,7 +109,12 @@ func run(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.HTTP, err)
 		}
-		listeners = append(listeners, listener{"http", privateSrv, httpLn})
+
+		httpSrv := privateSrv
+		if httpsUrl := cfg.Listener.HttpsUrl(name); httpsUrl != "" {
+			httpSrv = http.NewRedirect(httpsUrl)
+		}
+		listeners = append(listeners, listener{"http", httpSrv, httpLn})
 	}
 
 	if len(cfg.Listener.HTTPS) > 0 {

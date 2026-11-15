@@ -39,7 +39,22 @@ func newServer(issuer string, profiles oidc.Profiles, signer signing.Backend, ts
 	mux.Handle("GET /{profile}/.well-known/openid-configuration", discovery)
 
 	return &http.Server{
-		Handler: withMiddleware(mux, middleware.RequestID, middleware.Logging, middleware.RedirectToHTTPS(issuer)),
+		Handler: withMiddleware(mux, middleware.RequestID, middleware.Logging),
+	}
+}
+
+// NewRedirect creates an HTTP server that sends every request except health checks to target
+func NewRedirect(target string) *Server {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /health", health)
+
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target+r.URL.RequestURI(), http.StatusTemporaryRedirect)
+	}))
+
+	return &http.Server{
+		Handler: withMiddleware(mux, middleware.RequestID, middleware.Logging),
 	}
 }
 

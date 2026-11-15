@@ -81,10 +81,18 @@ func (c *listenerConfig) Issuer(dnsName string) string {
 	case c.Funnel:
 		return "https://" + dnsName
 	case len(c.HTTPS) != 0:
-		return "https://" + hostWithPort(dnsName, c.HTTPS, "443")
+		return c.HttpsUrl(dnsName)
 	default:
 		return "http://" + hostWithPort(dnsName, c.HTTP, "80")
 	}
+}
+
+// HttpsUrl is the base URL of the private https listener, or empty when it is disabled
+func (c *listenerConfig) HttpsUrl(dnsName string) string {
+	if len(c.HTTPS) == 0 {
+		return ""
+	}
+	return "https://" + hostWithPort(dnsName, c.HTTPS, "443")
 }
 
 func hostWithPort(name, address, defaultPort string) string {
