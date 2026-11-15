@@ -64,7 +64,7 @@ resource "google_compute_instance" "server" {
 
     startup-script = file("${path.module}/files/startup.sh")
 
-    tailfed-config        = yamlencode(local.settings)
+    tailfed-config        = jsonencode(local.settings)
     tailfed-artifacts-url = local.artifacts_url
   }
 
