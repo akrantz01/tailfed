@@ -52,19 +52,21 @@ type listenerConfig struct {
 	Funnel bool   `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
 }
 
-func (c *listenerConfig) SetDefaults() {
-	c.HTTP = "127.0.0.1:8000"
-}
-
 func (c *listenerConfig) Validate() error {
-	if len(c.HTTP) == 0 {
-		return errors.New("at least a http listen address is required")
-	}
-	if _, _, err := net.SplitHostPort(c.HTTP); err != nil {
-		return fmt.Errorf("invalid http listen address: %w", err)
+	hasHttp := len(c.HTTP) > 0
+	hasHttps := len(c.HTTPS) > 0
+
+	if !hasHttp && !hasHttps {
+		return errors.New("either a http or https listener is required")
 	}
 
-	if len(c.HTTPS) != 0 {
+	if hasHttp {
+		if _, _, err := net.SplitHostPort(c.HTTP); err != nil {
+			return fmt.Errorf("invalid http listen address: %w", err)
+		}
+	}
+
+	if hasHttps {
 		if _, _, err := net.SplitHostPort(c.HTTPS); err != nil {
 			return fmt.Errorf("invalid https listen address: %w", err)
 		}

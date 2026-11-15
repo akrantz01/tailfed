@@ -104,11 +104,13 @@ func run(cmd *cobra.Command, _ []string) error {
 
 	privateSrv := http.NewPrivate(issuer, profiles, signer, ts)
 
-	httpLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.HTTP)
-	if err != nil {
-		return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.HTTP, err)
+	if len(cfg.Listener.HTTP) > 0 {
+		httpLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.HTTP)
+		if err != nil {
+			return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.HTTP, err)
+		}
+		listeners = append(listeners, listener{"http", privateSrv, httpLn})
 	}
-	listeners = append(listeners, listener{"http", privateSrv, httpLn})
 
 	if len(cfg.Listener.HTTPS) > 0 {
 		httpsLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.HTTPS)
