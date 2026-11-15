@@ -31,7 +31,7 @@ partial:
 builds:
   - id: client
     main: ./cmd/client
-    binary: client
+    binary: tailfed-client
     goarch:
       - "386"
       - amd64
@@ -62,7 +62,7 @@ archives:
     ids: [client]
     formats: [binary]
     name_template: >-
-      client_
+      tailfed-client_
       {{- .Os }}_
       {{- if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
@@ -71,7 +71,7 @@ archives:
   - id: server
     ids: [server]
     formats: [binary]
-    name_template: server_{{ .Os }}_{{ .Arch }}
+    name_template: tailfed-server_{{ .Os }}_{{ .Arch }}
 
 signs:
   - cmd: cosign
