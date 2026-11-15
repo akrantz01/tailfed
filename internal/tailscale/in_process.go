@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
 	_ "tailscale.com/feature/identityfederation"
-	"tailscale.com/tailcfg"
 	"tailscale.com/tsnet"
 )
 
@@ -98,15 +97,16 @@ func (p *InProcess) Healthy(ctx context.Context) bool {
 	return len(status.Health) == 0
 }
 
-func (p *InProcess) Listen(_ context.Context, address string, service tailcfg.ServiceName) (net.Listener, error) {
-	if len(service) > 0 {
-		return p.ts.ListenService(string(service), tsnet.ServiceModeHTTP{
-			Port:  443,
-			HTTPS: true,
-		})
-	} else {
-		return p.ts.Listen("tcp", address)
-	}
+func (p *InProcess) ListenPrivate(_ context.Context, address string) (net.Listener, error) {
+	return p.ts.Listen("tcp", address)
+}
+
+func (p *InProcess) ListenFunnel(_ context.Context) (net.Listener, error) {
+	return p.ts.ListenFunnel("tcp", ":443", tsnet.FunnelOnly())
+}
+
+func (p *InProcess) DNSName(ctx context.Context) (string, error) {
+	return dnsName(ctx, p.client)
 }
 
 func (p *InProcess) WhoIs(ctx context.Context, address string) (*Node, error) {

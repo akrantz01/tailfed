@@ -12,7 +12,6 @@ import (
 	"github.com/akrantz01/tailfed/internal/tailscale"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"tailscale.com/ipn"
-	"tailscale.com/tailcfg"
 )
 
 var cfg Config
@@ -48,8 +47,8 @@ func (c *Config) Validate() error {
 }
 
 type listenerConfig struct {
-	Address string              `koanf:"address" help:"The host and port the server should bind to"`
-	Service tailcfg.ServiceName `koanf:"service" help:"The Tailscale service to advertise"`
+	Address string `koanf:"address" help:"The host and port the server should bind to"`
+	Funnel  bool   `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
 }
 
 func (c *listenerConfig) SetDefaults() {
@@ -57,21 +56,11 @@ func (c *listenerConfig) SetDefaults() {
 }
 
 func (c *listenerConfig) Validate() error {
-	hasAddress := len(c.Address) > 0
-	hasService := len(c.Service) > 0
-	if !hasAddress && !hasService {
-		return errors.New("a service or address is required")
+	if len(c.Address) == 0 {
+		return errors.New("an address is required")
 	}
-
-	if hasAddress {
-		if _, _, err := net.SplitHostPort(c.Address); err != nil {
-			return fmt.Errorf("invalid address: %w", err)
-		}
-	}
-	if hasService {
-		if err := c.Service.Validate(); err != nil {
-			return err
-		}
+	if _, _, err := net.SplitHostPort(c.Address); err != nil {
+		return fmt.Errorf("invalid address: %w", err)
 	}
 
 	return nil

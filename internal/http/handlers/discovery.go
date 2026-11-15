@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/akrantz01/tailfed/internal/logging"
@@ -10,13 +9,15 @@ import (
 )
 
 type DiscoveryHandler struct {
+	issuer   string
 	profiles oidc.Profiles
 }
 
 var _ http.Handler = (*DiscoveryHandler)(nil)
 
-func NewDiscoveryHandler(profiles oidc.Profiles) *DiscoveryHandler {
+func NewDiscoveryHandler(issuer string, profiles oidc.Profiles) *DiscoveryHandler {
 	return &DiscoveryHandler{
+		issuer:   issuer,
 		profiles: profiles,
 	}
 }
@@ -34,20 +35,9 @@ func (d *DiscoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Debug("selected profile")
 
-	doc := oidc.NewDiscoveryDocument(issuerFor(r), profile.AcceptedAlgorithms)
+	doc := oidc.NewDiscoveryDocument(d.issuer, profile.AcceptedAlgorithms)
 
 	w.WriteHeader(http.StatusOK)
 	body, _ := json.Marshal(doc)
 	_, _ = w.Write(body)
-}
-
-func issuerFor(r *http.Request) string {
-	var scheme string
-	if r.TLS == nil {
-		scheme = "http"
-	} else {
-		scheme = "https"
-	}
-
-	return fmt.Sprintf("%s://%s", scheme, r.Host)
 }

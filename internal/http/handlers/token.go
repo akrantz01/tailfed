@@ -9,24 +9,23 @@ import (
 	"github.com/akrantz01/tailfed/internal/oidc"
 	"github.com/akrantz01/tailfed/internal/signing"
 	"github.com/akrantz01/tailfed/internal/tailscale"
-	"github.com/sirupsen/logrus"
 )
 
 type TokenHandler struct {
+	issuer   string
 	profiles oidc.Profiles
 	signer   signing.Backend
 	ts       tailscale.Connection
-	logger   logrus.FieldLogger
 }
 
 var _ http.Handler = (*TokenHandler)(nil)
 
-func NewTokenHandler(profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *TokenHandler {
+func NewTokenHandler(issuer string, profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *TokenHandler {
 	return &TokenHandler{
+		issuer:   issuer,
 		profiles: profiles,
 		signer:   signer,
 		ts:       ts,
-		logger:   logrus.WithField("component", "http").WithField("http.handler", "token"),
 	}
 }
 
@@ -64,7 +63,7 @@ func (t *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Debug("selected profile")
 
-	claims, err := profile.GenerateClaims(issuerFor(r), node)
+	claims, err := profile.GenerateClaims(t.issuer, node)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.WithError(err).Error("failed to generate claims")

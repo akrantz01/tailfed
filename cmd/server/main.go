@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -89,32 +90,65 @@ func run(cmd *cobra.Command, _ []string) error {
 
 	profiles := oidc.NewProfiles(cfg.Token.DefaultProfile, cfg.Token.Profiles)
 
-	srv := http.New(profiles, signer, ts)
-	l, err := ts.Listen(context.Background(), cfg.Listener.Address, cfg.Listener.Service)
+	name, err := ts.DNSName(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to get listener: %w", err)
+		return fmt.Errorf("failed to get dns name: %w", err)
+	}
+	issuer := "https://" + name
+	if !cfg.Listener.Funnel {
+		_, port, _ := net.SplitHostPort(cfg.Listener.Address)
+		issuer = "http://" + net.JoinHostPort(name, port)
+	}
+	logrus.WithField("oidc.issuer", issuer).Info("selected issuer from magic dns")
+
+	privateSrv := http.NewPrivate(issuer, profiles, signer, ts)
+	privateLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.Address)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.Address, err)
 	}
 
-	srvErrors := make(chan error, 1)
+	privateSrvErr := make(chan error, 1)
 	go func() {
-		logrus.WithField("address", l.Addr().String()).Info("server is ready")
-		srvErrors <- srv.Serve(l)
+		logrus.WithField("address", privateLn.Addr().String()).Info("private server is ready")
+		privateSrvErr <- privateSrv.Serve(privateLn)
 	}()
+
+	var publicSrv *http.Server
+	publicSrvErr := make(chan error, 1)
+	if cfg.Listener.Funnel {
+		publicSrv = http.NewPublic(issuer, profiles, signer)
+		publicLn, err := ts.ListenFunnel(context.Background())
+		if err != nil {
+			return fmt.Errorf("failed to listen on funnel: %w", err)
+		}
+
+		go func() {
+			logrus.WithField("issuer", issuer).Info("public server is ready")
+			publicSrvErr <- publicSrv.Serve(publicLn)
+		}()
+	}
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
-	case err := <-srvErrors:
-		return fmt.Errorf("http error: %w", err)
+	case err := <-privateSrvErr:
+		return fmt.Errorf("private http server error: %w", err)
+	case err := <-publicSrvErr:
+		return fmt.Errorf("public http server error: %w", err)
 	case sig := <-shutdown:
 		logrus.WithField("signal", sig.String()).Info("signal received, shutting down...")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		if err := srv.Shutdown(ctx); err != nil {
-			return fmt.Errorf("failed to shutdown server: %w", err)
+		if err := privateSrv.Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown private server: %w", err)
+		}
+		if publicSrv != nil {
+			if err := publicSrv.Shutdown(ctx); err != nil {
+				return fmt.Errorf("failed to shutdown public server: %w", err)
+			}
 		}
 	}
 

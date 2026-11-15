@@ -28,4 +28,4 @@ with subtest("token signature matches the published keys"):
     verify_signature(client, server_url, raw_token, header, claims)
 
 with subtest("token claims"):
-    verify_claims(server_url, header, claims, EXPECTED)
+    verify_claims(f"http://{peer_dns_name(client, 'server')}:8000", header, claims, EXPECTED)

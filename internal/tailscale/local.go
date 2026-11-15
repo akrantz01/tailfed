@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
 	"tailscale.com/ipn"
-	"tailscale.com/tailcfg"
 )
 
 var (
@@ -67,23 +65,32 @@ func (l *Local) Healthy(ctx context.Context) bool {
 	return len(status.Health) == 0
 }
 
-func (l *Local) Listen(ctx context.Context, address string, service tailcfg.ServiceName) (net.Listener, error) {
+func (l *Local) ListenPrivate(_ context.Context, address string) (net.Listener, error) {
 	ln, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to bind to %s: %w", address, err)
 	}
 
-	if len(service) == 0 {
-		return ln, nil
+	return ln, nil
+}
+
+func (l *Local) ListenFunnel(ctx context.Context) (net.Listener, error) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to bind funnel backend: %w", err)
 	}
 
-	sl, err := l.bindService(ctx, ln, service)
+	fl, err := l.bindFunnel(ctx, ln)
 	if err != nil {
 		_ = ln.Close()
 		return nil, err
 	}
 
-	return sl, nil
+	return fl, nil
+}
+
+func (l *Local) DNSName(ctx context.Context) (string, error) {
+	return dnsName(ctx, &l.client)
 }
 
 func (l *Local) WhoIs(ctx context.Context, address string) (*Node, error) {
@@ -96,56 +103,30 @@ func (l *Local) WhoIs(ctx context.Context, address string) (*Node, error) {
 	return nodeFromWhoIsResponse(status, res, err)
 }
 
-// bindService serves and advertises the service, proxying to the listener
-func (l *Local) bindService(ctx context.Context, ln net.Listener, service tailcfg.ServiceName) (*ServiceListener, error) {
-	status, err := l.client.StatusWithoutPeers(ctx)
+// bindFunnel serves the listener on port 443 of the node and exposes it via funnel
+func (l *Local) bindFunnel(ctx context.Context, ln net.Listener) (*FunnelListener, error) {
+	host, err := l.DNSName(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node status: %w", err)
 	}
 
-	port := ln.Addr().(*net.TCPAddr).Port
-	proxy := fmt.Sprintf("http://127.0.0.1:%d", port)
-	suffix := status.CurrentTailnet.MagicDNSSuffix
-	fqdn := service.WithoutPrefix() + "." + suffix
-
-	// Serve before advertising so the service is never routable without a handler
-	if err := l.serve(ctx, service, proxy, suffix); err != nil {
-		return nil, fmt.Errorf("failed to serve %q: %w", service, err)
-	}
-
-	if err := l.setAdvertised(ctx, service, true); err != nil {
-		err = fmt.Errorf("failed to advertise service %q: %w", service, err)
-		return nil, errors.Join(err, l.unserve(ctx, service, fqdn))
-	}
-
-	l.logger.WithField("tailscale.service", service).WithField("tailscale.service.fqdn", fqdn).Info("serving tailscale service")
-	return &ServiceListener{Listener: ln, l: l, service: service, fqdn: fqdn}, nil
-}
-
-// serve configures an HTTPS handler on port 443 of the service that proxies to the target
-func (l *Local) serve(ctx context.Context, service tailcfg.ServiceName, proxy, suffix string) error {
-	return l.editServeConfig(ctx, func(sc *ipn.ServeConfig) {
-		delete(sc.Services, service)
-		sc.SetWebHandler(&ipn.HTTPHandler{Proxy: proxy}, service.String(), 443, "/", true, suffix)
-	})
-}
-
-// unserve stops advertising the service, then removes its handler
-func (l *Local) unserve(ctx context.Context, service tailcfg.ServiceName, fqdn string) error {
-	var unadvertiseErr error
-	if err := l.setAdvertised(ctx, service, false); err != nil {
-		unadvertiseErr = fmt.Errorf("failed to unadvertise service %q: %w", service, err)
-	}
-
-	var unserveErr error
-	err := l.editServeConfig(ctx, func(sc *ipn.ServeConfig) {
-		sc.RemoveServiceWebHandler(service, fqdn, 443, []string{"/"})
+	proxy := fmt.Sprintf("http://%s", ln.Addr())
+	err = l.editServeConfig(ctx, func(sc *ipn.ServeConfig) {
+		sc.SetWebHandler(&ipn.HTTPHandler{Proxy: proxy}, host, 443, "/", true, "")
+		sc.SetFunnel(host, 443, true)
 	})
 	if err != nil {
-		unserveErr = fmt.Errorf("failed to stop serving %q: %w", service, err)
+		return nil, fmt.Errorf("failed to funnel %q: %w", host, err)
 	}
 
-	return errors.Join(unadvertiseErr, unserveErr)
+	l.logger.WithField("tailscale.funnel.host", host).Info("serving tailscale funnel")
+	return &FunnelListener{Listener: ln, l: l, host: host}, nil
+}
+
+func (l *Local) unfunnel(ctx context.Context, host string) error {
+	return l.editServeConfig(ctx, func(sc *ipn.ServeConfig) {
+		sc.RemoveWebHandler(host, 443, []string{"/"}, true)
+	})
 }
 
 // editServeConfig applies edit to the current serve config, retrying if it was modified concurrently
@@ -167,56 +148,29 @@ func (l *Local) editServeConfig(ctx context.Context, edit func(*ipn.ServeConfig)
 	}
 }
 
-// setAdvertised adds or removes the service from the node's advertised services
-func (l *Local) setAdvertised(ctx context.Context, service tailcfg.ServiceName, advertise bool) error {
-	prefs, err := l.client.GetPrefs(ctx)
-	if err != nil {
-		return err
-	}
-
-	name := service.String()
-	if slices.Contains(prefs.AdvertiseServices, name) == advertise {
-		return nil
-	}
-
-	var services []string
-	if advertise {
-		services = append(prefs.AdvertiseServices, name)
-	} else {
-		services = slices.DeleteFunc(prefs.AdvertiseServices, func(s string) bool { return s == name })
-	}
-
-	_, err = l.client.EditPrefs(ctx, &ipn.MaskedPrefs{
-		AdvertiseServicesSet: true,
-		Prefs:                ipn.Prefs{AdvertiseServices: services},
-	})
-	return err
-}
-
-// ServiceListener is a listener whose Close also unadvertises and unserves its Tailscale service
-type ServiceListener struct {
+// FunnelListener is a listener whose Close also removes its funnel
+type FunnelListener struct {
 	net.Listener
 
-	l       *Local
-	service tailcfg.ServiceName
-	fqdn    string
+	l    *Local
+	host string
 
 	closeOnce sync.Once
 	closeErr  error
 }
 
-func (sl *ServiceListener) Close() error {
-	sl.closeOnce.Do(func() {
+func (fl *FunnelListener) Close() error {
+	fl.closeOnce.Do(func() {
 		// Close has no context
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		sl.closeErr = errors.Join(
-			sl.l.unserve(ctx, sl.service, sl.fqdn),
-			sl.Listener.Close(),
+		fl.closeErr = errors.Join(
+			fl.l.unfunnel(ctx, fl.host),
+			fl.Listener.Close(),
 		)
 	})
-	return sl.closeErr
+	return fl.closeErr
 }
 
 // Status provides information about the node

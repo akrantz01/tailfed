@@ -57,6 +57,12 @@ def peer_ip(m, hostname):
     return None
 
 
+def peer_dns_name(m, hostname):
+    peers = json.loads(m.succeed("tailscale status --json")).get("Peer") or {}
+    peer = next(p for p in peers.values() if p.get("HostName") == hostname)
+    return peer["DNSName"].rstrip(".")
+
+
 def fetch_token(client):
     client.wait_for_unit("tailfed-client.service")
     client.succeed("systemctl reload tailfed-client.service")
@@ -73,16 +79,18 @@ def fetch_token(client):
 def verify_signature(client, server_url, raw_token, header, claims):
     discovery = json.loads(client.succeed(f"curl -fsS {server_url}/.well-known/openid-configuration"))
     assert discovery.get("issuer") == claims.get("iss")
+    assert discovery.get("jwks_uri") == f"{claims.get('iss')}/.well-known/jwks.json"
 
-    jwks = client.succeed(f"curl -fsS {discovery['jwks_uri']}")
+    # Without MagicDNS the issuer's hostname doesn't resolve to the tailnet address
+    jwks = client.succeed(f"curl -fsS {server_url}/.well-known/jwks.json")
     keys = jwt.PyJWKSet.from_json(jwks)
     key = next(k for k in keys.keys if k.key_id == header.get("kid"))
     jwt.decode(raw_token, key=key, algorithms=[header["alg"]], audience=claims.get("aud"))
 
 
-def verify_claims(server_url, header, claims, expected):
+def verify_claims(issuer, header, claims, expected):
     assert header.get("alg") == expected["alg"]
-    assert claims.get("iss") == server_url
+    assert claims.get("iss") == issuer
     assert claims.get("aud") == expected["aud"]
     assert claims.get("sub") == expected["sub"]
     assert claims["exp"] - claims["iat"] == expected["lifetime"]

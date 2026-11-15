@@ -14,14 +14,10 @@ listener:
   # Default: "127.0.0.1:8000"
   address: 127.0.0.1:8000
 
-  # The Tailscale service to advertise
+  # Expose the token verification routes publicly via Tailscale Funnel on port 443
   #
-  # When using the in-process Tailscale connection, an address is not strictly required as the
-  # service and be listened on directly.
-  # When using the local Tailscale connection, you must have operator permissions for the node.
-  #
-  # Default: ""
-  service: svc:tailfed
+  # Default: false
+  funnel: false
 
 # Customizations for the token contents
 token:

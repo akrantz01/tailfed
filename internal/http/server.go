@@ -10,15 +10,28 @@ import (
 	"github.com/akrantz01/tailfed/internal/tailscale"
 )
 
-// Create a new HTTP server
-func New(profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *http.Server {
+type Server = http.Server
+
+// NewPrivate creates an HTTP server handling every route
+func NewPrivate(issuer string, profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *http.Server {
+	return newServer(issuer, profiles, signer, ts)
+}
+
+// NewPublic creates an HTTP server handling only the routes needed to verify tokens
+func NewPublic(issuer string, profiles oidc.Profiles, signer signing.Backend) *http.Server {
+	return newServer(issuer, profiles, signer, nil)
+}
+
+func newServer(issuer string, profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *Server {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", health)
 
-	mux.Handle("GET /token", handlers.NewTokenHandler(profiles, signer, ts))
+	if ts != nil {
+		mux.Handle("GET /token", handlers.NewTokenHandler(issuer, profiles, signer, ts))
+	}
 
-	discovery := handlers.NewDiscoveryHandler(profiles)
+	discovery := handlers.NewDiscoveryHandler(issuer, profiles)
 	mux.Handle("GET /.well-known/jwks.json", handlers.NewJwksHandler(signer))
 	mux.Handle("GET /.well-known/openid-configuration", discovery)
 	mux.Handle("GET /{profile}/.well-known/openid-configuration", discovery)
