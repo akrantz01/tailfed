@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -103,11 +104,23 @@ func run(cmd *cobra.Command, _ []string) error {
 
 	privateSrv := http.NewPrivate(issuer, profiles, signer, ts)
 
-	privateLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.Address)
+	httpLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.HTTP)
 	if err != nil {
-		return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.Address, err)
+		return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.HTTP, err)
 	}
-	listeners = append(listeners, listener{"private", privateSrv, privateLn})
+	listeners = append(listeners, listener{"http", privateSrv, httpLn})
+
+	if len(cfg.Listener.HTTPS) > 0 {
+		httpsLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.HTTPS)
+		if err != nil {
+			return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.HTTPS, err)
+		}
+
+		tlsLn := tls.NewListener(httpsLn, &tls.Config{
+			GetCertificate: ts.GetCertificate,
+		})
+		listeners = append(listeners, listener{"https", privateSrv, tlsLn})
+	}
 
 	if cfg.Listener.Funnel {
 		publicSrv := http.NewPublic(issuer, profiles, signer)
@@ -117,7 +130,7 @@ func run(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("failed to listen on funnel: %w", err)
 		}
 
-		listeners = append(listeners, listener{"public", publicSrv, publicLn})
+		listeners = append(listeners, listener{"funnel", publicSrv, publicLn})
 	}
 
 	serveCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

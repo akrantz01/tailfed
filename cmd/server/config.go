@@ -47,20 +47,27 @@ func (c *Config) Validate() error {
 }
 
 type listenerConfig struct {
-	Address string `koanf:"address" help:"The host and port the server should bind to"`
-	Funnel  bool   `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
+	HTTP   string `koanf:"http" help:"The port (with an optional host) the http listener should bind to"`
+	HTTPS  string `koanf:"https" help:"The port (and optional host) the https listener should bind to"`
+	Funnel bool   `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
 }
 
 func (c *listenerConfig) SetDefaults() {
-	c.Address = "127.0.0.1:8000"
+	c.HTTP = "127.0.0.1:8000"
 }
 
 func (c *listenerConfig) Validate() error {
-	if len(c.Address) == 0 {
-		return errors.New("an address is required")
+	if len(c.HTTP) == 0 {
+		return errors.New("at least a http listen address is required")
 	}
-	if _, _, err := net.SplitHostPort(c.Address); err != nil {
-		return fmt.Errorf("invalid address: %w", err)
+	if _, _, err := net.SplitHostPort(c.HTTP); err != nil {
+		return fmt.Errorf("invalid http listen address: %w", err)
+	}
+
+	if len(c.HTTPS) != 0 {
+		if _, _, err := net.SplitHostPort(c.HTTPS); err != nil {
+			return fmt.Errorf("invalid https listen address: %w", err)
+		}
 	}
 
 	return nil
@@ -71,8 +78,10 @@ func (c *listenerConfig) Issuer(dnsName string) string {
 	switch {
 	case c.Funnel:
 		return "https://" + dnsName
+	case len(c.HTTPS) != 0:
+		return "https://" + hostWithPort(dnsName, c.HTTPS, "443")
 	default:
-		return "http://" + hostWithPort(dnsName, c.Address, "80")
+		return "http://" + hostWithPort(dnsName, c.HTTP, "80")
 	}
 }
 
