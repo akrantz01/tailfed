@@ -10,7 +10,6 @@ import (
 	"tailscale.com/client/local"
 	"tailscale.com/client/tailscale/apitype"
 	"tailscale.com/ipn/ipnstate"
-	"tailscale.com/tailcfg"
 )
 
 // ConnectionId identifies a connection in the configuration
@@ -33,8 +32,12 @@ var ConnectionIds string = strings.Join(ConnectionLocal.Choices(), ", ")
 type Connection interface {
 	// Healthy returns whether the node is healthy
 	Healthy(ctx context.Context) bool
-	// Listen creates a TCP listener for the request address, binding a service to it when service is nonempty
-	Listen(ctx context.Context, address string, service tailcfg.ServiceName) (net.Listener, error)
+	// ListenPrivate creates a TCP listener for the requested address
+	ListenPrivate(ctx context.Context, address string) (net.Listener, error)
+	// ListenFunnel creates a listener exposed to the internet via Tailscale Funnel on port 443
+	ListenFunnel(ctx context.Context) (net.Listener, error)
+	// DNSName returns the node's MagicDNS name
+	DNSName(ctx context.Context) (string, error)
 	// WhoIs looks up the owner of the given address
 	//
 	// Returns (nil, nil) when peer could not be found
@@ -72,6 +75,18 @@ type User struct {
 	ID     int64
 	Login  string
 	Groups []string
+}
+
+func dnsName(ctx context.Context, client *local.Client) (string, error) {
+	status, err := client.StatusWithoutPeers(ctx)
+	if err != nil {
+		return "", err
+	}
+	if status.Self == nil || status.Self.DNSName == "" {
+		return "", errors.New("node has no dns name")
+	}
+
+	return strings.TrimSuffix(status.Self.DNSName, "."), nil
 }
 
 func nodeFromWhoIsResponse(status *ipnstate.Status, res *apitype.WhoIsResponse, err error) (*Node, error) {
