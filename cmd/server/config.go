@@ -66,6 +66,24 @@ func (c *listenerConfig) Validate() error {
 	return nil
 }
 
+// Issuer builds the token issuer used in the discovery document and embedded in tokens
+func (c *listenerConfig) Issuer(dnsName string) string {
+	switch {
+	case c.Funnel:
+		return "https://" + dnsName
+	default:
+		return "http://" + hostWithPort(dnsName, c.Address, "80")
+	}
+}
+
+func hostWithPort(name, address, defaultPort string) string {
+	_, port, _ := net.SplitHostPort(address)
+	if port == defaultPort {
+		return name
+	}
+	return net.JoinHostPort(name, port)
+}
+
 type signingConfig struct {
 	Backend signing.BackendId   `koanf:"backend" help:"How to sign ID tokens"`
 	AwsKms  signingAwsKmsConfig `koanf:"aws-kms"`

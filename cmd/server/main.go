@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -94,11 +93,7 @@ func run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get dns name: %w", err)
 	}
-	issuer := "https://" + name
-	if !cfg.Listener.Funnel {
-		_, port, _ := net.SplitHostPort(cfg.Listener.Address)
-		issuer = "http://" + net.JoinHostPort(name, port)
-	}
+	issuer := cfg.Listener.Issuer(name)
 	logrus.WithField("oidc.issuer", issuer).Info("selected issuer from magic dns")
 
 	privateSrv := http.NewPrivate(issuer, profiles, signer, ts)
