@@ -38,18 +38,30 @@ variable "tailscale_tags" {
   }
 }
 
-variable "tailscale_service" {
-  type        = string
-  default     = "svc:tailfed"
+variable "tailscale_funnel" {
+  type        = bool
+  default     = true
   description = <<-EOT
-    The Tailscale Service to host on port 443. It must be defined in the admin console and the node
-    approved (or auto-approved for its tags) as a host.
-    https://tailscale.com/docs/features/tailscale-services
+    Expose the token verification routes publicly on port 443 using Tailscale Funnel, which is
+    required for verifiers outside the tailnet, such as AWS. The tailnet must have MagicDNS and HTTPS
+    certificates enabled, and the policy must grant the `funnel` node attribute to the server's tags.
+    https://tailscale.com/docs/features/tailscale-funnel#requirements-and-limitations
   EOT
+}
+
+variable "listener_port" {
+  type        = number
+  default     = 80
+  description = "The port the server accepts token requests on from within the tailnet"
 
   validation {
-    condition     = can(regex("^svc:[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$", var.tailscale_service))
-    error_message = "The service must be of the form svc:<name>, where name is a valid DNS label."
+    condition     = var.listener_port >= 1 && var.listener_port <= 65535
+    error_message = "The listener port must be between 1 and 65535."
+  }
+
+  validation {
+    condition     = !(var.tailscale_funnel && var.listener_port == 443)
+    error_message = "The listener port cannot be 443 when Funnel is enabled."
   }
 }
 
@@ -63,13 +75,13 @@ variable "settings" {
   type        = any
   default     = {}
   description = <<-EOT
-    Additional tailfed-server configuration, rendered to YAML. See `tailfed-server.example.yml`.
+    Additional tailfed-server configuration. See `tailfed-server.example.yml`.
     The `listener` and `tailscale` keys are managed by the module and cannot be set here.
   EOT
 
   validation {
     condition     = !can(var.settings.listener) && !can(var.settings.tailscale)
-    error_message = "The listener and tailscale settings are managed by the module; use the tailscale_* variables instead."
+    error_message = "The listener and tailscale settings are managed by the module; use the listener_port and tailscale_* variables instead."
   }
 }
 

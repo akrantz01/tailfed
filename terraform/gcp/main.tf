@@ -33,7 +33,10 @@ locals {
   settings = merge(
     var.settings,
     {
-      listener  = { service = var.tailscale_service }
+      listener = {
+        address = ":${var.listener_port}"
+        funnel  = var.tailscale_funnel
+      }
       tailscale = local.tailscale_settings
     },
   )
