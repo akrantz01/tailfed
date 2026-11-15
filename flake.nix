@@ -72,10 +72,14 @@
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
           # Go development
-          go
+          go_1_27
           gopls
           gotools
           go-tools
+          golangci-lint
+          # Git hooks (husky, commitlint, lint-staged)
+          nodejs_22
+          pnpm_10
           # Other tools
           alejandra
           opentofu
