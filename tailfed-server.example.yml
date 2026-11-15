@@ -1,0 +1,198 @@
+# These options can all be set using environment variables. The environment variable names follow
+# the key names, prefixed with `TAILFED_SERVER_` with any nesting replaced with `__` and dashes
+# replaced with `_`. For example, the `log-level` key is read from the `TAILFED_SERVER_LOG_LEVEL`
+# environment variable.
+
+# The minimum level to emit logs at
+# Choices: panic, fatal, error, warn, info, debug, trace
+# Default: info
+log-level: info
+
+# Where the server should listen
+listener:
+  # The host and port the server should bind to
+  # Default: "127.0.0.1:8000"
+  address: 127.0.0.1:8000
+
+  # The Tailscale service to advertise
+  #
+  # When using the in-process Tailscale connection, an address is not strictly required as the
+  # service and be listened on directly.
+  # When using the local Tailscale connection, you must have operator permissions for the node.
+  #
+  # Default: ""
+  service: svc:tailfed
+
+# Customizations for the token contents
+token:
+  # The default profile to use when none is requested
+  # Default: "default"
+  default-profile: default
+
+  # The ways token claims can be generated
+  profiles:
+    # The ID this configuration is used for
+    # Must only contain lowercase, alphanumeric characters
+    default:
+      # The audience the token is for
+      # Default: "tailfed"
+      audience: sts.amazonaws.com
+
+      # The algorithms which tokens can be signed with
+      # Default: [RS256, RS384, RS512, ES256, ES384, ES512]
+      accepted-algorithms:
+        - ES256
+        - RS256
+
+      # The maximum length of the subject claim. Once reached, token generation will fail
+      # Default: 0 (unlimited)
+      max-subject-length: 0
+
+      # The format of the subject claim. Changes based on whether the device is tag- or user-owned.
+      #
+      # The common fields are:
+      # - hostname: the device's host name
+      # - id: the device's unique, stable identifier
+      # - tailnet.id: the tailnet's unique, stable identifier
+      # - tailnet.name: the tailnet's legacy ID (only present for tailnets created before October 2025)
+      # - tailnet.dns: the tailnet's magic DNS suffix (if enabled)
+      #
+      # The tag-owned device fields are:
+      # - tags: the list of tags assigned to the device
+      #
+      # The user-owned device fields are:
+      # - user.id: the user's unique, stable identifier
+      # - user.login: the user's login name (typically an email)
+      # - user.groups: the groups the user is part of (either ACL or from the IDP)
+      subject:
+        # The format of the subject claim for tag-owned devices
+        # Default: [tailnet.dns, hostname, tags]
+        tag:
+          - tailnet.dns
+          - hostname
+          - tags
+        # The format of the subject claim for user-owned devices
+        # Default: [tailnet.dns, hostname, user.login]
+        user:
+          - tailnet.dns
+          - hostname
+          - user.login
+
+      # How long generated token should be valid for
+      # Default: "1h"
+      validity: 1h
+
+# How to sign ID tokens
+signing:
+  # Which signing backend to use
+  #
+  # Choices:
+  #   - memory: generates an ephemeral signing key every boot
+  #   - aws-kms: uses an AWS KMS key
+  # Default: "memory"
+  backend: memory
+
+  aws-kms:
+    # The key references to use
+    #
+    # Can be either a
+    # - key ID: {uuid}
+    # - key ARN: arn:aws:kms:{region}:{account}:key/{uuid}
+    # - alias: alias/{name}
+    # - alias ARN: arn:aws:kms:{region}:{account}:alias/{name}
+    #
+    # Default: []
+    keys:
+      - arn:aws:...
+
+  memory:
+    # Generate a RSA 2048-bit key
+    # Default: true
+    rs256: true
+    # Generate a RSA 3072-bit key
+    # Default: false
+    rs384: false
+    # Generate a RSA 4096-bit key
+    # Default: false
+    rs512: false
+    # Generate an ECDSA curve P-256 key
+    # Default: true
+    es256: true
+    # Generate an ECDSA curve P-384 key
+    # Default: false
+    es384: false
+    # Generate an ECDSA curve P-521 key
+    # Default: false
+    es512: false
+
+# Tailscale connection details
+tailscale:
+  # How to connect to Tailscale
+  #
+  # Choices:
+  #   - local: use an existing local Tailscale daemon
+  #   - in-process: create a new connection scoped to the current process
+  # Default: "local"
+  connection: local
+
+  # The following options are only used for the "in-process" mode
+
+  # The Tailscale/Headscale control plane to connect to
+  # Default: "https://controlplane.tailscale.com"
+  control-plane-url: https://controlplane.tailscale.com
+
+  # The tags to register for the node
+  # Default: []
+  tags:
+    - tag:tailfed
+    - tag:cloud
+
+  # How to authenticate with Tailscale
+  #
+  # Choices:
+  #   - authkey: use a static auth key
+  #   - oauth: use an OAuth token to issue auth key(s)
+  #   - federation: use workload identity federation to issue auth key(s)
+  # Default: "authkey"
+  authentication: authkey
+
+  # The auth key used to join the tailnet. Required when `tailscale.authentication` is "authkey"
+  # Default: ""
+  auth-key: tskey-abcdef1432341818
+
+  # OAuth-based auth key generation. Required when `tailscale.authentication` is "oauth"
+  #
+  # Instructions for setting up a client: https://tailscale.com/docs/features/oauth-clients#setting-up-an-oauth-client
+  oauth:
+    # The OAuth app client ID
+    # Default: ""
+    client-id:
+
+    # The OAuth app client secret
+    # Default: ""
+    client-secret:
+
+  # Workload identity federation-based auth key generation. Required when
+  # `tailscale.authentication` is "federation"
+  federation:
+    # The OpenID Connect client ID
+    #
+    # Created according to: https://tailscale.com/docs/features/workload-identity-federation#configure-federated-identities-in-the-admin-console
+    #
+    # Default: ""
+    client-id:
+
+    # The identity provider's ID token for workload identity federation-based auth key generation.
+    #
+    # Either this or `tailscale.audience` must be set.
+    #
+    # Default: ""
+    id-token:
+
+    # The audience used to automatically fetch an ID token.
+    #
+    # Either this or `tailscale.id-token` must be set.
+    # This works for a select group of cloud providers: https://tailscale.com/docs/features/workload-identity-federation#automatic-cloud-token-discovery-and-exchange.
+    #
+    # Default: ""
+    audience:

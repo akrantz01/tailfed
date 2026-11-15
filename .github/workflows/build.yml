@@ -29,8 +29,8 @@ jobs:
           - os: darwin
             arch: arm
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           cache: true
           cache-dependency-path: go.sum
@@ -41,39 +41,35 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: client-${{ matrix.os }}-${{ matrix.arch }}
           path: out/client
 
-  lambda:
-    name: ${{ matrix.function }} Lambda (${{ matrix.arch }})
+  server:
+    name: Server linux ${{ matrix.arch }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        function:
-          - initializer
-          - finalizer
-          - verifier
-          - generator
         arch:
           - amd64
           - arm64
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           cache: true
           cache-dependency-path: go.sum
           go-version-file: go.mod
 
-      - run: make build-lambda LAMBDA_BINARIES=${{ matrix.function }}
+      - run: make build-server
         env:
           GOOS: linux
           GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: "0"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.function }}-${{ matrix.arch }}
-          path: out/${{ matrix.function }}
+          name: server-linux-${{ matrix.arch }}
+          path: out/server

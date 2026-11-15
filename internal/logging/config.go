@@ -11,25 +11,11 @@ import (
 )
 
 // Initialize configures logging to standard output at the desired level
-func Initialize(levelName string) error {
+func Initialize(levelName string, json bool) error {
 	logrus.SetOutput(os.Stdout)
 	logrus.SetReportCaller(true)
 
-	logrus.SetFormatter(&logrus.TextFormatter{
-		EnvironmentOverrideColors: true,
-
-		FullTimestamp:   true,
-		TimestampFormat: time.StampMilli,
-
-		DisableLevelTruncation: true,
-		PadLevelText:           true,
-
-		QuoteEmptyFields: true,
-
-		CallerPrettyfier: func(frame *runtime.Frame) (string, string) {
-			return "", frame.File + ":" + strconv.Itoa(frame.Line)
-		},
-	})
+	logrus.SetFormatter(formatter(json))
 
 	level, err := logrus.ParseLevel(levelName)
 	if err != nil {
@@ -38,4 +24,32 @@ func Initialize(levelName string) error {
 	logrus.SetLevel(level)
 
 	return nil
+}
+
+func formatter(json bool) logrus.Formatter {
+	if json {
+		return &logrus.JSONFormatter{
+			TimestampFormat:   time.RFC3339Nano,
+			DisableHTMLEscape: true,
+			CallerPrettyfier:  callerPrettyfier,
+		}
+	} else {
+		return &logrus.TextFormatter{
+			EnvironmentOverrideColors: true,
+
+			FullTimestamp:   true,
+			TimestampFormat: time.StampMilli,
+
+			DisableLevelTruncation: true,
+			PadLevelText:           true,
+
+			QuoteEmptyFields: true,
+
+			CallerPrettyfier: callerPrettyfier,
+		}
+	}
+}
+
+func callerPrettyfier(frame *runtime.Frame) (string, string) {
+	return "", frame.File + ":" + strconv.Itoa(frame.Line)
 }

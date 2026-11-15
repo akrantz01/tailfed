@@ -81,7 +81,7 @@ func (s *secretLoader) fromFile(value string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not open %q: %w", path, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	contents, err := io.ReadAll(file)
 	if err != nil {

@@ -1,25 +1,27 @@
 package configloader
 
 import (
-	"context"
 	"fmt"
 	"os"
+	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/parsers/dotenv"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
+	"github.com/spf13/pflag"
 )
 
 // RawConfig contains the raw configuration keys before structuring or validation.
 type RawConfig struct {
 	inner *koanf.Koanf
 }
-
-type rawConfigKey struct{}
 
 // Load retrieves configuration from at least the environment and command line arguments
 func Load(opts ...Option) (*RawConfig, error) {
@@ -58,7 +60,18 @@ func Load(opts ...Option) (*RawConfig, error) {
 	}
 
 	if options.flags != nil {
-		if err := k.Load(posflag.ProviderWithValue(options.flags, ".", k, secrets.Load), nil); err != nil {
+		if err := k.Load(posflag.ProviderWithFlag(options.flags, ".", k, func(f *pflag.Flag) (string, any) {
+			if !f.Changed {
+				return "", nil
+			}
+
+			// Only plain strings can reference secrets
+			if f.Value.Type() == "string" {
+				return secrets.Load(f.Name, f.Value.String())
+			}
+
+			return f.Name, posflag.FlagVal(options.flags, f)
+		}), nil); err != nil {
 			return nil, fmt.Errorf("failed to load from flags: %w", err)
 		} else if err := secrets.Err(); err != nil {
 			return nil, fmt.Errorf("failed to load secret from flags: %w", err)
@@ -82,38 +95,68 @@ func LoadInto[T any](dest *T, opts ...Option) error {
 	return nil
 }
 
-// FromContext retrieves a RawConfig instance from a context
-func FromContext(ctx context.Context) *RawConfig {
-	value := ctx.Value(rawConfigKey{})
-	if value == nil {
-		return nil
-	}
-	if r, ok := value.(*RawConfig); ok {
-		return r
-	} else {
-		panic("value at RawConfig key is not a *RawConfig")
-	}
-}
-
 // Structure populates a struct with configuration values
 func (r *RawConfig) Structure(dest any) error {
-	return r.inner.Unmarshal("", dest)
-}
+	v := reflect.ValueOf(dest)
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("destination must be a pointer to a struct, got %T", dest)
+	}
 
-// InContext adds the RawConfig instance to a context
-func (r *RawConfig) InContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, rawConfigKey{}, r)
+	v.Elem().SetZero()
+	applyDefaults(v.Elem())
+
+	return r.inner.UnmarshalWithConf("", dest, koanf.UnmarshalConf{
+		DecoderConfig: &mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				defaultsHook,
+				splitStringHook,
+				durationDaysHook,
+				mapstructure.StringToTimeDurationHookFunc(),
+				mapstructure.TextUnmarshallerHookFunc(),
+			),
+			WeaklyTypedInput: true,
+		},
+	})
 }
 
 func newEnvVarCleaner(prefix string, secrets *secretLoader) func(string, string) (string, any) {
 	keyCleaner := func(s string) string {
 		formatted := strings.ToLower(strings.TrimPrefix(s, prefix))
-		nested := strings.Replace(formatted, "__", ".", -1)
-		return strings.Replace(nested, "_", "-", -1)
+		nested := strings.ReplaceAll(formatted, "__", ".")
+		return strings.ReplaceAll(nested, "_", "-")
 	}
 
 	return func(key, value string) (string, interface{}) {
 		key = keyCleaner(key)
 		return secrets.Load(key, value)
 	}
+}
+
+// splitStringHook splits comma-separated strings into slices of any string kind
+func splitStringHook(from, to reflect.Type, data any) (any, error) {
+	if from.Kind() != reflect.String || to.Kind() != reflect.Slice || to.Elem().Kind() != reflect.String {
+		return data, nil
+	}
+
+	raw := reflect.ValueOf(data).String()
+	if raw == "" {
+		return []string{}, nil
+	}
+
+	return strings.Split(raw, ","), nil
+}
+
+var daysPattern = regexp.MustCompile(`(\d+(?:\.\d+)?)d`)
+
+// durationDaysHook allows durations to be specified in days (e.g. "7d")
+func durationDaysHook(from, to reflect.Type, data any) (any, error) {
+	if from.Kind() != reflect.String || to != durationType {
+		return data, nil
+	}
+
+	raw := reflect.ValueOf(data).String()
+	return daysPattern.ReplaceAllStringFunc(raw, func(match string) string {
+		days, _ := strconv.ParseFloat(strings.TrimSuffix(match, "d"), 64)
+		return strconv.FormatFloat(days*24, 'f', -1, 64) + "h"
+	}), nil
 }

@@ -1,5 +1,5 @@
 # These options can all be set using environment variables. The environment variable names follow the key names,
-# prefixed with `TAILFED_` with any nesting replaced with `__` and dashes replaced with `-`. For example, the `log-level`
+# prefixed with `TAILFED_` with any nesting replaced with `__` and dashes replaced with `_`. For example, the `log-level`
 # key is read from the `TAILFED_LOG_LEVEL` environment variable.
 
 # The minimum level to emit logs at

@@ -1,8 +1,0 @@
-.github/
-.husky/
-node_modules/
-out/
-terraform/
-wiremock/
-.env
-tailfed.yml

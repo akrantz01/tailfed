@@ -1,6 +1,0 @@
-[tools]
-go = "latest"
-golangci-lint = "latest"
-node = "22.14.0"
-opentofu = "latest"
-"ubi:goreleaser/goreleaser-pro" = { version = "latest", exe = "goreleaser" }

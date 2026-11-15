@@ -31,13 +31,13 @@ partial:
 builds:
   - id: client
     main: ./cmd/client
-    binary: client
+    binary: tailfed-client
     goarch:
       - "386"
       - amd64
       - arm
       - arm64
-    goarm: [ "6", "7" ]
+    goarm: ["6", "7"]
     env:
       - CGO_ENABLED=0
     ignore:
@@ -45,10 +45,14 @@ builds:
         goarch: arm
       - goos: windows
         goarch: arm64
+    hooks: &build-hooks
+      post:
+        - cmd: cosign sign-blob --yes --bundle={{ .Path }}.sigstore.json {{ .Path }}
+        - cmd: syft scan {{ .Path }} --output spdx-json={{ .Path }}.spdx.json
 
-  - id: finalizer
-    main: ./cmd/finalizer
-    binary: bootstrap
+  - id: server
+    main: ./cmd/server
+    binary: tailfed-server
     goos:
       - linux
     goarch:
@@ -56,98 +60,36 @@ builds:
       - arm64
     env:
       - CGO_ENABLED=0
-    flags:
-      - -tags=lambda.norpc
-
-  - id: initializer
-    main: ./cmd/initializer
-    binary: bootstrap
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm64
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -tags=lambda.norpc
-
-  - id: verifier
-    main: ./cmd/verifier
-    binary: bootstrap
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm64
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -tags=lambda.norpc
-
-  - id: generator
-    main: ./cmd/generator
-    binary: bootstrap
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm64
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -tags=lambda.norpc
+    hooks: *build-hooks
 
 archives:
   - id: client
-    ids: [ client ]
-    formats: [ binary ]
+    ids: [client]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
     name_template: >-
-      client_
+      tailfed-client_
       {{- .Os }}_
       {{- if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files: &archive-files
+      - src: "{{ .ArtifactPath }}.sigstore.json"
+        strip_parent: true
+        info:
+          mode: 0644
+      - src: "{{ .ArtifactPath }}.spdx.json"
+        strip_parent: true
+        info:
+          mode: 0644
 
-  - id: finalizer
-    ids: [ finalizer ]
-    formats: [ zip ]
-    name_template: finalizer-{{ .Arch }}
-    files: [ none* ]
-
-  - id: initializer
-    ids: [ initializer ]
-    formats: [ zip ]
-    name_template: initializer-{{ .Arch }}
-    files: [ none* ]
-
-  - id: verifier
-    ids: [ verifier ]
-    formats: [ zip ]
-    name_template: verifier-{{ .Arch }}
-    files: [ none* ]
-
-  - id: generator
-    ids: [ generator ]
-    formats: [ zip ]
-    name_template: generator-{{ .Arch }}
-    files: [ none* ]
-
-signs:
-  - cmd: cosign
-    args:
-      - sign-blob
-      - --yes
-      - --bundle=${signature}
-      - ${artifact}
-    artifacts: archive
-
-sboms:
-  - id: lambda
-    artifacts: archive
-  - id: client
-    artifacts: binary
-    ids: [ client ]
+  - id: server
+    ids: [server]
+    formats: [tar.gz]
+    name_template: tailfed-server_{{ .Os }}_{{ .Arch }}
+    files: *archive-files
 
 changelog:
   sort: asc
@@ -168,8 +110,4 @@ blobs:
     region: "{{ .Env.AWS_REGION }}"
     bucket: tailfed-artifacts
     directory: "{{ .Version }}"
-    ids:
-      - finalizer
-      - initializer
-      - verifier
-      - generator
+    ids: [client, server]
