@@ -12,6 +12,8 @@ import (
 
 type Server = http.Server
 
+var ErrServerClosed = http.ErrServerClosed
+
 // NewPrivate creates an HTTP server handling every route
 func NewPrivate(issuer string, profiles oidc.Profiles, signer signing.Backend, ts tailscale.Connection) *http.Server {
 	return newServer(issuer, profiles, signer, ts)
@@ -35,6 +37,21 @@ func newServer(issuer string, profiles oidc.Profiles, signer signing.Backend, ts
 	mux.Handle("GET /.well-known/jwks.json", handlers.NewJwksHandler(signer))
 	mux.Handle("GET /.well-known/openid-configuration", discovery)
 	mux.Handle("GET /{profile}/.well-known/openid-configuration", discovery)
+
+	return &http.Server{
+		Handler: withMiddleware(mux, middleware.RequestID, middleware.Logging),
+	}
+}
+
+// NewRedirect creates an HTTP server that sends every request except health checks to target
+func NewRedirect(target string) *Server {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /health", health)
+
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target+r.URL.RequestURI(), http.StatusTemporaryRedirect)
+	}))
 
 	return &http.Server{
 		Handler: withMiddleware(mux, middleware.RequestID, middleware.Logging),

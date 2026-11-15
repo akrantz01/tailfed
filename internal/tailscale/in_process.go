@@ -2,6 +2,7 @@ package tailscale
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"os"
 	"strings"
@@ -107,6 +108,10 @@ func (p *InProcess) ListenFunnel(_ context.Context) (net.Listener, error) {
 
 func (p *InProcess) DNSName(ctx context.Context) (string, error) {
 	return dnsName(ctx, p.client)
+}
+
+func (p *InProcess) GetCertificate(hi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	return p.client.GetCertificate(hi)
 }
 
 func (p *InProcess) WhoIs(ctx context.Context, address string) (*Node, error) {

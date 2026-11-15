@@ -2,6 +2,7 @@ package tailscale
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"slices"
@@ -38,6 +39,8 @@ type Connection interface {
 	ListenFunnel(ctx context.Context) (net.Listener, error)
 	// DNSName returns the node's MagicDNS name
 	DNSName(ctx context.Context) (string, error)
+	// GetCertificate fetches a TLS certificate for the TLS client hello
+	GetCertificate(hi *tls.ClientHelloInfo) (*tls.Certificate, error)
 	// WhoIs looks up the owner of the given address
 	//
 	// Returns (nil, nil) when peer could not be found

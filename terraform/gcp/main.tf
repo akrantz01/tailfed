@@ -34,8 +34,9 @@ locals {
     var.settings,
     {
       listener = {
-        address = ":${var.listener_port}"
-        funnel  = var.tailscale_funnel
+        http   = ":80"
+        https  = ":443"
+        funnel = var.tailscale_funnel
       }
       tailscale = local.tailscale_settings
     },
