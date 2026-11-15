@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/local"
+	_ "tailscale.com/feature/identityfederation"
 	"tailscale.com/tailcfg"
 	"tailscale.com/tsnet"
 )

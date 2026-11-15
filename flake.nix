@@ -25,7 +25,7 @@
           inherit pname;
           version = "2.0.0";
           src = lib.sources.sourceByRegex ./. ["^cmd$" "^cmd/.*" "^internal$" "^internal/.*" "^go\.(mod|sum)$"];
-          vendorHash = "sha256-z2KqrzABerPH90PVV6ayq4ye02yui64CFDDtuRVhBVk=";
+          vendorHash = "sha256-qRCr4znQLVDtEU+CMPRoHQW/Pw+uQo+KNMCeyktEXjc=";
 
           subPackages = ["cmd/${dir}"];
           env.CGO_ENABLED = 0;
