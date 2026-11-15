@@ -45,6 +45,10 @@ builds:
         goarch: arm
       - goos: windows
         goarch: arm64
+    hooks: &build-hooks
+      post:
+        - cmd: cosign sign-blob --yes --bundle={{ .Path }}.sigstore.json {{ .Path }}
+        - cmd: syft scan {{ .Path }} --output spdx-json={{ .Path }}.spdx.json
 
   - id: server
     main: ./cmd/server
@@ -56,35 +60,36 @@ builds:
       - arm64
     env:
       - CGO_ENABLED=0
+    hooks: *build-hooks
 
 archives:
   - id: client
     ids: [client]
-    formats: [binary]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
     name_template: >-
       tailfed-client_
       {{- .Os }}_
       {{- if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files: &archive-files
+      - src: "{{ .ArtifactPath }}.sigstore.json"
+        strip_parent: true
+        info:
+          mode: 0644
+      - src: "{{ .ArtifactPath }}.spdx.json"
+        strip_parent: true
+        info:
+          mode: 0644
 
   - id: server
     ids: [server]
-    formats: [binary]
+    formats: [tar.gz]
     name_template: tailfed-server_{{ .Os }}_{{ .Arch }}
-
-signs:
-  - cmd: cosign
-    args:
-      - sign-blob
-      - --yes
-      - --bundle=${signature}
-      - ${artifact}
-    artifacts: binary
-
-sboms:
-  - artifacts: binary
-    ids: [client, server]
+    files: *archive-files
 
 changelog:
   sort: asc
