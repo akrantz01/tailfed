@@ -179,18 +179,22 @@ func (c *signingMemoryConfig) Algorithms() map[signing.Algorithm]bool {
 }
 
 type tailscaleConfig struct {
-	ControlPlaneUrl string                         `koanf:"control-plane-url" help:"The Tailscale/Headscale control plane to connect to (in-process only)"`
-	Tags            []string                       `koanf:"tags" help:"The tags to register for the node (in-process only)"`
+	Hostname        string                         `koanf:"hostname" help:"The hostname to advertise as"`
+	StateDirectory  string                         `koanf:"state-directory" help:"Where to store Tailscale connection state"`
+	Tags            []string                       `koanf:"tags" help:"The tags to register for the node"`
 	Authentication  tailscale.AuthenticationMethod `koanf:"authentication"`
+	ControlPlaneUrl string                         `koanf:"control-plane-url" help:"The Tailscale/Headscale control plane to connect to"`
 
-	AuthKey    string                    `koanf:"authkey" help:"The auth key used to join the tailnet (in-process only)"`
+	AuthKey    string                    `koanf:"authkey" help:"The auth key used to join the tailnet"`
 	OAuth      tailscaleOauthConfig      `koanf:"oauth"`
 	Federation tailscaleFederationConfig `koanf:"federation"`
 }
 
 func (c *tailscaleConfig) SetDefaults() {
-	c.ControlPlaneUrl = ipn.DefaultControlURL
+	c.Hostname = "tailfed-server"
+	c.StateDirectory = ""
 	c.Authentication = tailscale.AuthenticationMethodKey
+	c.ControlPlaneUrl = ipn.DefaultControlURL
 }
 
 func (c *tailscaleConfig) Validate() error {
@@ -214,7 +218,7 @@ func (c *tailscaleConfig) Validate() error {
 }
 
 func (c *tailscaleConfig) Connect(ctx context.Context) (tailscale.Connection, error) {
-	return tailscale.NewInProcess(ctx, "", c.ControlPlaneUrl, c.Tags, c.credentials())
+	return tailscale.NewInProcess(ctx, c.Hostname, c.StateDirectory, c.ControlPlaneUrl, c.Tags, c.credentials())
 }
 
 func (c *tailscaleConfig) credentials() tailscale.CredentialProvider {

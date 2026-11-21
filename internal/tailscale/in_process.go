@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
-	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -45,16 +44,10 @@ type InProcess struct {
 var _ Connection = (*InProcess)(nil)
 
 // NewInProcess configures a new in-process connection
-func NewInProcess(ctx context.Context, dir string, controlUrl string, tags []string, credentials CredentialProvider) (Connection, error) {
+func NewInProcess(ctx context.Context, hostname, dir, controlUrl string, tags []string, credentials CredentialProvider) (Connection, error) {
 	logger := logrus.
 		WithField("component", "tailscale").
 		WithField("tailscale.connection", "in-process")
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		logger.WithError(err).Warn("failed to determine hostname")
-		hostname = "tailfed-server"
-	}
 
 	ts := &tsnet.Server{
 		Dir:           dir,

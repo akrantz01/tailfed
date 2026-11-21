@@ -137,11 +137,22 @@ tailscale:
   # Default: "https://controlplane.tailscale.com"
   control-plane-url: https://controlplane.tailscale.com
 
+  # The hostname to advertise as
+  # Default: "tailfed-server"
+  hostname: tailfed-server
+
   # The tags to register for the node
   # Default: []
   tags:
     - tag:tailfed
     - tag:cloud
+
+  # Where to store connection state
+  # Default:
+  #   - Windows: "%AppData%/tsnet-tailfed-server"
+  #   - MacOS:   "$HOME/Library/Application Support/tsnet-tailfed-server"
+  #   - Linux:   "$XDG_CONFIG_HOME/tsnet-tailfed-server"
+  state-directory:
 
   # How to authenticate with Tailscale
   #
