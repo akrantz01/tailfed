@@ -8,22 +8,25 @@
 # Default: info
 log-level: info
 
-# Where the server should listen
-#
-# At least one of the HTTP or HTTPS listener must be configured
+# How the server should listen
 listener:
-  # The port (and optional host) the server should bind to for HTTP traffic
-  # Default: ""
-  http: 127.0.0.1:8000
+  # Enable serving over HTTP
+  #
+  # Adds a listener on `${tailscale.hostname}:80`
+  #
+  # Default: true
+  http: true
 
-  # The port (and optional host) the server should bind to for HTTPS traffic
+  # Enable serving over HTTPS
+  #
+  # Adds an extra listener on `${tailscale.hostname}:443`. All HTTP traffic is redirected to HTTPS.
   #
   # Uses tailscale's built-in certificate support. Must have HTTPS enabled for the tailnet and
   # operator access for the device.
   # Documentation: https://tailscale.com/docs/how-to/set-up-https-certificates
   #
-  # Default: ""
-  https: 127.0.0.1:8443
+  # Default: false
+  https: false
 
   # Expose the token verification routes publicly via Tailscale Funnel on port 443
   # Default: false
@@ -133,25 +136,26 @@ signing:
 
 # Tailscale connection details
 tailscale:
-  # How to connect to Tailscale
-  #
-  # Choices:
-  #   - local: use an existing local Tailscale daemon
-  #   - in-process: create a new connection scoped to the current process
-  # Default: "local"
-  connection: local
-
-  # The following options are only used for the "in-process" mode
-
   # The Tailscale/Headscale control plane to connect to
   # Default: "https://controlplane.tailscale.com"
   control-plane-url: https://controlplane.tailscale.com
+
+  # The hostname to advertise as
+  # Default: "tailfed-server"
+  hostname: tailfed-server
 
   # The tags to register for the node
   # Default: []
   tags:
     - tag:tailfed
     - tag:cloud
+
+  # Where to store connection state
+  # Default:
+  #   - Windows: "%AppData%/tsnet-tailfed-server"
+  #   - MacOS:   "$HOME/Library/Application Support/tsnet-tailfed-server"
+  #   - Linux:   "$XDG_CONFIG_HOME/tsnet-tailfed-server"
+  state-directory:
 
   # How to authenticate with Tailscale
   #
@@ -164,7 +168,7 @@ tailscale:
 
   # The auth key used to join the tailnet. Required when `tailscale.authentication` is "authkey"
   # Default: ""
-  auth-key: tskey-abcdef1432341818
+  authkey: tskey-abcdef1432341818
 
   # OAuth-based auth key generation. Required when `tailscale.authentication` is "oauth"
   #

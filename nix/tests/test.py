@@ -1,10 +1,10 @@
-server_url = f"http://{SERVER_IP}:8000"
+server_url = f"http://{SERVER_IP}"
 
 authkey = setup_headscale(control)
 for m in control, client:
     write_auth_key(m, authkey)
 with (server.shared_dir / "server.env").open("w") as f:
-    f.write(f"TAILFED_SERVER_TAILSCALE__AUTH_KEY={authkey}\n")
+    f.write(f"TAILFED_SERVER_TAILSCALE__AUTHKEY={authkey}\n")
 
 control.start_job("tailscaled.service")
 
@@ -21,7 +21,7 @@ connect_tailscale(client, expected_ip=CLIENT_IP)
 client.wait_until_succeeds(f"curl -fsS {server_url}/health", timeout=60)
 
 with subtest("server is not reachable outside the tailnet"):
-    control.fail("curl -fsS --max-time 5 http://server:8000/health")
+    control.fail("curl -fsS --max-time 5 http://server/health")
 
 with subtest("client fetches a token"):
     raw_token, header, claims = fetch_token(client)
@@ -30,4 +30,4 @@ with subtest("token signature matches the published keys"):
     verify_signature(client, server_url, raw_token, header, claims)
 
 with subtest("token claims"):
-    verify_claims(f"http://{peer_dns_name(client, 'server')}:8000", header, claims, EXPECTED)
+    verify_claims(f"http://{peer_dns_name(client, 'server')}", header, claims, EXPECTED)

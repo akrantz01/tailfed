@@ -38,6 +38,16 @@ variable "tailscale_tags" {
   }
 }
 
+variable "tailscale_https" {
+  type        = bool
+  default     = true
+  description = <<-EOT
+    Serve over HTTPS on port 443 within the tailnet, redirecting HTTP traffic to it. The tailnet must
+    have MagicDNS and HTTPS certificates enabled.
+    https://tailscale.com/docs/how-to/set-up-https-certificates
+  EOT
+}
+
 variable "tailscale_funnel" {
   type        = bool
   default     = true

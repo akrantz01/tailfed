@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"regexp"
 
 	"github.com/akrantz01/tailfed/internal/oidc"
@@ -47,29 +46,18 @@ func (c *Config) Validate() error {
 }
 
 type listenerConfig struct {
-	HTTP   string `koanf:"http" help:"The port (with an optional host) the http listener should bind to"`
-	HTTPS  string `koanf:"https" help:"The port (and optional host) the https listener should bind to"`
-	Funnel bool   `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
+	HTTP   bool `koanf:"http" help:"Enable serving over HTTP"`
+	HTTPS  bool `koanf:"https" help:"Enable serving over HTTPS"`
+	Funnel bool `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
+}
+
+func (c *listenerConfig) SetDefaults() {
+	c.HTTP = true
 }
 
 func (c *listenerConfig) Validate() error {
-	hasHttp := len(c.HTTP) > 0
-	hasHttps := len(c.HTTPS) > 0
-
-	if !hasHttp && !hasHttps {
+	if !c.HTTP && !c.HTTPS {
 		return errors.New("either a http or https listener is required")
-	}
-
-	if hasHttp {
-		if _, _, err := net.SplitHostPort(c.HTTP); err != nil {
-			return fmt.Errorf("invalid http listen address: %w", err)
-		}
-	}
-
-	if hasHttps {
-		if _, _, err := net.SplitHostPort(c.HTTPS); err != nil {
-			return fmt.Errorf("invalid https listen address: %w", err)
-		}
 	}
 
 	return nil
@@ -77,30 +65,19 @@ func (c *listenerConfig) Validate() error {
 
 // Issuer builds the token issuer used in the discovery document and embedded in tokens
 func (c *listenerConfig) Issuer(dnsName string) string {
-	switch {
-	case c.Funnel:
+	if c.Funnel || c.HTTPS {
 		return "https://" + dnsName
-	case len(c.HTTPS) != 0:
-		return c.HttpsUrl(dnsName)
-	default:
-		return "http://" + hostWithPort(dnsName, c.HTTP, "80")
+	} else {
+		return "http://" + dnsName
 	}
 }
 
 // HttpsUrl is the base URL of the private https listener, or empty when it is disabled
 func (c *listenerConfig) HttpsUrl(dnsName string) string {
-	if len(c.HTTPS) == 0 {
+	if !c.HTTPS {
 		return ""
 	}
-	return "https://" + hostWithPort(dnsName, c.HTTPS, "443")
-}
-
-func hostWithPort(name, address, defaultPort string) string {
-	_, port, _ := net.SplitHostPort(address)
-	if port == defaultPort {
-		return name
-	}
-	return net.JoinHostPort(name, port)
+	return "https://" + dnsName
 }
 
 type signingConfig struct {
@@ -179,61 +156,46 @@ func (c *signingMemoryConfig) Algorithms() map[signing.Algorithm]bool {
 }
 
 type tailscaleConfig struct {
-	Connection tailscale.ConnectionId `koanf:"connection" help:"How to connect to Tailscale"`
-
-	ControlPlaneUrl string                         `koanf:"control-plane-url" help:"The Tailscale/Headscale control plane to connect to (in-process only)"`
-	Tags            []string                       `koanf:"tags" help:"The tags to register for the node (in-process only)"`
+	Hostname        string                         `koanf:"hostname" help:"The hostname to advertise as"`
+	StateDirectory  string                         `koanf:"state-directory" help:"Where to store Tailscale connection state"`
+	Tags            []string                       `koanf:"tags" help:"The tags to register for the node"`
 	Authentication  tailscale.AuthenticationMethod `koanf:"authentication"`
+	ControlPlaneUrl string                         `koanf:"control-plane-url" help:"The Tailscale/Headscale control plane to connect to"`
 
-	AuthKey    string                    `koanf:"auth-key" help:"The auth key used to join the tailnet (in-process only)"`
+	AuthKey    string                    `koanf:"authkey" help:"The auth key used to join the tailnet"`
 	OAuth      tailscaleOauthConfig      `koanf:"oauth"`
 	Federation tailscaleFederationConfig `koanf:"federation"`
 }
 
 func (c *tailscaleConfig) SetDefaults() {
-	c.Connection = tailscale.ConnectionLocal
-	c.ControlPlaneUrl = ipn.DefaultControlURL
+	c.Hostname = "tailfed-server"
+	c.StateDirectory = ""
 	c.Authentication = tailscale.AuthenticationMethodKey
+	c.ControlPlaneUrl = ipn.DefaultControlURL
 }
 
 func (c *tailscaleConfig) Validate() error {
-	switch c.Connection {
-	case tailscale.ConnectionLocal:
-		return nil
-
-	case tailscale.ConnectionInProcess:
-		switch c.Authentication {
-		case tailscale.AuthenticationMethodKey:
-			if len(c.AuthKey) == 0 {
-				return errors.New("an authkey is required")
-			} else {
-				return nil
-			}
-
-		case tailscale.AuthenticationMethodOAuth:
-			return c.OAuth.Validate()
-
-		case tailscale.AuthenticationMethodFederation:
-			return c.Federation.Validate()
-
-		default:
-			return fmt.Errorf("unknown authentication method %q (options: %s)", c.Authentication, tailscale.AuthenticationMethods)
+	switch c.Authentication {
+	case tailscale.AuthenticationMethodKey:
+		if len(c.AuthKey) == 0 {
+			return errors.New("an authkey is required")
+		} else {
+			return nil
 		}
 
+	case tailscale.AuthenticationMethodOAuth:
+		return c.OAuth.Validate()
+
+	case tailscale.AuthenticationMethodFederation:
+		return c.Federation.Validate()
+
 	default:
-		return fmt.Errorf("unknown connection method %q (options: %s)", c.Connection, tailscale.ConnectionIds)
+		return fmt.Errorf("unknown authentication method %q (options: %s)", c.Authentication, tailscale.AuthenticationMethods)
 	}
 }
 
 func (c *tailscaleConfig) Connect(ctx context.Context) (tailscale.Connection, error) {
-	switch c.Connection {
-	case tailscale.ConnectionLocal:
-		return tailscale.NewLocal(ctx)
-	case tailscale.ConnectionInProcess:
-		return tailscale.NewInProcess(ctx, "", c.ControlPlaneUrl, c.Tags, c.credentials())
-	default:
-		panic("unreachable")
-	}
+	return tailscale.NewInProcess(ctx, c.Hostname, c.StateDirectory, c.ControlPlaneUrl, c.Tags, c.credentials())
 }
 
 func (c *tailscaleConfig) credentials() tailscale.CredentialProvider {

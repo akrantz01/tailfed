@@ -3,7 +3,8 @@
   stdenvNoCC,
   fetchurl,
   installShellFiles,
-}: let
+}:
+let
   version = "2.20.2";
 
   sources = {
@@ -25,40 +26,42 @@
     };
   };
 
-  source = sources.${stdenvNoCC.hostPlatform.system} or (throw "goreleaser-pro: unsupported system ${stdenvNoCC.hostPlatform.system}");
+  source =
+    sources.${stdenvNoCC.hostPlatform.system}
+      or (throw "goreleaser-pro: unsupported system ${stdenvNoCC.hostPlatform.system}");
 in
-  stdenvNoCC.mkDerivation {
-    pname = "goreleaser-pro";
-    inherit version;
+stdenvNoCC.mkDerivation {
+  pname = "goreleaser-pro";
+  inherit version;
 
-    src = fetchurl {
-      url = "https://github.com/goreleaser/goreleaser-pro/releases/download/v${version}/goreleaser-pro_${source.platform}.tar.gz";
-      inherit (source) hash;
-    };
+  src = fetchurl {
+    url = "https://github.com/goreleaser/goreleaser-pro/releases/download/v${version}/goreleaser-pro_${source.platform}.tar.gz";
+    inherit (source) hash;
+  };
 
-    sourceRoot = ".";
+  sourceRoot = ".";
 
-    nativeBuildInputs = [installShellFiles];
+  nativeBuildInputs = [ installShellFiles ];
 
-    installPhase = ''
-      runHook preInstall
+  installPhase = ''
+    runHook preInstall
 
-      install -Dm755 goreleaser "$out/bin/goreleaser"
-      installManPage manpages/goreleaser.1.gz
-      installShellCompletion \
-        --bash completions/goreleaser.bash \
-        --fish completions/goreleaser.fish \
-        --zsh completions/goreleaser.zsh
+    install -Dm755 goreleaser "$out/bin/goreleaser"
+    installManPage manpages/goreleaser.1.gz
+    installShellCompletion \
+      --bash completions/goreleaser.bash \
+      --fish completions/goreleaser.fish \
+      --zsh completions/goreleaser.zsh
 
-      runHook postInstall
-    '';
+    runHook postInstall
+  '';
 
-    meta = {
-      description = "Release automation tool for Go projects (Pro edition)";
-      homepage = "https://goreleaser.com/pro/";
-      license = lib.licenses.unfree;
-      sourceProvenance = [lib.sourceTypes.binaryNativeCode];
-      mainProgram = "goreleaser";
-      platforms = builtins.attrNames sources;
-    };
-  }
+  meta = {
+    description = "Release automation tool for Go projects (Pro edition)";
+    homepage = "https://goreleaser.com/pro/";
+    license = lib.licenses.unfree;
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+    mainProgram = "goreleaser";
+    platforms = builtins.attrNames sources;
+  };
+}

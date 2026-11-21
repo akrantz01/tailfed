@@ -3,8 +3,10 @@ package tailscale
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"net"
-	"os"
+	"slices"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -18,7 +20,7 @@ type AuthenticationMethod string
 
 const (
 	// AuthenticationMethodKey uses a static authkey
-	AuthenticationMethodKey AuthenticationMethod = "auth-key"
+	AuthenticationMethodKey AuthenticationMethod = "authkey"
 	// AuthenticationMethodOAuth uses the OAuth flow for generating authkey(s)
 	AuthenticationMethodOAuth AuthenticationMethod = "oauth"
 	// AuthenticationMethodFederation uses workload identity federation for generating authkey(s)
@@ -45,16 +47,10 @@ type InProcess struct {
 var _ Connection = (*InProcess)(nil)
 
 // NewInProcess configures a new in-process connection
-func NewInProcess(ctx context.Context, dir string, controlUrl string, tags []string, credentials CredentialProvider) (Connection, error) {
+func NewInProcess(ctx context.Context, hostname, dir, controlUrl string, tags []string, credentials CredentialProvider) (Connection, error) {
 	logger := logrus.
 		WithField("component", "tailscale").
 		WithField("tailscale.connection", "in-process")
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		logger.WithError(err).Warn("failed to determine hostname")
-		hostname = "tailfed-server"
-	}
 
 	ts := &tsnet.Server{
 		Dir:           dir,
@@ -98,8 +94,8 @@ func (p *InProcess) Healthy(ctx context.Context) bool {
 	return len(status.Health) == 0
 }
 
-func (p *InProcess) ListenPrivate(_ context.Context, address string) (net.Listener, error) {
-	return p.ts.Listen("tcp", address)
+func (p *InProcess) ListenPrivate(_ context.Context, port uint16) (net.Listener, error) {
+	return p.ts.Listen("tcp", fmt.Sprintf(":%d", port))
 }
 
 func (p *InProcess) ListenFunnel(_ context.Context) (net.Listener, error) {
@@ -107,7 +103,15 @@ func (p *InProcess) ListenFunnel(_ context.Context) (net.Listener, error) {
 }
 
 func (p *InProcess) DNSName(ctx context.Context) (string, error) {
-	return dnsName(ctx, p.client)
+	status, err := p.client.StatusWithoutPeers(ctx)
+	if err != nil {
+		return "", err
+	}
+	if status.Self == nil || status.Self.DNSName == "" {
+		return "", errors.New("node has no dns name")
+	}
+
+	return strings.TrimSuffix(status.Self.DNSName, "."), nil
 }
 
 func (p *InProcess) GetCertificate(hi *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -121,7 +125,39 @@ func (p *InProcess) WhoIs(ctx context.Context, address string) (*Node, error) {
 	}
 
 	res, err := p.client.WhoIs(ctx, address)
-	return nodeFromWhoIsResponse(status, res, err)
+	if errors.Is(err, local.ErrPeerNotFound) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else {
+		var user *User
+		if !res.Node.IsTagged() {
+			slices.Sort(res.UserProfile.Groups)
+			user = &User{
+				ID:     int64(res.UserProfile.ID),
+				Login:  res.UserProfile.LoginName,
+				Groups: res.UserProfile.Groups,
+			}
+		}
+
+		dns := status.CurrentTailnet.MagicDNSSuffix
+		if !status.CurrentTailnet.MagicDNSEnabled {
+			dns = ""
+		}
+
+		slices.Sort(res.Node.Tags)
+		return &Node{
+			Tailnet: Tailnet{
+				ID:   string(status.CurrentTailnet.StableID),
+				Name: status.CurrentTailnet.Name,
+				DNS:  dns,
+			},
+			Hostname: res.Node.ComputedName,
+			ID:       string(res.Node.StableID),
+			Tags:     res.Node.Tags,
+			User:     user,
+		}, nil
+	}
 }
 
 // CredentialProvider provides credentials for authentication with Tailscale

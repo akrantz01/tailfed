@@ -19,9 +19,10 @@ locals {
 
   tailscale_settings = merge(
     {
-      connection     = "in-process"
-      tags           = var.tailscale_tags
-      authentication = "federation"
+      hostname        = var.name
+      state-directory = "/var/lib/tailfed-server"
+      tags            = var.tailscale_tags
+      authentication  = "federation"
       federation = {
         client-id = var.tailscale_client_id
         audience  = var.tailscale_audience
@@ -34,8 +35,8 @@ locals {
     var.settings,
     {
       listener = {
-        http   = ":80"
-        https  = ":443"
+        http   = true
+        https  = var.tailscale_https
         funnel = var.tailscale_funnel
       }
       tailscale = local.tailscale_settings
