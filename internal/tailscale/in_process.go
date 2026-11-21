@@ -95,7 +95,7 @@ func (p *InProcess) Healthy(ctx context.Context) bool {
 }
 
 func (p *InProcess) ListenPrivate(_ context.Context, port uint16) (net.Listener, error) {
-	return p.ts.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	return p.ts.Listen("tcp", fmt.Sprintf(":%d", port))
 }
 
 func (p *InProcess) ListenFunnel(_ context.Context) (net.Listener, error) {
