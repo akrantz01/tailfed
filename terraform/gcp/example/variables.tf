@@ -17,6 +17,21 @@ variable "tailscale_tags" {
 variable "settings" {
   type = any
   default = {
+    signing = {
+      backend = "file"
+      file = {
+        paths = [
+          {
+            path     = "/var/lib/tailfed-server/es256.pem"
+            generate = "ES256"
+          },
+          {
+            path     = "/var/lib/tailfed-server/rs256.pem"
+            generate = "RS256"
+          }
+        ]
+      }
+    }
     token = {
       profiles = {
         default = { audience = "sts.amazonaws.com" }
