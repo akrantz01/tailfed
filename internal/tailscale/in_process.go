@@ -18,7 +18,7 @@ type AuthenticationMethod string
 
 const (
 	// AuthenticationMethodKey uses a static authkey
-	AuthenticationMethodKey AuthenticationMethod = "auth-key"
+	AuthenticationMethodKey AuthenticationMethod = "authkey"
 	// AuthenticationMethodOAuth uses the OAuth flow for generating authkey(s)
 	AuthenticationMethodOAuth AuthenticationMethod = "oauth"
 	// AuthenticationMethodFederation uses workload identity federation for generating authkey(s)

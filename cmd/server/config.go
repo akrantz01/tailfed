@@ -179,61 +179,42 @@ func (c *signingMemoryConfig) Algorithms() map[signing.Algorithm]bool {
 }
 
 type tailscaleConfig struct {
-	Connection tailscale.ConnectionId `koanf:"connection" help:"How to connect to Tailscale"`
-
 	ControlPlaneUrl string                         `koanf:"control-plane-url" help:"The Tailscale/Headscale control plane to connect to (in-process only)"`
 	Tags            []string                       `koanf:"tags" help:"The tags to register for the node (in-process only)"`
 	Authentication  tailscale.AuthenticationMethod `koanf:"authentication"`
 
-	AuthKey    string                    `koanf:"auth-key" help:"The auth key used to join the tailnet (in-process only)"`
+	AuthKey    string                    `koanf:"authkey" help:"The auth key used to join the tailnet (in-process only)"`
 	OAuth      tailscaleOauthConfig      `koanf:"oauth"`
 	Federation tailscaleFederationConfig `koanf:"federation"`
 }
 
 func (c *tailscaleConfig) SetDefaults() {
-	c.Connection = tailscale.ConnectionLocal
 	c.ControlPlaneUrl = ipn.DefaultControlURL
 	c.Authentication = tailscale.AuthenticationMethodKey
 }
 
 func (c *tailscaleConfig) Validate() error {
-	switch c.Connection {
-	case tailscale.ConnectionLocal:
-		return nil
-
-	case tailscale.ConnectionInProcess:
-		switch c.Authentication {
-		case tailscale.AuthenticationMethodKey:
-			if len(c.AuthKey) == 0 {
-				return errors.New("an authkey is required")
-			} else {
-				return nil
-			}
-
-		case tailscale.AuthenticationMethodOAuth:
-			return c.OAuth.Validate()
-
-		case tailscale.AuthenticationMethodFederation:
-			return c.Federation.Validate()
-
-		default:
-			return fmt.Errorf("unknown authentication method %q (options: %s)", c.Authentication, tailscale.AuthenticationMethods)
+	switch c.Authentication {
+	case tailscale.AuthenticationMethodKey:
+		if len(c.AuthKey) == 0 {
+			return errors.New("an authkey is required")
+		} else {
+			return nil
 		}
 
+	case tailscale.AuthenticationMethodOAuth:
+		return c.OAuth.Validate()
+
+	case tailscale.AuthenticationMethodFederation:
+		return c.Federation.Validate()
+
 	default:
-		return fmt.Errorf("unknown connection method %q (options: %s)", c.Connection, tailscale.ConnectionIds)
+		return fmt.Errorf("unknown authentication method %q (options: %s)", c.Authentication, tailscale.AuthenticationMethods)
 	}
 }
 
 func (c *tailscaleConfig) Connect(ctx context.Context) (tailscale.Connection, error) {
-	switch c.Connection {
-	case tailscale.ConnectionLocal:
-		return tailscale.NewLocal(ctx)
-	case tailscale.ConnectionInProcess:
-		return tailscale.NewInProcess(ctx, "", c.ControlPlaneUrl, c.Tags, c.credentials())
-	default:
-		panic("unreachable")
-	}
+	return tailscale.NewInProcess(ctx, "", c.ControlPlaneUrl, c.Tags, c.credentials())
 }
 
 func (c *tailscaleConfig) credentials() tailscale.CredentialProvider {

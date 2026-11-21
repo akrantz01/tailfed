@@ -133,16 +133,6 @@ signing:
 
 # Tailscale connection details
 tailscale:
-  # How to connect to Tailscale
-  #
-  # Choices:
-  #   - local: use an existing local Tailscale daemon
-  #   - in-process: create a new connection scoped to the current process
-  # Default: "local"
-  connection: local
-
-  # The following options are only used for the "in-process" mode
-
   # The Tailscale/Headscale control plane to connect to
   # Default: "https://controlplane.tailscale.com"
   control-plane-url: https://controlplane.tailscale.com
@@ -164,7 +154,7 @@ tailscale:
 
   # The auth key used to join the tailnet. Required when `tailscale.authentication` is "authkey"
   # Default: ""
-  auth-key: tskey-abcdef1432341818
+  authkey: tskey-abcdef1432341818
 
   # OAuth-based auth key generation. Required when `tailscale.authentication` is "oauth"
   #
