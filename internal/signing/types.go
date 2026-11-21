@@ -15,11 +15,12 @@ type BackendId string
 
 const (
 	BackendMemory BackendId = "memory"
+	BackendFile   BackendId = "file"
 	BackendAWSKMS BackendId = "aws-kms"
 )
 
 func (b BackendId) Choices() []string {
-	return []string{string(BackendMemory), string(BackendAWSKMS)}
+	return []string{string(BackendMemory), string(BackendFile), string(BackendAWSKMS)}
 }
 
 var BackendIds string = strings.Join(BackendMemory.Choices(), ", ")
@@ -54,6 +55,12 @@ func (a Algorithm) Choices() []string {
 		string(ES384),
 		string(ES512),
 	}
+}
+
+// ValidAlgorithm returns whether the algorithm is known
+func ValidAlgorithm(raw Algorithm) bool {
+	_, ok := toJose[raw]
+	return ok
 }
 
 // Backend provides a mechanism for generating signed JWTs

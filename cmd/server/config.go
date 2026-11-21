@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"regexp"
 
 	"github.com/akrantz01/tailfed/internal/oidc"
@@ -83,6 +84,7 @@ func (c *listenerConfig) HttpsUrl(dnsName string) string {
 type signingConfig struct {
 	Backend signing.BackendId   `koanf:"backend" help:"How to sign ID tokens"`
 	AwsKms  signingAwsKmsConfig `koanf:"aws-kms"`
+	File    signingFileConfig   `koanf:"file"`
 	Memory  signingMemoryConfig `koanf:"memory"`
 }
 
@@ -97,6 +99,9 @@ func (c *signingConfig) Validate() error {
 	case signing.BackendMemory:
 		return c.Memory.Validate()
 
+	case signing.BackendFile:
+		return c.File.Validate()
+
 	case signing.BackendAWSKMS:
 		return c.AwsKms.Validate()
 
@@ -109,8 +114,20 @@ func (c *signingConfig) NewBackend(awsConfig aws.Config) (signing.Backend, error
 	switch c.Backend {
 	case signing.BackendMemory:
 		return signing.NewInMemory(c.Memory.Algorithms())
+
+	case signing.BackendFile:
+		var files []signing.File
+		for _, file := range c.File.Paths {
+			files = append(files, signing.File{
+				Path:     file.Path,
+				Generate: file.Generate,
+			})
+		}
+		return signing.NewFile(files)
+
 	case signing.BackendAWSKMS:
 		return signing.NewAWSKMS(awsConfig, c.AwsKms.Keys)
+
 	default:
 		panic("unreachable")
 	}
@@ -125,6 +142,77 @@ func (c *signingAwsKmsConfig) Validate() error {
 		return errors.New("at least one KMS key ARN/alias is required")
 	}
 	return nil
+}
+
+type signingFileConfig struct {
+	Paths []signingFileKeyConfig `koanf:"paths"`
+}
+
+func (c *signingFileConfig) Validate() error {
+	if len(c.Paths) == 0 {
+		return errors.New("at least one key is required")
+	}
+
+	for i, key := range c.Paths {
+		if err := key.Validate(); err != nil {
+			return fmt.Errorf("key %d is invalid: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+type signingFileKeyConfig struct {
+	Path     string            `koanf:"path" help:"The path to the key"`
+	Generate signing.Algorithm `koanf:"generate" help:"The algorithm used to generate the key, if it doesn't exist"`
+}
+
+func (c *signingFileKeyConfig) Validate() error {
+	if len(c.Path) == 0 {
+		return fmt.Errorf("a path is required")
+	}
+
+	if len(c.Generate) > 0 && !signing.ValidAlgorithm(c.Generate) {
+		return fmt.Errorf("invalid signing algorithm %s", c.Generate)
+	}
+
+	return nil
+}
+
+var (
+	fileMapPathKey     = reflect.ValueOf("path")
+	fileMapGenerateKey = reflect.ValueOf("generate")
+)
+
+func (c *signingFileKeyConfig) UnmarshalMapstructure(input any) error {
+	in := reflect.ValueOf(input)
+	switch in.Kind() {
+	case reflect.String:
+		c.Path = in.String()
+		return nil
+
+	case reflect.Map:
+		pathValue := in.MapIndex(fileMapPathKey)
+		if path, ok := reflect.TypeAssert[string](pathValue); ok {
+			c.Path = path
+		} else {
+			inner := reflect.ValueOf(pathValue.Interface())
+			return fmt.Errorf("expected string for key 'path', got %s", inner.Kind())
+		}
+
+		generateValue := in.MapIndex(fileMapGenerateKey)
+		if generate, ok := reflect.TypeAssert[string](generateValue); ok {
+			c.Generate = signing.Algorithm(generate)
+		} else {
+			inner := reflect.ValueOf(generateValue.Interface())
+			return fmt.Errorf("expected string for key 'generate', got %s", inner.Kind())
+		}
+
+		return nil
+
+	default:
+		return fmt.Errorf("expected map or string, got %s", in.Kind())
+	}
 }
 
 type signingMemoryConfig struct {
