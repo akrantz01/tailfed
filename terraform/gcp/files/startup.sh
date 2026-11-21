@@ -42,7 +42,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=simple
+Type=notify
+WatchdogSec=30
 ExecStart=/usr/local/bin/tailfed-server --config /etc/tailfed-server/config.yml --json
 Restart=on-failure
 RestartSec=5
