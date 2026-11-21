@@ -1,7 +1,8 @@
 {
   module,
   pkgs,
-}: let
+}:
+let
   lib = pkgs.lib;
   nixOSVersion = "23.11";
 
@@ -15,11 +16,11 @@
     services.tailscale = {
       enable = true;
       authKeyFile = "/tmp/shared/auth-key";
-      extraUpFlags = ["--login-server=${loginServer}"];
+      extraUpFlags = [ "--login-server=${loginServer}" ];
     };
     systemd.services = {
       tailscaled.environment.TS_DEBUG_USE_DERP_HTTP = "true";
-      tailscaled-autoconnect.wantedBy = lib.mkForce [];
+      tailscaled-autoconnect.wantedBy = lib.mkForce [ ];
     };
 
     networking.firewall.enable = false;
@@ -57,7 +58,7 @@
             ipv4 = controlAddress;
             ipv6 = "2001:db8:1::2";
           };
-          derp.urls = [];
+          derp.urls = [ ];
 
           dns = {
             magic_dns = false;
@@ -66,84 +67,101 @@
         };
       };
       systemd.services.tailscaled = {
-        requires = ["headscale.service"];
-        after = ["headscale.service"];
-        wantedBy = lib.mkForce [];
+        requires = [ "headscale.service" ];
+        after = [ "headscale.service" ];
+        wantedBy = lib.mkForce [ ];
       };
     }
   ];
 
   serverSettings = {
     log-level = "debug";
-    listener.http = "0.0.0.0:8000";
+    listener.http = true;
+    tailscale = {
+      hostname = "server";
+      control-plane-url = "http://${controlAddress}";
+    };
     token.profiles = {
       default.audience = "sts.amazonaws.com";
       other = {
         audience = "other.example.com";
-        accepted-algorithms = ["ES256"];
-        subject.user = ["hostname" "user.id"];
+        accepted-algorithms = [ "ES256" ];
+        subject.user = [
+          "hostname"
+          "user.id"
+        ];
         validity = "15m";
       };
     };
   };
 
-  clientNode = extra:
-    lib.mkMerge [
-      (tailscaleNode "http://${controlAddress}")
-      {
-        imports = [module];
-
-        services.tailfed.client = {
-          enable = true;
-          settings = {
-            log-level = "debug";
-            url = "http://${serverTailscaleAddress}:8000";
-          };
-        };
-      }
-      extra
-    ];
-
-  script = file: expected:
-    ''
-      SERVER_IP = "${serverTailscaleAddress}"
-      CLIENT_IP = "${clientTailscaleAddress}"
-      EXPECTED = ${builtins.toJSON expected}
-    ''
-    + builtins.readFile ./common.py
-    + builtins.readFile file;
-
-  localTest = {
-    name,
-    client ? {},
-    expected,
-  }:
+  moduleTest =
+    {
+      name,
+      client ? { },
+      expected,
+    }:
     pkgs.testers.runNixOSTest {
       inherit name;
 
       nodes = {
         control = controlNode;
 
-        server = lib.mkMerge [
+        server = {
+          imports = [ module ];
+
+          services.tailfed.server = {
+            enable = true;
+            environmentFile = "/tmp/shared/server.env";
+            settings = serverSettings;
+          };
+          # Without root, tsnet binds its sockets to the default route's interface
+          networking.defaultGateway = {
+            address = controlAddress;
+            interface = "eth1";
+          };
+
+          systemd.services.tailfed-server = {
+            wantedBy = lib.mkForce [ ];
+            environment.TS_DEBUG_USE_DERP_HTTP = "true";
+          };
+
+          networking.firewall.enable = false;
+          system.stateVersion = nixOSVersion;
+        };
+
+        client = lib.mkMerge [
           (tailscaleNode "http://${controlAddress}")
           {
-            imports = [module];
+            imports = [ module ];
 
-            services.tailfed.server = {
+            services.tailfed.client = {
               enable = true;
-              settings = serverSettings;
+              settings = {
+                log-level = "debug";
+                url = "http://${serverTailscaleAddress}";
+              };
             };
           }
+          client
         ];
-
-        client = clientNode client;
       };
 
-      extraPythonPackages = p: [p.pyjwt p.cryptography];
-      testScript = script ./local.py expected;
+      extraPythonPackages = p: [
+        p.pyjwt
+        p.cryptography
+      ];
+      testScript = ''
+        SERVER_IP = "${serverTailscaleAddress}"
+        CLIENT_IP = "${clientTailscaleAddress}"
+        EXPECTED = ${builtins.toJSON expected}
+      ''
+      + builtins.readFile ./common.py
+      + builtins.readFile ./test.py;
     };
-in {
-  module-default-profile = localTest {
+in
+{
+  module-default-profile = moduleTest {
     name = "module-default-profile";
     expected = {
       alg = "RS256";
@@ -153,7 +171,7 @@ in {
     };
   };
 
-  module-custom-profile = localTest {
+  module-custom-profile = moduleTest {
     name = "module-custom-profile";
     client.services.tailfed.client.settings.profile = "other";
     expected = {
@@ -161,54 +179,6 @@ in {
       aud = "other.example.com";
       sub = "hostname:client:user.id:1";
       lifetime = 15 * 60;
-    };
-  };
-
-  module-in-process = pkgs.testers.runNixOSTest {
-    name = "module-in-process";
-
-    nodes = {
-      control = controlNode;
-
-      server = {
-        imports = [module];
-
-        services.tailfed.server = {
-          enable = true;
-          environmentFile = "/tmp/shared/server.env";
-          settings =
-            serverSettings
-            // {
-              tailscale = {
-                connection = "in-process";
-                control-plane-url = "http://${controlAddress}";
-              };
-            };
-        };
-        # Without root, tsnet binds its sockets to the default route's interface
-        networking.defaultGateway = {
-          address = controlAddress;
-          interface = "eth1";
-        };
-
-        systemd.services.tailfed-server = {
-          wantedBy = lib.mkForce [];
-          environment.TS_DEBUG_USE_DERP_HTTP = "true";
-        };
-
-        networking.firewall.enable = false;
-        system.stateVersion = nixOSVersion;
-      };
-
-      client = clientNode {};
-    };
-
-    extraPythonPackages = p: [p.pyjwt p.cryptography];
-    testScript = script ./in_process.py {
-      alg = "RS256";
-      aud = "sts.amazonaws.com";
-      sub = "tailnet.dns::hostname:client:user.login:test@nixos.org";
-      lifetime = 60 * 60;
     };
   };
 }
