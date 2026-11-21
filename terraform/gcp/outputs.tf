@@ -22,3 +22,8 @@ output "reset_command" {
   value       = "gcloud compute instances reset ${google_compute_instance.server.name} --project ${var.project} --zone ${google_compute_instance.server.zone}"
   description = "Resets the VM, which applies version and configuration changes"
 }
+
+output "resolved_config" {
+  value       = jsonencode(local.settings)
+  description = "The resolved server configuration"
+}
