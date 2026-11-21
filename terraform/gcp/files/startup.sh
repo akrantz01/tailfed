@@ -50,7 +50,6 @@ RestartSec=5
 User=tailfed-server
 DynamicUser=true
 StateDirectory=tailfed-server
-Environment=XDG_CONFIG_HOME=%S/tailfed-server
 
 NoNewPrivileges=true
 PrivateTmp=true
