@@ -99,6 +99,7 @@ changelog:
       - "^test:"
 
 release:
+  mode: keep-existing
   footer: >-
 
     ---
