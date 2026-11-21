@@ -114,6 +114,20 @@ signing:
     keys:
       - arn:aws:...
 
+  file:
+    # The paths to read keys from
+    # Default: []
+    paths:
+      # Load a key from the path
+      - ./default.pem
+
+      # Automatically generate a key at the path given path
+      - path: ./new.pem
+        # The algorithm to use
+        # Options: RS256, RS384, RS512, ES256, ES384, ES512
+        # Default: ""
+        generate: ES256
+
   memory:
     # Generate a RSA 2048-bit key
     # Default: true
