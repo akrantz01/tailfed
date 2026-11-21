@@ -23,8 +23,6 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           release-type: go
-          skip-github-release: true
-          skip-labeling: true
 
   prepare:
     name: Prepare ${{ matrix.goos }} ${{ matrix.goarch }}${{ matrix.goarm && format('v{0}', matrix.goarm) || '' }}
