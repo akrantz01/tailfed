@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"regexp"
 
 	"github.com/akrantz01/tailfed/internal/oidc"
@@ -47,29 +46,18 @@ func (c *Config) Validate() error {
 }
 
 type listenerConfig struct {
-	HTTP   string `koanf:"http" help:"The port (with an optional host) the http listener should bind to"`
-	HTTPS  string `koanf:"https" help:"The port (and optional host) the https listener should bind to"`
-	Funnel bool   `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
+	HTTP   bool `koanf:"http" help:"Enable serving over HTTP"`
+	HTTPS  bool `koanf:"https" help:"Enable serving over HTTPS"`
+	Funnel bool `koanf:"funnel" help:"Expose the token verification routes publicly via Tailscale Funnel"`
+}
+
+func (c *listenerConfig) SetDefaults() {
+	c.HTTP = true
 }
 
 func (c *listenerConfig) Validate() error {
-	hasHttp := len(c.HTTP) > 0
-	hasHttps := len(c.HTTPS) > 0
-
-	if !hasHttp && !hasHttps {
+	if !c.HTTP && !c.HTTPS {
 		return errors.New("either a http or https listener is required")
-	}
-
-	if hasHttp {
-		if _, _, err := net.SplitHostPort(c.HTTP); err != nil {
-			return fmt.Errorf("invalid http listen address: %w", err)
-		}
-	}
-
-	if hasHttps {
-		if _, _, err := net.SplitHostPort(c.HTTPS); err != nil {
-			return fmt.Errorf("invalid https listen address: %w", err)
-		}
 	}
 
 	return nil
@@ -77,30 +65,19 @@ func (c *listenerConfig) Validate() error {
 
 // Issuer builds the token issuer used in the discovery document and embedded in tokens
 func (c *listenerConfig) Issuer(dnsName string) string {
-	switch {
-	case c.Funnel:
+	if c.Funnel || c.HTTPS {
 		return "https://" + dnsName
-	case len(c.HTTPS) != 0:
-		return c.HttpsUrl(dnsName)
-	default:
-		return "http://" + hostWithPort(dnsName, c.HTTP, "80")
+	} else {
+		return "http://" + dnsName
 	}
 }
 
 // HttpsUrl is the base URL of the private https listener, or empty when it is disabled
 func (c *listenerConfig) HttpsUrl(dnsName string) string {
-	if len(c.HTTPS) == 0 {
+	if !c.HTTPS {
 		return ""
 	}
-	return "https://" + hostWithPort(dnsName, c.HTTPS, "443")
-}
-
-func hostWithPort(name, address, defaultPort string) string {
-	_, port, _ := net.SplitHostPort(address)
-	if port == defaultPort {
-		return name
-	}
-	return net.JoinHostPort(name, port)
+	return "https://" + dnsName
 }
 
 type signingConfig struct {

@@ -104,10 +104,10 @@ func run(cmd *cobra.Command, _ []string) error {
 
 	privateSrv := http.NewPrivate(issuer, profiles, signer, ts)
 
-	if len(cfg.Listener.HTTP) > 0 {
-		httpLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.HTTP)
+	if cfg.Listener.HTTP {
+		httpLn, err := ts.ListenPrivate(context.Background(), "127.0.0.1:80")
 		if err != nil {
-			return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.HTTP, err)
+			return fmt.Errorf("failed to listen start http listener: %w", err)
 		}
 
 		httpSrv := privateSrv
@@ -117,10 +117,10 @@ func run(cmd *cobra.Command, _ []string) error {
 		listeners = append(listeners, listener{"http", httpSrv, httpLn})
 	}
 
-	if len(cfg.Listener.HTTPS) > 0 {
-		httpsLn, err := ts.ListenPrivate(context.Background(), cfg.Listener.HTTPS)
+	if cfg.Listener.HTTPS {
+		httpsLn, err := ts.ListenPrivate(context.Background(), "127.0.0.1:443")
 		if err != nil {
-			return fmt.Errorf("failed to listen on %q: %w", cfg.Listener.HTTPS, err)
+			return fmt.Errorf("failed to start https listener: %w", err)
 		}
 
 		tlsLn := tls.NewListener(httpsLn, &tls.Config{
