@@ -3,7 +3,9 @@ package tailscale
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
+	"slices"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -100,7 +102,15 @@ func (p *InProcess) ListenFunnel(_ context.Context) (net.Listener, error) {
 }
 
 func (p *InProcess) DNSName(ctx context.Context) (string, error) {
-	return dnsName(ctx, p.client)
+	status, err := p.client.StatusWithoutPeers(ctx)
+	if err != nil {
+		return "", err
+	}
+	if status.Self == nil || status.Self.DNSName == "" {
+		return "", errors.New("node has no dns name")
+	}
+
+	return strings.TrimSuffix(status.Self.DNSName, "."), nil
 }
 
 func (p *InProcess) GetCertificate(hi *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -114,7 +124,39 @@ func (p *InProcess) WhoIs(ctx context.Context, address string) (*Node, error) {
 	}
 
 	res, err := p.client.WhoIs(ctx, address)
-	return nodeFromWhoIsResponse(status, res, err)
+	if errors.Is(err, local.ErrPeerNotFound) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else {
+		var user *User
+		if !res.Node.IsTagged() {
+			slices.Sort(res.UserProfile.Groups)
+			user = &User{
+				ID:     int64(res.UserProfile.ID),
+				Login:  res.UserProfile.LoginName,
+				Groups: res.UserProfile.Groups,
+			}
+		}
+
+		dns := status.CurrentTailnet.MagicDNSSuffix
+		if !status.CurrentTailnet.MagicDNSEnabled {
+			dns = ""
+		}
+
+		slices.Sort(res.Node.Tags)
+		return &Node{
+			Tailnet: Tailnet{
+				ID:   string(status.CurrentTailnet.StableID),
+				Name: status.CurrentTailnet.Name,
+				DNS:  dns,
+			},
+			Hostname: res.Node.ComputedName,
+			ID:       string(res.Node.StableID),
+			Tags:     res.Node.Tags,
+			User:     user,
+		}, nil
+	}
 }
 
 // CredentialProvider provides credentials for authentication with Tailscale
