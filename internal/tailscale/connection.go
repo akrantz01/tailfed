@@ -11,7 +11,7 @@ type Connection interface {
 	// Healthy returns whether the node is healthy
 	Healthy(ctx context.Context) bool
 	// ListenPrivate creates a TCP listener for the requested address
-	ListenPrivate(ctx context.Context, address string) (net.Listener, error)
+	ListenPrivate(ctx context.Context, port uint16) (net.Listener, error)
 	// ListenFunnel creates a listener exposed to the internet via Tailscale Funnel on port 443
 	ListenFunnel(ctx context.Context) (net.Listener, error)
 	// DNSName returns the node's MagicDNS name

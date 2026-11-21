@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"slices"
 	"strings"
@@ -93,8 +94,8 @@ func (p *InProcess) Healthy(ctx context.Context) bool {
 	return len(status.Health) == 0
 }
 
-func (p *InProcess) ListenPrivate(_ context.Context, address string) (net.Listener, error) {
-	return p.ts.Listen("tcp", address)
+func (p *InProcess) ListenPrivate(_ context.Context, port uint16) (net.Listener, error) {
+	return p.ts.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 }
 
 func (p *InProcess) ListenFunnel(_ context.Context) (net.Listener, error) {
