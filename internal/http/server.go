@@ -39,7 +39,8 @@ func newServer(issuer string, profiles oidc.Profiles, signer signing.Backend, ts
 	mux.Handle("GET /{profile}/.well-known/openid-configuration", discovery)
 
 	return &http.Server{
-		Handler: withMiddleware(mux, middleware.RequestID, middleware.Logging),
+		Handler:     withMiddleware(mux, middleware.RequestID, middleware.FunnelSource, middleware.Logging),
+		ConnContext: middleware.ConnContext,
 	}
 }
 
