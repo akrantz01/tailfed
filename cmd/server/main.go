@@ -15,6 +15,7 @@ import (
 	"github.com/akrantz01/tailfed/internal/http"
 	"github.com/akrantz01/tailfed/internal/logging"
 	"github.com/akrantz01/tailfed/internal/oidc"
+	"github.com/akrantz01/tailfed/internal/systemd"
 	"github.com/akrantz01/tailfed/internal/version"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -80,6 +81,8 @@ func run(cmd *cobra.Command, _ []string) error {
 	if version.Display(cmd) {
 		return nil
 	}
+
+	systemd.EnableWatchdog()
 
 	signer, err := cfg.Signing.NewBackend(awsConfig)
 	if err != nil {
@@ -171,10 +174,13 @@ func serve(ctx context.Context, listeners []listener) error {
 		})
 	}
 
+	systemd.Ready()
+
 	errGrp.Go(func() error {
 		<-ctx.Done()
 
 		logrus.Info("signal received, shutting down...")
+		systemd.Stopping()
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

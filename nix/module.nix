@@ -170,7 +170,8 @@ in
         restartTriggers = [ cfg.server.package ];
 
         serviceConfig = {
-          Type = "simple";
+          Type = "notify";
+          WatchdogSec = 30;
 
           User = "tailfed-server";
           DynamicUser = true;
