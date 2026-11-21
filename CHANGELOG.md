@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.0.0](https://github.com/akrantz01/tailfed/compare/v1.2.0...v2.0.0) (2026-11-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* in-tailnet version ([#6](https://github.com/akrantz01/tailfed/issues/6))
+
+### Features
+
+* **http:** add middleware for getting funnel source ips ([#16](https://github.com/akrantz01/tailfed/issues/16)) ([06c0aa9](https://github.com/akrantz01/tailfed/commit/06c0aa9b8556d4199c6ab9d84f99b94b445d41a2))
+* in-tailnet version ([#6](https://github.com/akrantz01/tailfed/issues/6)) ([7ce36f1](https://github.com/akrantz01/tailfed/commit/7ce36f11f54a3498a4aa006c13e1ced5e2779b80))
+* **server:** allow listening on https ([#11](https://github.com/akrantz01/tailfed/issues/11)) ([7c837ff](https://github.com/akrantz01/tailfed/commit/7c837ff97686584b74ccfe23ca55132fd3d00cd2))
+* **server:** enable systemd daemon support ([#14](https://github.com/akrantz01/tailfed/issues/14)) ([698a35e](https://github.com/akrantz01/tailfed/commit/698a35ee9df1c1810f2b12e4473b90402b338f5a))
+* **server:** use tailscale funnel instead of services ([#9](https://github.com/akrantz01/tailfed/issues/9)) ([c059081](https://github.com/akrantz01/tailfed/commit/c05908193df3ff53b44823f49402bdfd6074fe91))
+* **signing:** add local file support ([#15](https://github.com/akrantz01/tailfed/issues/15)) ([84945c8](https://github.com/akrantz01/tailfed/commit/84945c8e316377dd177a780a30968aa2b98d00df))
+* **tailscale:** remove local connection method ([#13](https://github.com/akrantz01/tailfed/issues/13)) ([d4b9f0c](https://github.com/akrantz01/tailfed/commit/d4b9f0ce9dbbb4bb85eb0f70f1d366985fcbeb35))
+* **terraform:** add vm-based terraform on gcp ([#10](https://github.com/akrantz01/tailfed/issues/10)) ([44f92be](https://github.com/akrantz01/tailfed/commit/44f92bee5dcd8d14829a0769cba0df7b2200c19a))
+
+
+### Bug Fixes
+
+* **ci:** use client-id instead of app-id ([e806ccd](https://github.com/akrantz01/tailfed/commit/e806ccd37f842e32d69ddfef26a008d1b007cd16))
+* **handlers:** add missing http headers ([#12](https://github.com/akrantz01/tailfed/issues/12)) ([22f05a5](https://github.com/akrantz01/tailfed/commit/22f05a5db7d59b5d760e05549eb0202b165fd03a))
+* **oidc:** set profile subject defaults ([cbd653d](https://github.com/akrantz01/tailfed/commit/cbd653d31c25c2ffe588580778d0a568301837e5))
+
 ## [1.2.0](https://github.com/akrantz01/tailfed/compare/v1.1.0...v1.2.0) (2025-05-05)
 
 
