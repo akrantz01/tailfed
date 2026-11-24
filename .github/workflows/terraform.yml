@@ -1,0 +1,64 @@
+name: Terraform
+
+on:
+  push:
+    paths:
+      - .github/workflows/terraform.yml
+      - terraform/self/**
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  OPENTOFU_VERSION: 1.11.6
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_VAR_state_bucket: ${{ vars.TERRAFORM_STATE_BUCKET }}
+  TF_VAR_state_key: ${{ vars.TERRAFORM_STATE_KEY }}
+  TF_VAR_state_region: ${{ vars.TERRAFORM_STATE_REGION }}
+
+defaults:
+  run:
+    working-directory: terraform/self
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: ${{ env.OPENTOFU_VERSION }}
+          tofu_wrapper: false
+
+      - run: tofu fmt -check -recursive
+      - run: tofu init -backend=false
+      - run: tofu validate
+
+  # TODO: consider adding plan job
+
+  apply:
+    name: Apply
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: validate
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: ${{ env.OPENTOFU_VERSION }}
+          tofu_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: ${{ github.event_name }}-${{ github.run_id }}-${{ github.job }}
+          aws-region: us-east-1
+
+      - run: tofu init
+      - run: tofu apply -auto-approve
