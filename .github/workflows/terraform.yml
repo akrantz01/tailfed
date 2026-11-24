@@ -42,7 +42,7 @@ jobs:
   apply:
     name: Apply
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # if: github.ref == 'refs/heads/main'
     needs: validate
     permissions:
       contents: read
