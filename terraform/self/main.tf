@@ -27,31 +27,6 @@ provider "aws" {
   }
 }
 
-import {
-  id = "tailfed-artifacts"
-  to = aws_s3_bucket.artifacts
-}
-
-import {
-  id = "tailfed-artifacts"
-  to = aws_s3_bucket_ownership_controls.artifacts
-}
-
-import {
-  id = "tailfed-artifacts"
-  to = aws_s3_bucket_public_access_block.artifacts
-}
-
-import {
-  id = "tailfed-artifacts"
-  to = aws_s3_bucket_acl.artifacts
-}
-
-import {
-  id = "tailfed-artifacts"
-  to = aws_s3_bucket_policy.artifacts
-}
-
 resource "aws_s3_bucket" "artifacts" {
   bucket = "tailfed-artifacts"
 }
