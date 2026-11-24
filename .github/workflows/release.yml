@@ -124,7 +124,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           role-session-name: ${{ github.event_name }}-${{ github.run_id }}-${{ github.job }}
           aws-region: us-east-1
 
